@@ -1,0 +1,8 @@
+{
+    "name": "stockfellow",
+    "workspaces": [
+        "apps/*",
+        "packages/*",
+        "services/*"
+    ]
+}
