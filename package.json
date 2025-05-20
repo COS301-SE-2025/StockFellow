@@ -4,5 +4,9 @@
         "apps/*",
         "packages/*",
         "services/*"
-    ]
+    ],
+    "scripts": {
+        "mobile:start": "npm run start --workspace=apps/mobile-app",
+        "mobile:install": "npm install --workspace=apps/mobile-app"
+    }
 }
