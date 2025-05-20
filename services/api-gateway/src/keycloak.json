@@ -1,6 +1,6 @@
 {
-  "realm": "stockfellow",
-  "auth-server-url": "http://localhost:8080/",
+  "realm": "master",
+  "auth-server-url": "http://keycloak:8080/",
   "ssl-required": "external",
   "resource": "stockfellow-api",
   "bearer-only": true,

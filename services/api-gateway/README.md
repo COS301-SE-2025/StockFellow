@@ -26,3 +26,13 @@ The API Gateway servers as the entry point to the systems microserves. It valida
 * To run (FOR DEV PURPOSES ONLY) use:
   * `docker run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:latest start-dev`
   * Then access at http://localhost:8080/admin/
+
+## Routes ##
+* user
+* transaction
+* groups
+
+## How to run ##
+* Use command `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up` to creating and start running server.js, keycloak and its postgres DB
+* Enter `http://localhost:3000/user` into browser which should redirect to google
+* `http://localhost:3000/transaction` and `http://localhost:3000/transaction` should show "Access Denied"
