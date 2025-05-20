@@ -1,0 +1,37 @@
+# This is a placeholder yml file for CI, it will be updated as we begin to add dependencies and test scripts
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: |
+          echo "Installation command will go here"
+          # npm ci
+
+      - name: Run tests
+        run: |
+          echo "Test commands will go here"
+          # npm test
+          
+      - name: Build
+        run: |
+          echo "Build commands will go here"
+          # npm run build
