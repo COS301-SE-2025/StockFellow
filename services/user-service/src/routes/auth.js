@@ -1,14 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const keycloak = require('keycloak-connect');
+const jwtMiddleware = require('../config/jwt');
 
-// Redirect to Keycloak for login
-router.get('/login', keycloak.protect(), (req, res) => {
-  res.json({ message: 'Login successful', user: req.kauth.grant.access_token });
+router.get('/login', jwtMiddleware, (req, res) => {
+  res.json({ message: 'Login successful', user: { userId: req.user.sub, email: req.user.email } });
 });
 
-// Logout
-router.get('/logout', keycloak.protect(), (req, res) => {
+router.get('/logout', (req, res) => {
   req.session.destroy();
   res.json({ message: 'Logged out successfully' });
 });

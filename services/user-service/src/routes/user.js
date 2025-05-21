@@ -1,26 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const RegisterUserCommand = require('../commands/registerUser');
+const jwtMiddleware = require('../config/jwt');
 const readModel = require('../models/readModel');
 
-// Register a new user
-router.post('/register', async (req, res) => {
-  const { userId, name, email, saId, password } = req.body;
+router.get('/profile', jwtMiddleware, async (req, res) => {
   try {
-    await RegisterUserCommand.execute(userId, name, email, saId, password);
-    res.status(201).json({ message: 'User registered successfully' });
+    const user = await readModel.getUser(req.user.sub);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
-});
-
-// Get user profile
-router.get('/:userId', async (req, res) => {
-  const user = await readModel.getUser(req.params.userId);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  res.json(user);
 });
 
 module.exports = router;
