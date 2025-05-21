@@ -37,7 +37,7 @@ const setupAuth = (app, routes) => {
 
     app.use(keycloak.middleware());
 
-     //login endpoint 
+        //login endpoint 
         app.get('/login', (req, res) => {
             console.log('Login enpoint hit'); // checking that it reaches endpoint
             res.redirect(keycloak.loginUrl());

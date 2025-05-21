@@ -36,3 +36,10 @@ The API Gateway servers as the entry point to the systems microserves. It valida
 * Use command `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up` to creating and start running server.js, keycloak and its postgres DB
 * Enter `http://localhost:3000/user` into browser which should redirect to google
 * `http://localhost:3000/transaction` and `http://localhost:3000/transaction` should show "Access Denied"
+
+## Setting up Keycloak(For development) ##
+* Running the docker-compose up command should import the realm-exports/stockfellow-realm.json file to set up the keycloak realm
+* Realm shouls contain:
+  * `public-client`
+  * `confidential-client`
+* You will need to create your own users for testing
