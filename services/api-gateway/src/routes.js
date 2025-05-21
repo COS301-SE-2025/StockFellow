@@ -1,5 +1,21 @@
 const ROUTES = [
     {
+        url: '/auth',
+        auth: false,
+        creditCheck: false,
+        rateLimit: {
+            windowMs: 15 * 60 * 1000,
+            max: 100
+        },
+        proxy: {
+            target: "http://localhost:8080",
+            changeOrigin: true,
+            pathRewrite: {
+                [`^/auth`]: '/auth',
+            },
+        }
+    },
+    {
         url: '/user',
         auth: false,
         creditCheck: false,
