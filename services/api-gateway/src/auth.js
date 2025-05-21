@@ -37,6 +37,24 @@ const setupAuth = (app, routes) => {
 
     app.use(keycloak.middleware());
 
+     //login endpoint 
+        app.get('/login', (req, res) => {
+            console.log('Login enpoint hit'); // checking that it reaches endpoint
+            res.redirect(keycloak.loginUrl());
+        });
+
+        //registration endpoint
+        app.get('/register', (req, res) => {
+            console.log('Register enpoint hit');
+            res.redirect(keycloak.registerUrl());
+        });
+
+        //logout endpoint
+        app.get('/logout', (req, res) => {
+            console.log('Logout enpoint hit');
+            res.redirect(keycloak.logoutUrl());
+        });
+
     routes.forEach(r => {
         if (r.auth) {
             app.use(r.url, keycloak.protect(), function (req, res, next) {
