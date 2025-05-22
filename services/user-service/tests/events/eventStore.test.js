@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const EventStore = require('../src/events/eventStore');
+const EventStore = require('../../src/events/eventStore');
 
 let mongoServer;
 

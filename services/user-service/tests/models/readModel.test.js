@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const UserReadModel = require('../src/models/readModel');
-const eventStore = require('../src/events/eventStore');
+const UserReadModel = require('../../src/models/readModel');
+const eventStore = require('../../src/events/eventStore');
 
-jest.mock('../src/events/eventStore');
+jest.mock('../../src/events/eventStore');
 
 let mongoServer;
 
