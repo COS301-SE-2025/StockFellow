@@ -2,13 +2,12 @@ const ROUTES = [
     {
         url: '/auth',
         auth: false,
-        creditCheck: false,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
             max: 100
         },
         proxy: {
-            target: "http://localhost:8080",
+            target: "http://localhost:5000",
             changeOrigin: true,
             pathRewrite: {
                 [`^/auth`]: '/auth',
@@ -18,13 +17,12 @@ const ROUTES = [
     {
         url: '/user',
         auth: false,
-        creditCheck: false,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
             max: 5
         },
         proxy: {
-            target: "https://www.google.com",
+            target: "http://localhost:5000",
             changeOrigin: true,
             pathRewrite: {
                 [`^/user`]: '',
@@ -34,7 +32,6 @@ const ROUTES = [
     {
         url: '/transaction',
         auth: true,
-        creditCheck: true,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
             max: 5
@@ -48,9 +45,8 @@ const ROUTES = [
         }
     },
     {
-        url: '/group',
+        url: '/api*',
         auth: true,
-        creditCheck: true,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
             max: 5

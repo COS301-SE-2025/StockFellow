@@ -9,6 +9,7 @@ module.exports = async (req, res, next) => {
 
   try {
     const publicKey = await fetchPublicKey();
+    console.log(`Public-Key : ${publicKey}`);
     const decoded = jwt.verify(token, publicKey);
     req.user = decoded; // Attach user info (e.g., sub, email)
     next();
