@@ -1,164 +1,94 @@
+import { Image, Text, View } from 'react-native';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, TouchableOpacity, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useRouter } from "expo-router";
+import { StatusBar } from 'expo-status-bar';
+import CustomButton from '../../src/components/CustomButton';
+import { icons } from '../../src/constants';
 
 const Verification = () => {
+  const router = useRouter();
+
+  const handleStartVerification = () => {
+    // Verification logic here
+  };
+
+  const verificationSteps = [
+    { icon: icons.noGlasses, text: 'Avoid Wearing Glasses' },
+    { icon: icons.noHat, text: 'Avoid Wearing Hats' },
+    { icon: icons.avoidObjects, text: 'Avoid Background Objects' },
+    { icon: icons.light, text: 'Ensure Good Lighting in Room' }
+  ];
+
   return (
-    <View style={styles.container}>
-      {/* Top Bar with Back Button */}
-      <View style={styles.topBar}>
-        <TouchableOpacity>
-          <Image
-            source={require('../../assets/icons/back.png')}
-            style={styles.backButton}
-          />
-        </TouchableOpacity>
-      </View>
+    <GestureHandlerRootView className='flex-1'>
+      <StatusBar style="light" />
+      <SafeAreaView className='flex-1'>
+        <View className='flex-1 bg-white p-8'>
+          <View className='flex-1'>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Image
+                source={icons.back}
+                style={{ 
+                  width: 32,
+                  height: 32,
+                  tintColor: '#1DA1FA',
+                  marginBottom: 24
+                }}
+              />
+            </TouchableOpacity>
 
-      {/* Title */}
-      <Text style={styles.title}>Biometric Verification</Text>
-      <Text style={styles.subtitle}>
-        We will confirm your identity using biometrics.
-      </Text>
+            <Text className="text-2xl text-center font-['PlusJakartaSans-SemiBold'] mb-2">
+              Biometric Verification
+            </Text>
+            <Text className="text-base text-center font-['PlusJakartaSans-Regular'] mb-6 text-[#6b7280]">
+              We will confirm your identity using biometrics
+            </Text>
 
-      {/* Face image with instructions */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={require('../../assets/icons/face.png')}
-          style={styles.largeImage}
-        />
-        <Text style={styles.imageText}>Position your face in the frame</Text>
-      </View>
+            <View className="items-center justify-center mb-6 flex-1">
+              <Image
+                source={icons.face}
+                style={{ 
+                  width: 180,
+                  height: 180,
+                  tintColor: '#1DA1FA'
+                }}
+                resizeMode="contain"
+              />
+              <Text className="text-lg text-center font-['PlusJakartaSans-SemiBold'] text-[#374151] mt-4">
+                Position your face in the frame
+              </Text>
+            </View>
 
-      {/* Guidelines */}
-      <View style={styles.guidelinesContainer}>
-        <View style={styles.guideline}>
-          <Image
-            source={require('../../assets/icons/no-glasses.png')}
-            style={styles.guidelineIcon}
-          />
-          <Text style={styles.guidelineText}>Avoid Wearing Glasses</Text>
-        </View>
-        <View style={styles.guideline}>
-          <Image
-            source={require('../../assets/icons/no-hat.png')}
-            style={styles.guidelineIcon}
-          />
-          <Text style={styles.guidelineText}>Avoid Wearing Hats</Text>
-        </View>
-        <View style={styles.guideline}>
-          <Image
-            source={require('../../assets/icons/avoid-objects.png')}
-            style={styles.guidelineIcon}
-          />
-          <Text style={styles.guidelineText}>Avoid Background Objects</Text>
-        </View>
-        <View style={styles.guideline}>
-          <Image
-            source={require('../../assets/icons/light.png')}
-            style={styles.guidelineIcon}
-          />
-          <Text style={styles.guidelineText}>Ensure Good Lighting in Room</Text>
-        </View>
-      </View>
+            <View className="mb-6">
+              {verificationSteps.map((item, index) => (
+                <View key={index} className="flex-row items-center mb-4">
+                  <Image
+                    source={item.icon}
+                    style={{ width: 24, height: 24, tintColor: '#1DA1FA' }}
+                    resizeMode="contain"
+                  />
+                  <Text className="text-base font-['PlusJakartaSans-Regular'] text-[#374151] ml-3">
+                    {item.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
-      {/* Start Verification Button */}
-      <View style={styles.bottomPrompt}>
-        <TouchableOpacity style={styles.verificationButton}>
-          <Text style={styles.buttonText}>Start Verification</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <View className="mt-auto">
+              <CustomButton
+                title="Start Verification"
+                containerStyles="bg-[#1DA1FA] rounded-xl px-8 py-4"
+                textStyles="text-white text-lg font-['PlusJakartaSans-SemiBold']"
+                handlePress={handleStartVerification}
+              />
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
 export default Verification;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 24,
-    paddingTop: 40,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  backButton: {
-    width: 24,
-    height: 24,
-    tintColor: '#1DA1FA',
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: 'PlusJakartaSans-Bold',
-    textAlign: 'center',
-    marginBottom: 16,
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 16,
-    // fontFamily: 'PlusJakartaSans-Regular',
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  imageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 40,
-  },
-  largeImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 24,
-    tintColor: '#1DA1FA',
-  },
-  imageText: {
-    fontSize: 18,
-    // fontFamily: 'PlusJakartaSans-SemiBold',
-    color: '#374151',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  guidelinesContainer: {
-    marginBottom: 40,
-  },
-  guideline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  guidelineIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 12,
-    tintColor: '#1DA1FA',
-  },
-  guidelineText: {
-    fontSize: 16,
-    // fontFamily: 'PlusJakartaSans-Medium', 
-    color: '#374151',
-  },
-  bottomPrompt: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  verificationButton: {
-    backgroundColor: '#1DA1FA',
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    // fontFamily: 'PlusJakartaSans-SemiBold',
-    color: '#ffffff',
-  },
-});
