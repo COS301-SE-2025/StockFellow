@@ -1,0 +1,18 @@
+services:
+  user-service:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_URL=mongodb://mongodb:27017/stokvel_db
+    networks:
+      - stockfellow-net
+    command: npm test
+  mongodb:
+    image: mongo
+    networks:
+      - stockfellow-net
+
+networks:
+  stockfellow-net:
+    driver: bridge
