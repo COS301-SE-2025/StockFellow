@@ -47,6 +47,7 @@ const FormField = ({
           outlineStyle={{ borderRadius: 12 }}
           outlineColor={error ? "#FF3B30" : "#C5C6CC"}
           activeOutlineColor={error ? "#FF3B30" : "#1DA1FA"}
+          contextMenuHidden={true}
           right={
             isPasswordField && (
               <TextInput.Icon
