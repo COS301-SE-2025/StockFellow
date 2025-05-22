@@ -14,7 +14,7 @@ export default function SplashPage() {
     // Auto-navigate after delay
     const timer = setTimeout(() => {
       router.push('/(auth)/login');
-    }, 5000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
 

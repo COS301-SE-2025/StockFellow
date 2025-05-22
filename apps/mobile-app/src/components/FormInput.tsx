@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TouchableOpacity, Image } from "react-native";
+import { View, TouchableOpacity, Image, Text } from "react-native";
 import { TextInput } from "react-native-paper";
 import { icons } from "../constants";
 
@@ -9,6 +9,8 @@ type FormFieldProps = {
   placeholder: string;
   handleChangeText: (text: string) => void;
   otherStyles?: string;
+  error?: string;
+  secureTextEntry?: boolean;
   [key: string]: any;
 };
 
@@ -18,27 +20,21 @@ const FormField = ({
   placeholder,
   handleChangeText,
   otherStyles = "",
+  error = "",
   ...props
 }: FormFieldProps) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const toggleVisibility = () => {
-    if (title === "Password") {
-      setShowPassword(!showPassword);
-    } else if (title === "Confirm Password") {
-      setShowConfirmPassword(!showConfirmPassword);
-    }
+    setShowPassword(!showPassword);
   };
 
-  const isPasswordField = title === "Password" || title === "Confirm Password";
-  const shouldHideText = 
-    (title === "Password" && !showPassword) || 
-    (title === "Confirm Password" && !showConfirmPassword);
+  const isPasswordField = title.includes("Password");
+  const shouldHideText = isPasswordField && !showPassword;
 
   return (
     <View className={otherStyles}>
-      <View className="w-full h-16 flex-1">
+      <View className="w-full">
         <TextInput
           mode="outlined"
           label={title}
@@ -49,8 +45,8 @@ const FormField = ({
           secureTextEntry={shouldHideText}
           className="flex-1 bg-transparent"
           outlineStyle={{ borderRadius: 12 }}
-          outlineColor="#C5C6CC"
-          activeOutlineColor="#1DA1FA"
+          outlineColor={error ? "#FF3B30" : "#C5C6CC"}
+          activeOutlineColor={error ? "#FF3B30" : "#1DA1FA"}
           right={
             isPasswordField && (
               <TextInput.Icon
@@ -68,6 +64,9 @@ const FormField = ({
           }
           {...props}
         />
+        {error && (
+          <Text className="text-red-500 text-xs mt-1 ml-3">{error}</Text>
+        )}
       </View>
     </View>
   );

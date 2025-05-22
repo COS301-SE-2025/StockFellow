@@ -1,11 +1,10 @@
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
-import { images } from '../../src/constants';
 import { StatusBar } from 'expo-status-bar';
 
 const Login = () => {
@@ -14,22 +13,53 @@ const Login = () => {
     password: ''
   });
 
+  const [errors, setErrors] = useState({
+    email: '',
+    password: ''
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
+  const validateForm = () => {
+    let valid = true;
+    const newErrors = { email: '', password: '' };
+
+    if (!form.email) {
+      newErrors.email = 'Email is required';
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = 'Email is invalid';
+      valid = false;
+    }
+
+    if (!form.password) {
+      newErrors.password = 'Password is required';
+      valid = false;
+    } else if (form.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+      valid = false;
+    }
+
+    setErrors(newErrors);
+    return valid;
+  };
+
   const handleLogin = async () => {
-    // Your login logic here
+    if (validateForm()) {
+      setIsSubmitting(true);
+      // Your login logic here
+      // router.push('/home');
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <GestureHandlerRootView className='flex-1'>
       <StatusBar style="light" />
-      {/* Blue header section */}
       <View className='h-40 bg-[#1DA1FA] w-full absolute top-0' />
-      <SafeAreaView className='flex-1  '>
-        {/* Blue background with white "sheet" */}
+      <SafeAreaView className='flex-1'>
         <View className='flex-1 pt-20 bg-[#1DA1FA]'>
-          {/* White "bottom sheet" container */}
           <View className='flex-1 bg-white rounded-t-[60px] mt-20 p-8'>
             <ScrollView 
               contentContainerStyle={{ flexGrow: 1 }}
@@ -37,7 +67,9 @@ const Login = () => {
             >
               <View className='flex-1 justify-start'>
                 <Text className="text-2xl text-left font-semibold my-3">Login</Text>
-                <Text className="text-m text-left mb-3 text-[#71727A] font-light">Access your existing account</Text>
+                <Text className="text-m text-left mb-3 text-[#71727A] font-light">
+                  Access your existing account
+                </Text>
 
                 <FormInput
                   title="Email"
@@ -46,6 +78,7 @@ const Login = () => {
                   otherStyles="mt-3"
                   keyboardType="email-address"
                   placeholder='Email Address'
+                  error={errors.email}
                 />
 
                 <FormInput
@@ -54,6 +87,8 @@ const Login = () => {
                   handleChangeText={(e) => setForm({...form, password: e})}
                   otherStyles="mt-3"
                   placeholder='Password'
+                  secureTextEntry
+                  error={errors.password}
                 />
 
                 <Link href="/forgot-password" className="text-[#1DA1FA] font-medium self-start mt-4 mb-4 text-sm">
@@ -75,15 +110,6 @@ const Login = () => {
                   </Link>
                 </View>
               </View>
-
-              {/* <View className="flex-row justify-center gap-4 mt-8 pb-10">
-                <Link href="/terms" className="text-blue-400 font-semibold text-sm">
-                  Terms of Use
-                </Link>
-                <Link href="/privacy" className="text-blue-400 font-semibold text-sm">
-                  Privacy Policy
-                </Link>
-              </View> */}
             </ScrollView>
           </View>
         </View>

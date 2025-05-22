@@ -1,5 +1,4 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "allowJs": true,
     "strict": true,
@@ -8,22 +7,33 @@
       "dom",
       "esnext"
     ],
+    "module": "esnext",
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "src/*"
       ]
-    }
+    },
+    "types": [
+      "expo",
+      "node"
+    ],
+    "noEmit": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ],
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "**/*.js",
+    "src/**/*",
     "nativewind-env.d.ts"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
