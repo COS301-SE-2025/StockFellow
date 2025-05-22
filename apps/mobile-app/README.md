@@ -2,80 +2,106 @@
 
 ### Prerequisites
 
-- **Node.js**: v18 or later ([Download](https://nodejs.org/en/download/)).
+- **Node.js**: v18 or later ([Download](https://nodejs.org/)).
 - **Git**: For cloning the repository.
-- **Expo CLI**: `npm install -g expo-cli`.
+- **Expo CLI**: For managing the mobile app.
 - **Expo Go App**: For testing on iOS/Android devices.
-- **Emulator/Simulator** (optional): Android Studio (Android) or Xcode (iOS, macOS only).
-- **Editor**: VS Code with ESLint/Prettier extensions.
+- **Emulator/Simulator**: Android Studio (Android) or Xcode (iOS, macOS only).
+- **Editor**: VS Code with ESLint, Prettier, and TypeScript extensions.
+- **Terminal**: PowerShell (Windows), Terminal (macOS), or equivalent (Linux).
 
 ### Setup Instructions
 
+Follow these steps to set up the StockFellow mobile app on your machine. Commands are provided for PowerShell, but they work in other terminals with slight syntax adjustments (e.g., use `rm -rf` instead of `Remove-Item`).
+
 1. **Clone the Repository**:
-   ```bash
+   ```powershell
+   cd C:\Users\<YourUsername>\Projects
    git clone <repository-url>
    cd stockfellow
    ```
+   - Replace `<repository-url>` with your GitHub repo URL (e.g., `https://github.com/your-team/stockfellow.git`).
 
 2. **Install Node.js**:
    - Verify: `node --version` (should show v18.x.x).
-   - If needed, install via [nodejs.org](https://nodejs.org/en/download/) or:
-     ```bash
+   - If not installed, download from [nodejs.org](https://nodejs.org/) or use:
+     ```powershell
      nvm install 18
      nvm use 18
      ```
 
-3. **Install Expo CLI**:
-   ```bash
-   npm install -g expo-cli
-   expo --version
-   ```
 
-4. **Install Dependencies**:
-   ```bash
+3. **Initial Installation Project Dependencies**:
+   ```powershell
    npm install
    ```
-   - Installs dependencies for all workspaces (`apps/`, `services/`, `packages/`).
+   - Installs dependencies for all workspaces (`apps/`, `services/`, `packages/`), hoisting shared packages to the root `node_modules/`.
 
-5. **Set Up Environment Variables**:
-   - Copy `apps/mobile-app/.env.example` to `apps/mobile-app/.env` if present.
-   - Add required values (e.g., API URLs) from the team lead.
-
-6. **Start the Mobile App**:
-   ```bash
+3. **If You want to install a new package for the mobile app**:
+   ```powershell
    cd apps/mobile-app
-   expo start
+   npm install <package-name>
    ```
-   - Test with Expo Go (scan QR code) or emulator (`a` for Android, `i` for iOS).
 
-7. **Run Tests**:
-   ```bash
+
+7. **Start the Mobile App**:
+   ```powershell
+   cd apps/mobile-app
+   npx expo start --clear
+   ```
+   -Or from the root folder
+   ```powershell
+   npm run start --workspace=mobile-app
+   ```
+   - The `--clear` flag resets the Metro cache.
+   - Test with:
+     - **Expo Go**: Scan the QR code on an iOS/Android device.
+     - **Emulator**: Press `a` (Android Studio) or `i` (Xcode, macOS only).
+   - If connection issues occur, use:
+     ```powershell
+     npx expo start --tunnel
+     ```
+
+8. **Run Tests**:
+   ```powershell
    npm test --workspace=apps/mobile-app
    npm run test:cypress --workspace=apps/mobile-app
    ```
+   - Ensures Jest (unit) and Cypress (end-to-end) tests pass, aligning with N6.3 (Automated testing).
+
+9. **Git Workflow**:
+   - Create a feature branch:
+     ```powershell
+     git checkout -b feature/<your-name>/<feature-name>
+     ```
+     Example: `git checkout -b feature/tinotenda/login-screen`
+   - Commit and push:
+     ```powershell
+     git add .
+     git commit -m "Add login screen"
+     git push origin feature/<your-name>/<feature-name>
+     ```
+   - Create a pull request on GitHub for review.
+
 ## Troubleshooting
 
-- **Version Conflicts**: Check with `npm ls react-native` and align versions in `package.json`.
-- **Metro Slow**: Add `apps/mobile-app/metro.config.js`:
-  ```javascript
-  const { getDefaultConfig } = require('expo/metro-config');
-  const path = require('path');
-
-  const config = getDefaultConfig(__dirname);
-  config.watchFolders = [
-    path.resolve(__dirname, '../..'),
-    path.resolve(__dirname, '../../packages')
-  ];
-  config.resolver.nodeModulesPaths = [
-    path.resolve(__dirname, 'node_modules'),
-    path.resolve(__dirname, '../..', 'node_modules')
-  ];
-  module.exports = config;
-  ```
-- **Expo Go Fails**: Use `expo start --tunnel`.
+- **Expo Go Connection**:
+  - Ensure device and computer are on the same Wi-Fi or use `--tunnel`.
+- **Node.js Version**:
+  - Verify: `node --version`. Use `nvm use 18` if incorrect.
+- **Slow Metro**:
+  - The provided `metro.config.js` optimizes monorepo performance.
 
 ## Resources
 
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Native Documentation](https://reactnative.dev/)
 - [npm Workspaces](https://docs.npmjs.com/cli/v7/using-npm/workspaces/)
+- [GitHub Actions](https://docs.github.com/en/actions)
+- [AWS Free Tier](https://aws.amazon.com/free/)
+- [React Native Paper](https://callstack.github.io/react-native-paper/)
+
+
+## License
+
+0BSD (see `apps/mobile-app/package.json`).
