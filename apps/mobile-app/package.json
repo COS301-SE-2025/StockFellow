@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "^5.1.4",
     "@react-native-vector-icons/material-design-icons": "^12.0.0",
     "@react-navigation/native": "^7.1.9",
     "expo": "~53.0.9",
@@ -19,7 +20,7 @@
     "nativewind": "^4.1.23",
     "react": "19.0.0",
     "react-native": "0.79.2",
-    "react-native-gesture-handler": "2.24.0",
+    "react-native-gesture-handler": "~2.24.0",
     "react-native-paper": "^5.14.5",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",

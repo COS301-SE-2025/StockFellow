@@ -38,19 +38,19 @@ const FormField = ({
 
   return (
     <View className={otherStyles}>
-      <View className="w-full h-16 flex-row items-center">
+      <View className="w-full h-16 flex-1">
         <TextInput
           mode="outlined"
           label={title}
           value={value}
           placeholder={placeholder}
-          placeholderTextColor="#7B7B8B"
+          placeholderTextColor="#8F9098"
           onChangeText={handleChangeText}
           secureTextEntry={shouldHideText}
           className="flex-1 bg-transparent"
           outlineStyle={{ borderRadius: 12 }}
-          outlineColor="#8E8E8E"
-          activeOutlineColor="#007D05"
+          outlineColor="#C5C6CC"
+          activeOutlineColor="#1DA1FA"
           right={
             isPasswordField && (
               <TextInput.Icon
@@ -58,7 +58,7 @@ const FormField = ({
                   <TouchableOpacity onPress={toggleVisibility}>
                     <Image
                       source={shouldHideText ? icons.eye : icons.eyehide}
-                      className="w-6 h-6 mt-3"
+                      className="w-6 h-6"
                       resizeMode="contain"
                     />
                   </TouchableOpacity>
