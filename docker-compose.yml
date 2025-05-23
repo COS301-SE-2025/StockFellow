@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Keycloak
+  postgres:
+    image: postgres:15
+    container_name: keycloak-postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
+    command: start-dev --import-realm
+
+  # MongoDB Database for user-service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    networks:
+      - stockfellow-net
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+
+  # api-gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - keycloak
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # For debugging
+    environment:
+      - NODE_ENV=development
+      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stokvel-realm
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/api-gateway/src:/usr/src/app/src
+      - /usr/src/app/node_modules
+    command: npx nodemon --inspect=0.0.0.0:9229 src/server.js
+
+  # user-service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    depends_on:
+      - mongodb
+      - keycloak
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/stokvel_db
+      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stockfellow
+    networks:
+      - stockfellow-net
+    command: npm start
+
+networks:
+  stockfellow-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
