@@ -1,0 +1,40 @@
+# Stage 1: Build the application
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy root package.json and lockfile to leverage workspace
+COPY package.json package-lock.json ./
+COPY apps/mobile-app/package.json ./apps/mobile-app/
+COPY packages/ ./packages/
+
+# Install root dependencies and mobile-app dependencies
+RUN npm install --workspace=stockfellow --workspace=mobile-app
+
+# Copy all files
+COPY . .
+
+# Build the mobile app
+WORKDIR /app/apps/mobile-app
+RUN npm run build
+
+# Stage 2: Serve the application
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy built files from builder
+COPY --from=builder /app/apps/mobile-app ./
+
+# Install production dependencies only
+RUN npm install --omit=dev
+
+# Install Expo CLI globally
+RUN npm install -g expo-cli
+
+# Expose the port Expo uses
+EXPOSE 19000 19001 19002
+
+# Start the application
+CMD ["expo", "start", "--no-dev", "--minify"]
