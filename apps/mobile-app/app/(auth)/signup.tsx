@@ -6,13 +6,13 @@ import FormInput from '../../src/components/FormInput';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const SignUp = () => {
   const [form, setForm] = useState({
-    username: '',  
-    firstName: '', 
-    lastName: '',  
+    username: '',
+    firstName: '',
+    lastName: '',
     contactNumber: '',
     idNumber: '',
     email: '',
@@ -21,9 +21,9 @@ const SignUp = () => {
   });
 
   const [errors, setErrors] = useState({
-    username: '',  
-    firstName: '', 
-    lastName: '',  
+    username: '',
+    firstName: '',
+    lastName: '',
     contactNumber: '',
     idNumber: '',
     email: '',
@@ -53,13 +53,13 @@ const SignUp = () => {
       newErrors.contactNumber = 'Contact number is required';
       valid = false;
     } else {
-      
+
       const cleanNumber = form.contactNumber.replace(/\s+/g, '');
       if (!/^0[0-9]{9}$/.test(cleanNumber)) {
         newErrors.contactNumber = 'Please enter a valid 10-digit phone number';
         valid = false;
       } else {
-        
+
         newErrors.contactNumber = '';
         // Update the form with the cleaned number before sending to Keycloak
         form.contactNumber = cleanNumber;
@@ -102,18 +102,18 @@ const SignUp = () => {
   };
 
   const handlePasswordChange = (text: string) => {
-    setForm({...form, password: text});
+    setForm({ ...form, password: text });
     passwordRef.current = text;
   };
 
   const handleConfirmPasswordChange = (text: string) => {
-    
+
     if (text.length > form.confirmPassword.length + 1) {
-      
-      setForm({...form, confirmPassword: ''});
-      setErrors({...errors, confirmPassword: 'Pasting is not allowed'});
+
+      setForm({ ...form, confirmPassword: '' });
+      setErrors({ ...errors, confirmPassword: 'Pasting is not allowed' });
     } else {
-      setForm({...form, confirmPassword: text});
+      setForm({ ...form, confirmPassword: text });
     }
   };
 
@@ -141,7 +141,7 @@ const SignUp = () => {
           throw new Error('Failed to get admin token');
         }
 
-        
+
         const createUserResponse = await fetch('http://10.0.2.2:8080/admin/realms/stockfellow/users', {
           method: 'POST',
           headers: {
@@ -149,7 +149,7 @@ const SignUp = () => {
             'Authorization': `Bearer ${tokenData.access_token}`
           },
           body: JSON.stringify({
-            username: form.email, 
+            username: form.username,
             enabled: true,
             emailVerified: true,
             firstName: form.firstName,
@@ -172,7 +172,7 @@ const SignUp = () => {
           throw new Error(errorData.errorMessage || 'Registration failed');
         }
 
-       
+
         const loginFormData = new URLSearchParams();
         loginFormData.append('grant_type', 'password');
         loginFormData.append('client_id', 'public-client');
@@ -194,17 +194,17 @@ const SignUp = () => {
         }
 
         // Store tokens
-        await AsyncStorage.setItem('access_token', loginData.access_token);
-        await AsyncStorage.setItem('refresh_token', loginData.refresh_token);
+        await SecureStore.setItemAsync('access_token', loginData.access_token);
+        await SecureStore.setItemAsync('refresh_token', loginData.refresh_token);
 
-        
-        router.push('/(app)/homepage');
+
+        router.push('/login');
       } catch (error) {
         console.error('Registration error:', error);
         setErrors({
           ...errors,
-          email: error instanceof Error ? 
-            error.message : 
+          email: error instanceof Error ?
+            error.message :
             'Registration failed. Please try again.',
         });
       } finally {
@@ -233,7 +233,7 @@ const SignUp = () => {
                 <FormInput
                   title="First Name"
                   value={form.firstName}
-                  handleChangeText={(e) => setForm({...form, firstName: e})}
+                  handleChangeText={(e) => setForm({ ...form, firstName: e })}
                   otherStyles="mt-3"
                   placeholder='Jane'
                   error={errors.firstName}
@@ -242,7 +242,7 @@ const SignUp = () => {
                 <FormInput
                   title="Last Name"
                   value={form.lastName}
-                  handleChangeText={(e) => setForm({...form, lastName: e})}
+                  handleChangeText={(e) => setForm({ ...form, lastName: e })}
                   otherStyles="mt-3"
                   placeholder='Doe'
                   error={errors.lastName}
@@ -251,7 +251,7 @@ const SignUp = () => {
                 <FormInput
                   title="Username"
                   value={form.username}
-                  handleChangeText={(e) => setForm({...form, username: e})}
+                  handleChangeText={(e) => setForm({ ...form, username: e })}
                   otherStyles="mt-3"
                   placeholder='johndoe'
                   error={errors.username}
@@ -261,10 +261,10 @@ const SignUp = () => {
                   title="Contact Number"
                   value={form.contactNumber}
                   handleChangeText={(e) => {
-                    setForm({...form, contactNumber: e});
+                    setForm({ ...form, contactNumber: e });
                     // Clear the error when user starts typing
                     if (errors.contactNumber) {
-                      setErrors({...errors, contactNumber: ''});
+                      setErrors({ ...errors, contactNumber: '' });
                     }
                   }}
                   otherStyles="mt-3"
@@ -276,7 +276,7 @@ const SignUp = () => {
                 <FormInput
                   title="ID Number"
                   value={form.idNumber}
-                  handleChangeText={(e) => setForm({...form, idNumber: e})}
+                  handleChangeText={(e) => setForm({ ...form, idNumber: e })}
                   otherStyles="mt-3"
                   keyboardType="numeric"
                   placeholder='8601011234567'
@@ -286,7 +286,7 @@ const SignUp = () => {
                 <FormInput
                   title="Email Address"
                   value={form.email}
-                  handleChangeText={(e) => setForm({...form, email: e})}
+                  handleChangeText={(e) => setForm({ ...form, email: e })}
                   otherStyles="mt-3"
                   keyboardType="email-address"
                   placeholder='jane@example.com'

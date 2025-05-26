@@ -6,7 +6,7 @@ import FormInput from '../../src/components/FormInput';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -48,14 +48,14 @@ const Login = () => {
       setIsSubmitting(true);
       try {
         console.log('Attempting login...');
-        
+
         // Create URLSearchParams to match the working Postman request
         const formData = new URLSearchParams();
         formData.append('grant_type', 'password');
         formData.append('client_id', 'public-client');
         formData.append('username', form.username);
         formData.append('password', form.password);
-        
+
         const response = await fetch('http://10.0.2.2:8080/realms/stockfellow/protocol/openid-connect/token', {
           method: 'POST',
           headers: {
@@ -69,23 +69,23 @@ const Login = () => {
 
         console.log('Response received:', response.status);
         const data = await response.json();
-        
+
         if (!response.ok) {
           console.error('Login failed:', data);
           throw new Error(data.error_description || 'Login failed');
         }
 
         console.log('Login successful');
-        await AsyncStorage.setItem('access_token', data.access_token);
-        await AsyncStorage.setItem('refresh_token', data.refresh_token);
+        await SecureStore.setItemAsync('access_token', data.access_token);
+        await SecureStore.setItemAsync('refresh_token', data.refresh_token);
 
-        router.push('/(app)/homepage');
+        router.push('/(tabs)/home');
       } catch (error) {
         console.error('Login error:', error);
         setErrors({
           ...errors,
-          username: error instanceof Error ? 
-            error.message : 
+          username: error instanceof Error ?
+            error.message :
             'Network error. Please check your connection.',
         });
       } finally {
@@ -101,7 +101,7 @@ const Login = () => {
       <SafeAreaView className='flex-1'>
         <View className='flex-1 pt-20 bg-[#1DA1FA]'>
           <View className='flex-1 bg-white rounded-t-[60px] mt-20 p-8'>
-            <ScrollView 
+            <ScrollView
               contentContainerStyle={{ flexGrow: 1 }}
               showsVerticalScrollIndicator={false}
             >
@@ -114,7 +114,7 @@ const Login = () => {
                 <FormInput
                   title="Username"
                   value={form.username}
-                  handleChangeText={(e) => setForm({...form, username: e})}
+                  handleChangeText={(e) => setForm({ ...form, username: e })}
                   otherStyles="mt-3"
                   placeholder='Username'
                   error={errors.username}
@@ -123,7 +123,7 @@ const Login = () => {
                 <FormInput
                   title="Password"
                   value={form.password}
-                  handleChangeText={(e) => setForm({...form, password: e})}
+                  handleChangeText={(e) => setForm({ ...form, password: e })}
                   otherStyles="mt-3"
                   placeholder='Password'
                   secureTextEntry
