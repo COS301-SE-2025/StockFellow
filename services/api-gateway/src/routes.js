@@ -10,8 +10,14 @@ const ROUTES = [
             target: "http://user-service:4000",
             changeOrigin: true,
             pathRewrite: {
-                [`^/api`]: '', // Removes /api prefix
+                [`^/auth`]: '/auth',
             },
+            // Add CORS headers
+            onProxyRes: function(proxyRes, req, res) {
+                proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+                proxyRes.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS';
+                proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+            }
         }
     },
     {
