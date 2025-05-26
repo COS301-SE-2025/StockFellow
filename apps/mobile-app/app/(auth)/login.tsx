@@ -79,7 +79,7 @@ const Login = () => {
         await AsyncStorage.setItem('access_token', data.access_token);
         await AsyncStorage.setItem('refresh_token', data.refresh_token);
 
-        router.push('/(app)/dashboard');
+        router.push('/(app)/homepage');
       } catch (error) {
         console.error('Login error:', error);
         setErrors({
