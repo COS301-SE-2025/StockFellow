@@ -55,6 +55,36 @@ const setupAuth = (app, routes) => {
             res.redirect(keycloak.logoutUrl());
         });
 
+        // authentication endpoint
+        app.post('/auth/login', async (req, res) => {
+            try {
+                console.log('Login request received:', { 
+                    username: req.body.username,
+                    hasPassword: !!req.body.password 
+                });
+                
+                const { username, password } = req.body;
+                const grant = await keycloak.grantManager.obtainDirectly(username, password);
+                
+                console.log('Login successful for user:', username);
+                res.json({
+                    access_token: grant.access_token.token,
+                    refresh_token: grant.refresh_token.token,
+                    expires_in: grant.access_token.content.exp
+                });
+            } catch (error) {
+                console.error('Detailed login error:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                res.status(401).json({ 
+                    error: 'Authentication failed',
+                    details: error.message 
+                });
+            }
+        });
+
     routes.forEach(r => {
         if (r.auth) {
             app.use(r.url, keycloak.protect(), function (req, res, next) {
@@ -66,3 +96,5 @@ const setupAuth = (app, routes) => {
 }
 
 exports.setupAuth = setupAuth
+
+
