@@ -43,17 +43,6 @@ services:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
     command: start-dev --import-realm
 
-  # MongoDB Database for user-service
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    networks:
-      - stockfellow-net
-    volumes:
-      - mongodb_data:/data/db
-    ports:
-      - "27017:27017"
-
   # api-gateway
   api-gateway:
     build:
