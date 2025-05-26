@@ -43,16 +43,6 @@ services:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
     command: start-dev --import-realm
 
-  # MongoDB Database for user-service
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    networks:
-      - stockfellow-net
-    volumes:
-      - mongodb_data:/data/db
-    ports:
-      - "27017:27017"
 
   # api-gateway
   api-gateway:
@@ -82,14 +72,13 @@ services:
       dockerfile: Dockerfile
     container_name: user-service
     depends_on:
-      - mongodb
       - keycloak
     ports:
       - "4000:4000"
     environment:
       - PORT=4000
-      - MONGODB_URI=mongodb://mongodb:27017/stokvel_db
-      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stockfellow
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stockfellowmongodb
     networks:
       - stockfellow-net
     command: npm start
@@ -101,13 +90,12 @@ services:
       dockerfile: Dockerfile
     container_name: group-service
     depends_on:
-      - mongodb
       - keycloak
     ports:
       - "4040:4040"
     environment:
       - PORT=4040
-      - MONGODB_URI=mongodb://mongodb:27017/stokvel_db
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
     networks:

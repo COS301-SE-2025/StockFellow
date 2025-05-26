@@ -7,7 +7,7 @@ const app = express();
 
 mongoose.set('strictQuery', true);
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stokvel_db', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('Connected to MongoDB'))
