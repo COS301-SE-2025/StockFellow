@@ -17,7 +17,8 @@ class RegisterUserCommand {
     }
 
     // Assume token is verified by middleware; extract sub
-    const userId = token.sub;
+    //const userId = token.sub;
+    const userId = 'e20f93e2-d283-4100-a5fa-92c61d85b4f4'; // Placeholder for user ID, replace with actual user ID from JWT
 
     // Store user data in MongoDB via event sourcing
     const event = await eventStore.appendEvent('UserRegistered', {

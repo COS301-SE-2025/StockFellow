@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwtMiddleware = require('../config/jwt');
-const createGroupCommand = require('../commands/createGroup');
+const createGroupCommand = require('../commands/createGroups');
 
 // GET /api/groups - Service info
 router.get('/', async (req, res) => {
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/groups/create - Create a new stokvel group
-router.post('/create', jwtMiddleware, async (req, res) => {
+router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
   try {
     const { name, contributionAmount, contributionType, numberOfMembers, description, payoutAmount } = req.body;
 
@@ -45,7 +45,8 @@ router.post('/create', jwtMiddleware, async (req, res) => {
     }
 
     const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const adminId = req.user.sub;
+    //const adminId = req.user.sub;
+    const adminId = 'e20f93e2-d283-4100-a5fa-92c61d85b4f4'; // Placeholder for admin ID, replace with actual user ID from JWT
 
     const event = await createGroupCommand.execute({
       groupId,

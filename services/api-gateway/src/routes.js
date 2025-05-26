@@ -7,7 +7,7 @@ const ROUTES = [
             max: 100
         },
         proxy: {
-            target: "http://localhost:5000",
+            target: "http://localhost:4000",
             changeOrigin: true,
             pathRewrite: {
                 [`^/auth`]: '/auth',
@@ -22,7 +22,7 @@ const ROUTES = [
             max: 5
         },
         proxy: {
-            target: "http://localhost:5000",
+            target: "http://localhost:4000",
             changeOrigin: true,
             pathRewrite: {
                 [`^/user`]: '',

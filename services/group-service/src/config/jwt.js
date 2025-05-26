@@ -21,7 +21,7 @@ const jwtMiddleware = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   jwt.verify(token, getKey, {
-    issuer: process.env.KEYCLOAK_ISSUER || 'http://localhost:8080/auth/realms/stockfellow',
+    issuer: process.env.KEYCLOAK_JWKS_URI || 'http://localhost:8080/realms/stockfellow/protocol/openid-connect/token',
     algorithms: ['RS256']
   }, (err, decoded) => {
     if (err) {
