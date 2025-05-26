@@ -6,3 +6,5 @@ coverage/
 .coverage
 *.lcov
 *.lcov.info
+
+*.env
