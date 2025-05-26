@@ -1,28 +1,35 @@
 const eventStore = require('../events/eventStore');
 const readModel = require('../models/readModel');
-const axios = require('axios');
 const logger = require('../utils/logger');
 
 class RegisterUserCommand {
-  async execute(userId, name, email, saId, password) {
+  async execute(token, userData) {
+    const { name, email, saId, mobileNumber } = userData;
+
     if (!saId || saId.length !== 13 || !/^\d+$/.test(saId)) {
       throw new Error('Invalid SA ID');
     }
-
-    try {
-      await axios.post(
-        'http://localhost:3000/auth/register', // Gateway endpoint
-        { username: email, email, firstName: name.split(' ')[0], lastName: name.split(' ').slice(1).join(' '), enabled: true, credentials: [{ type: 'password', value: password, temporary: false }] },
-        { headers: { 'Authorization': `Bearer mock-admin-token` } } // Mocked for Demo 1
-      );
-      logger.info(`User ${userId} registered via gateway`);
-    } catch (error) {
-      logger.error(`Registration failed: ${error.message}`);
-      throw new Error('Registration failed');
+    if (!mobileNumber || !/^\+?\d{10,15}$/.test(mobileNumber)) {
+      throw new Error('Invalid mobile number');
+    }
+    if (!name || !email) {
+      throw new Error('Missing required fields');
     }
 
-    const event = await eventStore.appendEvent('UserRegistered', { userId, name, email, saId });
+    // Assume token is verified by middleware; extract sub
+    const userId = token.sub;
+
+    // Store user data in MongoDB via event sourcing
+    const event = await eventStore.appendEvent('UserRegistered', {
+      userId,
+      name,
+      email,
+      saId,
+      mobileNumber
+    });
     await readModel.rebuildState(userId);
+    logger.info(`User ${userId} registered successfully`);
+
     return event;
   }
 }

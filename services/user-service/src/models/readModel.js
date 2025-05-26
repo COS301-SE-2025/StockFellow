@@ -1,39 +1,49 @@
-const eventStore = require('../events/eventStore');
 const mongoose = require('mongoose');
+const eventStore = require('../events/eventStore');
 
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  saId: { type: String, required: true }, // Encrypted in production
-  tier: { type: String, default: 'Tier 1' }
+  name: String,
+  email: String,
+  saId: String,
+  mobileNumber: String
 });
 
 const User = mongoose.model('User', userSchema);
 
-class UserReadModel {
+class ReadModel {
   async rebuildState(userId) {
     const events = await eventStore.getEvents(userId);
+    let userData = null;
+
     for (const event of events) {
       if (event.eventType === 'UserRegistered') {
-        await User.findOneAndUpdate(
-          { userId: event.data.userId },
-          {
-            userId: event.data.userId,
-            name: event.data.name,
-            email: event.data.email,
-            saId: event.data.saId,
-            tier: 'Tier 1'
-          },
-          { upsert: true }
-        );
+        userData = {
+          userId: event.data.userId,
+          name: event.data.name,
+          email: event.data.email,
+          saId: event.data.saId,
+          mobileNumber: event.data.mobileNumber
+        };
       }
+    }
+
+    if (userData) {
+      await User.findOneAndUpdate(
+        { userId: userData.userId },
+        userData,
+        { upsert: true, new: true }
+      );
     }
   }
 
   async getUser(userId) {
     return await User.findOne({ userId });
   }
+
+  async getAllUsers() {
+    return await User.find();
+  }
 }
 
-module.exports = new UserReadModel();
+module.exports = new ReadModel();

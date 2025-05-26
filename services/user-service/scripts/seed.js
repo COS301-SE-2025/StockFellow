@@ -21,7 +21,13 @@ const mockUsers = [
     name: 'Thabo Mokoena',
     email: 'thabo.mokoena@example.com',
     saId: '4567891234567'
-  }
+  },
+  {
+    userId: '308da984-ffda-4b49-abc4-be94b9452085',
+    name: 'Test User',
+    email: 'testuser1@mail.com',
+    saId: '4567891234567'
+  }  
 ];
 
 async function seedDatabase() {

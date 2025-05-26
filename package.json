@@ -16,7 +16,9 @@
     "format": "prettier --write \"**/*.{js,ts,tsx,md}\"",
     "prepare": "husky install",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "mobile:start": "npm run start --workspace=apps/mobile-app",
+    "mobile:install": "npm install --workspace=apps/mobile-app"
   },
   "devDependencies": {
     "eslint": "^8.42.0",
