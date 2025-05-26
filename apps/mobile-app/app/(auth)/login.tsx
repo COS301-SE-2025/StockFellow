@@ -6,15 +6,16 @@ import FormInput from '../../src/components/FormInput';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Login = () => {
   const [form, setForm] = useState({
-    email: '',
+    username: '',
     password: ''
   });
 
   const [errors, setErrors] = useState({
-    email: '',
+    username: '',
     password: ''
   });
 
@@ -23,13 +24,10 @@ const Login = () => {
 
   const validateForm = () => {
     let valid = true;
-    const newErrors = { email: '', password: '' };
+    const newErrors = { username: '', password: '' };
 
-    if (!form.email) {
-      newErrors.email = 'Email is required';
-      valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      newErrors.email = 'Email is invalid';
+    if (!form.username) {
+      newErrors.username = 'Username is required';
       valid = false;
     }
 
@@ -48,9 +46,51 @@ const Login = () => {
   const handleLogin = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
-      // Your login logic here
-      // router.push('/home');
-      setIsSubmitting(false);
+      try {
+        console.log('Attempting login...');
+        
+        // Create URLSearchParams to match the working Postman request
+        const formData = new URLSearchParams();
+        formData.append('grant_type', 'password');
+        formData.append('client_id', 'public-client');
+        formData.append('username', form.username);
+        formData.append('password', form.password);
+        
+        const response = await fetch('http://10.0.2.2:8080/realms/stockfellow/protocol/openid-connect/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+        }).catch(error => {
+          console.error('Network error details:', error);
+          throw new Error('Network request failed');
+        });
+
+        console.log('Response received:', response.status);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Login failed:', data);
+          throw new Error(data.error_description || 'Login failed');
+        }
+
+        console.log('Login successful');
+        await AsyncStorage.setItem('access_token', data.access_token);
+        await AsyncStorage.setItem('refresh_token', data.refresh_token);
+
+        router.push('/(app)/homepage');
+      } catch (error) {
+        console.error('Login error:', error);
+        setErrors({
+          ...errors,
+          username: error instanceof Error ? 
+            error.message : 
+            'Network error. Please check your connection.',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -72,13 +112,12 @@ const Login = () => {
                 </Text>
 
                 <FormInput
-                  title="Email"
-                  value={form.email}
-                  handleChangeText={(e) => setForm({...form, email: e})}
+                  title="Username"
+                  value={form.username}
+                  handleChangeText={(e) => setForm({...form, username: e})}
                   otherStyles="mt-3"
-                  keyboardType="email-address"
-                  placeholder='Email Address'
-                  error={errors.email}
+                  placeholder='Username'
+                  error={errors.username}
                 />
 
                 <FormInput

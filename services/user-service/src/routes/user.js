@@ -25,6 +25,7 @@ router.get('/', async (req, res) => {
 router.get('/profile', jwtMiddleware, async (req, res) => {
   try {
     const user = await readModel.getUser(req.user.sub);
+    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

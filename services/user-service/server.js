@@ -12,4 +12,4 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
-app.listen(process.env.PORT || 4001, () => console.log('User Service running on port 4000'));
+app.listen(process.env.PORT || 4000, () => console.log('User Service running on port 4000'));
