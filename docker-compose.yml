@@ -71,13 +71,12 @@ services:
       dockerfile: Dockerfile
     container_name: user-service
     depends_on:
-      - mongodb
       - keycloak
     ports:
       - "4000:4000"
     environment:
       - PORT=4000
-      - MONGODB_URI=mongodb://mongodb:27017/stokvel_db
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
     networks:
