@@ -1,0 +1,16 @@
+{
+  "name": "group-service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^6.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "jwks-rsa": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "winston": "^3.8.0"
+  }
+}
