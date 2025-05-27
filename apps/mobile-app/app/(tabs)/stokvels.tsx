@@ -20,7 +20,7 @@ const Stokvels = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="px-6">
+      <View className="px-6 pt-6">
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
