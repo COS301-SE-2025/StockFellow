@@ -6,7 +6,9 @@ import noGlasses from "../../assets/icons/no-glasses.png";
 import noHat from "../../assets/icons/no-hat.png";
 import avoidObjects from "../../assets/icons/avoid-objects.png";
 import light from "../../assets/icons/light.png";
-
+import search from "../../assets/icons/search.png";
+import group from "../../assets/icons/group.png";
+import plus from "../../assets/icons/plus.png";
 import home from "../../assets/icons/home.png";
 import home_filled from "../../assets/icons/home_filled.png";
 import stokvel from "../../assets/icons/stokvel.png";
@@ -25,6 +27,9 @@ export default {
   noHat,
   avoidObjects,
   light,
+  search,
+  group,
+  plus,
   home,
   home_filled,
   stokvel,
