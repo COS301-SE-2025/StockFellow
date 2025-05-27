@@ -63,6 +63,7 @@ router.post('/register', /*jwtMiddleware,*/ async (req, res) => {
     
     res.status(201).json({ 
       message: 'User registered successfully',
+      //userId: req.user.sub,
       userId: user,
       eventId: event._id
     });
