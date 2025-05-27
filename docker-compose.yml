@@ -35,12 +35,14 @@ services:
       KC_DB_PASSWORD: password
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://user-service:4000
     ports:
       - "8080:8080"
     networks:
       - stockfellow-net
     volumes:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
+      - ./keycloak-extensions:/opt/keycloak/providers
     command: start-dev --import-realm
 
   # api-gateway
