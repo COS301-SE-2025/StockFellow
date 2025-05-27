@@ -1,6 +1,7 @@
 import React from 'react'; 
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { icons } from '../constants';
+import { useTheme } from '../../app/_layout';
 
 interface StokvelCardProps {
   name: string;
@@ -10,24 +11,37 @@ interface StokvelCardProps {
 }
 
 const StokvelCard: React.FC<StokvelCardProps> = ({ name, memberCount, balance, onPress }) => {
+  const { isDarkMode, colors } = useTheme();
+  
   return (
     <TouchableOpacity 
       onPress={onPress}
-      style={{ height: 85 }}
-      className="flex-row items-center bg-white mb-1 p-2"
+      style={{ 
+        height: 85, 
+      }}
+      className="flex-row items-center mb-1 p-2 rounded-lg"
     >
       {/* Left section: Icon and info */}
       <View className="flex-row items-center flex-1 ml-[-10px]">
         <Image 
           source={icons.group}
-          className="w-13 h-13 tint-[#1DA1FA]"
+          className="w-13 h-13"
+          style={{ 
+            opacity: 0.9
+          }}
         />
 
         <View>
-          <Text className="text-base font-['PlusJakartaSans-SemiBold'] text-gray-800">
+          <Text 
+            style={{ color: isDarkMode ? '#CCCCCC' : '#1A1A1A' }}
+            className="text-base font-['PlusJakartaSans-SemiBold']"
+          >
             {name}
           </Text>
-          <Text className="text-sm font-['PlusJakartaSans-Regular'] text-gray-500">
+          <Text 
+            style={{ color: isDarkMode ? '#AAAAAA' : '#6F6F6F' }}
+            className="text-sm font-['PlusJakartaSans-Regular']"
+          >
             {memberCount} Members
           </Text>
         </View>

@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { StyleSheet } from 'react-native';
 
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
-import CustomButton from '../../src/components/CustomButton';
+import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
+import { useTheme } from '../_layout';
 
 const Stokvels = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const { colors } = useTheme();
 
   const mockStokvels = [
     { id: 1, name: 'Stokvel Group 1', members: 23, balance: '15435.95' },
@@ -19,8 +20,10 @@ const Stokvels = () => {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="px-6 pt-6">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
+      <TopBar title="Stokvels" />
+      
+      <View className="px-6 pt-4">
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -30,7 +33,7 @@ const Stokvels = () => {
       
       <ScrollView className="flex-1 px-6">
         <View className="py-2">
-          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2">
+          <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2">
             Your Stokvels
           </Text>
 
@@ -44,7 +47,7 @@ const Stokvels = () => {
             />
           ))}
 
-          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-4">
+          <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-4">
             Joined Stokvels
           </Text>
 
@@ -60,9 +63,10 @@ const Stokvels = () => {
         </View>
       </ScrollView>
 
-      <View className="p-6 border-t border-gray-100 items-center">
+      <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
         <TouchableOpacity 
-          className="bg-[#1DA1FA] rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
+          style={{ backgroundColor: colors.primary }}
+          className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
           onPress={() => router.push('/create-stokvel')}
         >
           <Image 
@@ -78,5 +82,3 @@ const Stokvels = () => {
 };
 
 export default Stokvels;
-
-const styles = StyleSheet.create({});
