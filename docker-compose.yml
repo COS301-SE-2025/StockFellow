@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Keycloak
+  postgres:
+    image: postgres:15
+    container_name: keycloak-postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
+    command: start-dev --import-realm
+
+  # api-gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - keycloak
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # For debugging
+    environment:
+      - NODE_ENV=development
+      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stokvel-realm
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/api-gateway/src:/usr/src/app/src
+      - /usr/src/app/node_modules
+    command: npx nodemon --inspect=0.0.0.0:9229 src/server.js
+
+  # user-service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    depends_on:
+      - keycloak
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+    networks:
+      - stockfellow-net
+    command: npm start
+
+networks:
+  stockfellow-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:

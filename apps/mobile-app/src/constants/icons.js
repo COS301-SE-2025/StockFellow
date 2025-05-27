@@ -9,6 +9,14 @@ import light from "../../assets/icons/light.png";
 import search from "../../assets/icons/search.png";
 import group from "../../assets/icons/group.png";
 import plus from "../../assets/icons/plus.png";
+import home from "../../assets/icons/home.png";
+import home_filled from "../../assets/icons/home_filled.png";
+import stokvel from "../../assets/icons/stokvel.png";
+import stokvel_filled from "../../assets/icons/stokvel_filled.png";
+import transactions from "../../assets/icons/transactions.png";
+import transactions_filled from "../../assets/icons/transactions_filled.png";
+import profile from "../../assets/icons/profile.png";
+import profile_filled from "../../assets/icons/profile_filled.png";
 
 export default {
   eyehide,
@@ -22,4 +30,12 @@ export default {
   search,
   group,
   plus,
+  home,
+  home_filled,
+  stokvel,
+  stokvel_filled,
+  transactions,
+  transactions_filled,
+  profile,
+  profile_filled
 };

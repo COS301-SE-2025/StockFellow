@@ -6,10 +6,13 @@ import FormInput from '../../src/components/FormInput';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
+import * as SecureStore from 'expo-secure-store';
 
 const SignUp = () => {
   const [form, setForm] = useState({
-    fullName: '',
+    username: '',
+    firstName: '',
+    lastName: '',
     contactNumber: '',
     idNumber: '',
     email: '',
@@ -18,7 +21,9 @@ const SignUp = () => {
   });
 
   const [errors, setErrors] = useState({
-    fullName: '',
+    username: '',
+    firstName: '',
+    lastName: '',
     contactNumber: '',
     idNumber: '',
     email: '',
@@ -32,26 +37,33 @@ const SignUp = () => {
 
   const validateForm = () => {
     let valid = true;
-    const newErrors = {
-      fullName: '',
-      contactNumber: '',
-      idNumber: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
-    };
+    const newErrors = { ...errors };
 
-    if (!form.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+    if (!form.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
       valid = false;
     }
 
-    if (!form.contactNumber.trim()) {
+    if (!form.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+      valid = false;
+    }
+
+    if (!form.contactNumber) {
       newErrors.contactNumber = 'Contact number is required';
       valid = false;
-    } else if (!/^[0-9]{10,15}$/.test(form.contactNumber)) {
-      newErrors.contactNumber = 'Invalid contact number';
-      valid = false;
+    } else {
+
+      const cleanNumber = form.contactNumber.replace(/\s+/g, '');
+      if (!/^0[0-9]{9}$/.test(cleanNumber)) {
+        newErrors.contactNumber = 'Please enter a valid 10-digit phone number';
+        valid = false;
+      } else {
+
+        newErrors.contactNumber = '';
+        // Update the form with the cleaned number before sending to Keycloak
+        form.contactNumber = cleanNumber;
+      }
     }
 
     if (!form.idNumber.trim()) {
@@ -90,27 +102,114 @@ const SignUp = () => {
   };
 
   const handlePasswordChange = (text: string) => {
-    setForm({...form, password: text});
+    setForm({ ...form, password: text });
     passwordRef.current = text;
   };
 
   const handleConfirmPasswordChange = (text: string) => {
-    // Prevent paste by comparing with previous password value
+
     if (text.length > form.confirmPassword.length + 1) {
-      // Likely a paste operation
-      setForm({...form, confirmPassword: ''});
-      setErrors({...errors, confirmPassword: 'Pasting is not allowed'});
+
+      setForm({ ...form, confirmPassword: '' });
+      setErrors({ ...errors, confirmPassword: 'Pasting is not allowed' });
     } else {
-      setForm({...form, confirmPassword: text});
+      setForm({ ...form, confirmPassword: text });
     }
   };
 
   const handleSignup = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
-      // Your signup logic here
-      // router.push('/verify-email');
-      setIsSubmitting(false);
+      try {
+        // Get admin token
+        const tokenResponse = await fetch('http://10.0.2.2:8080/realms/master/protocol/openid-connect/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            'grant_type': 'password',
+            'client_id': 'admin-cli',
+            'username': 'admin',
+            'password': 'admin'
+          }).toString()
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+          throw new Error('Failed to get admin token');
+        }
+
+
+        const createUserResponse = await fetch('http://10.0.2.2:8080/admin/realms/stockfellow/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenData.access_token}`
+          },
+          body: JSON.stringify({
+            username: form.username,
+            enabled: true,
+            emailVerified: true,
+            firstName: form.firstName,
+            lastName: form.lastName,
+            email: form.email,
+            attributes: {
+              contactNumber: [form.contactNumber],
+              idNumber: [form.idNumber]
+            },
+            credentials: [{
+              type: 'password',
+              value: form.password,
+              temporary: false
+            }]
+          })
+        });
+
+        if (!createUserResponse.ok) {
+          const errorData = await createUserResponse.json();
+          throw new Error(errorData.errorMessage || 'Registration failed');
+        }
+
+
+        const loginFormData = new URLSearchParams();
+        loginFormData.append('grant_type', 'password');
+        loginFormData.append('client_id', 'public-client');
+        loginFormData.append('username', form.email);
+        loginFormData.append('password', form.password);
+
+        const loginResponse = await fetch('http://10.0.2.2:8080/realms/stockfellow/protocol/openid-connect/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: loginFormData.toString()
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (!loginResponse.ok) {
+          throw new Error('Login after registration failed');
+        }
+
+        // Store tokens
+        await SecureStore.setItemAsync('access_token', loginData.access_token);
+        await SecureStore.setItemAsync('refresh_token', loginData.refresh_token);
+
+
+        router.push('/login');
+      } catch (error) {
+        console.error('Registration error:', error);
+        setErrors({
+          ...errors,
+          email: error instanceof Error ?
+            error.message :
+            'Registration failed. Please try again.',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -132,18 +231,42 @@ const SignUp = () => {
                 </Text>
 
                 <FormInput
-                  title="Full Name"
-                  value={form.fullName}
-                  handleChangeText={(e) => setForm({...form, fullName: e})}
+                  title="First Name"
+                  value={form.firstName}
+                  handleChangeText={(e) => setForm({ ...form, firstName: e })}
                   otherStyles="mt-3"
-                  placeholder='Jane Doe'
-                  error={errors.fullName}
+                  placeholder='Jane'
+                  error={errors.firstName}
+                />
+
+                <FormInput
+                  title="Last Name"
+                  value={form.lastName}
+                  handleChangeText={(e) => setForm({ ...form, lastName: e })}
+                  otherStyles="mt-3"
+                  placeholder='Doe'
+                  error={errors.lastName}
+                />
+
+                <FormInput
+                  title="Username"
+                  value={form.username}
+                  handleChangeText={(e) => setForm({ ...form, username: e })}
+                  otherStyles="mt-3"
+                  placeholder='johndoe'
+                  error={errors.username}
                 />
 
                 <FormInput
                   title="Contact Number"
                   value={form.contactNumber}
-                  handleChangeText={(e) => setForm({...form, contactNumber: e})}
+                  handleChangeText={(e) => {
+                    setForm({ ...form, contactNumber: e });
+                    // Clear the error when user starts typing
+                    if (errors.contactNumber) {
+                      setErrors({ ...errors, contactNumber: '' });
+                    }
+                  }}
                   otherStyles="mt-3"
                   keyboardType="phone-pad"
                   placeholder='071 234 5678'
@@ -153,7 +276,7 @@ const SignUp = () => {
                 <FormInput
                   title="ID Number"
                   value={form.idNumber}
-                  handleChangeText={(e) => setForm({...form, idNumber: e})}
+                  handleChangeText={(e) => setForm({ ...form, idNumber: e })}
                   otherStyles="mt-3"
                   keyboardType="numeric"
                   placeholder='8601011234567'
@@ -163,7 +286,7 @@ const SignUp = () => {
                 <FormInput
                   title="Email Address"
                   value={form.email}
-                  handleChangeText={(e) => setForm({...form, email: e})}
+                  handleChangeText={(e) => setForm({ ...form, email: e })}
                   otherStyles="mt-3"
                   keyboardType="email-address"
                   placeholder='jane@example.com'
