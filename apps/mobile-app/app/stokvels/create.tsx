@@ -9,7 +9,7 @@ import RadioBox from "../../src/components/RadioBox";
 import DateTimeInput from "../../src/components/DateTimeInput";
 import { router } from "expo-router";
 import { icons } from "../../src/constants";
-
+//import { StatusBar } from 'expo-status-bar';
 interface FormData {
   name: string;
   minContribution: string;
@@ -66,7 +66,7 @@ const StokvelForm: React.FC = () => {
         return;
       }
 
-      // Your submission logic here
+      
       router.push('/stokvels');
     } catch (error) {
       Alert.alert("Error", "Failed to create stokvel");
@@ -79,7 +79,7 @@ const StokvelForm: React.FC = () => {
     <GestureHandlerRootView className="flex-1">
       <SafeAreaView className="flex-1 bg-white">
         {/* Header with Back Button and Title */}
-        <View className="flex-row items-center px-5 py-4 border-b border-gray-200">
+        <View className="flex-row items-center px-5 py-3 border-b border-gray-200">
           <TouchableOpacity onPress={() => router.back()}>
             <Image 
               source={icons.back} 
@@ -87,7 +87,7 @@ const StokvelForm: React.FC = () => {
               resizeMode="contain"
             />
           </TouchableOpacity>
-          <Text className="text-xl font-semibold ml-4">Stokvels</Text>
+          <Text className="text-lg font-medium ml-4">Stokvels</Text>
         </View>
 
         <ScrollView

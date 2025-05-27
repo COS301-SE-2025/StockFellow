@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-
+//import { StatusBar } from 'expo-status-bar';
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
 import TopBar from '../../src/components/TopBar';
@@ -61,13 +61,12 @@ const Stokvels = () => {
             />
           ))}
         </View>
-      </ScrollView>
 
-      <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
+        <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
         <TouchableOpacity 
           style={{ backgroundColor: colors.primary }}
           className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
-          onPress={() => router.push('/create-stokvel')}
+          onPress={() => router.push('/stokvels/create')}
         >
           <Image 
             source={icons.plus} 
@@ -77,6 +76,9 @@ const Stokvels = () => {
           <Text className="text-white text-base font-['PlusJakartaSans-Regular']">Create</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
+
+      
     </SafeAreaView>
   );
 };
