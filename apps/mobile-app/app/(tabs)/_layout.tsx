@@ -1,14 +1,15 @@
 // app/(tabs)/_layout.tsx
-import { View, Image,  Platform, Dimensions } from 'react-native'
+import { View, Image, Platform, Dimensions } from 'react-native'
 import { Tabs } from 'expo-router'
 import icons from '../../src/constants/icons'
+import { useTheme } from '../_layout'
 
 const { height } = Dimensions.get('window')
+
 interface TabIconProps {
-  icon: any; // Consider using a more specific type for your icons
+  icon: any;
   color: string;
   focused: boolean;
-  value?: any; // Made optional since it's not being used
 }
 
 const TabIcon = ({ icon, color, focused }: TabIconProps) => {
@@ -25,6 +26,8 @@ const TabIcon = ({ icon, color, focused }: TabIconProps) => {
 }
 
 const TabsLayout = () => {
+  const { isDarkMode, colors } = useTheme();
+
   // Calculate bottom padding based on platform
   const bottomPadding = Platform.select({
     ios: height > 800 ? 34 : 20, // More padding for iPhone X+ models
@@ -36,13 +39,13 @@ const TabsLayout = () => {
     <Tabs
       screenOptions={{
         tabBarShowLabel: true,
-        // tabBarActiveTintColor: '#0C0C0F',
-        tabBarInactiveTintColor: '#0C0C0F',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: isDarkMode ? '#AAAAAA' : '#0C0C0F',
         tabBarStyle: {
-          backgroundColor: '#F5F5F5',
+          backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5',
           borderTopWidth: 1,
-          borderTopColor: '#F5F5F5',
-          height: 100 + bottomPadding, // Base height + bottom padding
+          borderTopColor: isDarkMode ? '#333333' : '#F5F5F5',
+          height: 100 + bottomPadding,
           paddingTop: 5,
           paddingBottom: bottomPadding,
           position: 'absolute',
