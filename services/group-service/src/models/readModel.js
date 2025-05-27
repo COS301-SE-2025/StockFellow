@@ -5,11 +5,15 @@ const groupSchema = new mongoose.Schema({
   groupId: { type: String, required: true, unique: true },
   adminId: String,
   name: String,
-  contributionAmount: Number,
-  contributionType: String,
-  numberOfMembers: Number,
+  minContribution: Number,
+  maxMembers: Number,
   description: String,
-  payoutAmount: Number,
+  profileImage: String,
+  visibility: String,
+  contributionFrequency: String,
+  contributionDate: Date,
+  payoutFrequency: String,
+  payoutDate: Date,
   memberIds: [{ type: String }]
 });
 
@@ -26,17 +30,21 @@ class ReadModel {
           groupId: event.data.groupId,
           adminId: event.data.adminId,
           name: event.data.name,
-          contributionAmount /*Chartered Accountant*/: event.data.contributionAmount,
-          contributionType: event.data.contributionType,
-          numberOfMembers: event.data.numberOfMembers,
+          minContribution: event.data.minContribution,
+          maxMembers: event.data.maxMembers,
           description: event.data.description,
-          payoutAmount: event.data.payoutAmount,
+          profileImage: event.data.profileImage || null,
+          visibility: event.data.visibility,
+          contributionFrequency: event.data.contributionFrequency,
+          contributionDate: event.data.contributionDate ? new Date(event.data.contributionDate) : null,
+          payoutFrequency: event.data.payoutFrequency,
+          payoutDate: event.data.payoutDate ? new Date(event.data.payoutDate) : null,
           memberIds: event.data.memberIds || []
         };
       } else if (event.eventType === 'MemberAdded') {
         if (groupData) {
           groupData.memberIds = [...new Set([...groupData.memberIds, event.data.userId])]; // Avoid duplicates
-          groupData.numberOfMembers = groupData.memberIds.length; // Update numberOfMembers
+          groupData.maxMembers = groupData.memberIds.length > groupData.maxMembers ? groupData.memberIds.length : groupData.maxMembers; // Update maxMembers if needed
         }
       }
     }
