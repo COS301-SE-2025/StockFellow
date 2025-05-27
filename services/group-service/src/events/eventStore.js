@@ -5,8 +5,12 @@ const eventSchema = new mongoose.Schema({
   data: Object,
   timestamp: { type: Date, default: Date.now }
 });
+
+// Index for both userId and groupId to support user and group events
+eventSchema.index({ 'data.userId': 1 });
 eventSchema.index({ 'data.groupId': 1 });
-const Event = mongoose.model('GroupEvent', eventSchema);
+
+const Event = mongoose.model('Event', eventSchema);
 
 class EventStore {
   async appendEvent(eventType, data) {
@@ -15,8 +19,14 @@ class EventStore {
     return event;
   }
 
-  async getEvents(groupId) {
-    return await Event.find({ 'data.groupId': groupId }).sort({ timestamp: 1 });
+  async getEvents(id) {
+    // Support both userId and groupId queries
+    return await Event.find({
+      $or: [
+        { 'data.userId': id },
+        { 'data.groupId': id }
+      ]
+    }).sort({ timestamp: 1 });
   }
 }
 

@@ -9,7 +9,8 @@ const groupSchema = new mongoose.Schema({
   contributionType: String,
   numberOfMembers: Number,
   description: String,
-  payoutAmount: Number
+  payoutAmount: Number,
+  memberIds: [{ type: String }]
 });
 
 const Group = mongoose.model('Group', groupSchema);
@@ -25,12 +26,18 @@ class ReadModel {
           groupId: event.data.groupId,
           adminId: event.data.adminId,
           name: event.data.name,
-          contributionAmount: event.data.contributionAmount,
+          contributionAmount /*Chartered Accountant*/: event.data.contributionAmount,
           contributionType: event.data.contributionType,
           numberOfMembers: event.data.numberOfMembers,
           description: event.data.description,
-          payoutAmount: event.data.payoutAmount
+          payoutAmount: event.data.payoutAmount,
+          memberIds: event.data.memberIds || []
         };
+      } else if (event.eventType === 'MemberAdded') {
+        if (groupData) {
+          groupData.memberIds = [...new Set([...groupData.memberIds, event.data.userId])]; // Avoid duplicates
+          groupData.numberOfMembers = groupData.memberIds.length; // Update numberOfMembers
+        }
       }
     }
 
@@ -49,6 +56,10 @@ class ReadModel {
 
   async getAllGroups() {
     return await Group.find();
+  }
+
+  async getUserGroups(userId) {
+    return await Group.find({ memberIds: userId });
   }
 }
 

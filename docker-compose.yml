@@ -82,6 +82,25 @@ services:
     networks:
       - stockfellow-net
     command: npm start
+  
+  # group-service
+  group-service:
+    build:
+      context: ./services/group-service
+      dockerfile: Dockerfile
+    container_name: group-service
+    depends_on:
+      - keycloak
+    ports:
+      - "4040:4040"
+    environment:
+      - PORT=4040
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+    networks:
+      - stockfellow-net
+    command: npm start
 
 networks:
   stockfellow-net:
