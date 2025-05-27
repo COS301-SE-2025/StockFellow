@@ -14,7 +14,7 @@ export default function SplashPage() {
     // Auto-navigate after delay
     const timer = setTimeout(() => {
       router.push('/(tabs)/home');
-    }, 3000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
 

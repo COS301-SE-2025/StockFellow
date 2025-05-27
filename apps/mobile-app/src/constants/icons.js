@@ -7,6 +7,7 @@ import noHat from "../../assets/icons/no-hat.png";
 import avoidObjects from "../../assets/icons/avoid-objects.png";
 import light from "../../assets/icons/light.png";
 
+//tabs
 import home from "../../assets/icons/home.png";
 import home_filled from "../../assets/icons/home_filled.png";
 import stokvel from "../../assets/icons/stokvel.png";
@@ -15,6 +16,14 @@ import transactions from "../../assets/icons/transactions.png";
 import transactions_filled from "../../assets/icons/transactions_filled.png";
 import profile from "../../assets/icons/profile.png";
 import profile_filled from "../../assets/icons/profile_filled.png";
+
+// stokvels pages
+import camera from "../../assets/icons/camera.png";
+import stokvelpfp from "../../assets/icons/stokvel-large.png";
+import gallery from "../../assets/icons/gallery.png";
+import trash from "../../assets/icons/trash.png";
+import calendar from "../../assets/icons/calendar.png";
+import clock from "../../assets/icons/clock.png";
 
 export default {
   eyehide,
@@ -32,5 +41,11 @@ export default {
   transactions,
   transactions_filled,
   profile,
-  profile_filled
+  profile_filled,
+  camera,
+  stokvelpfp,
+  gallery,
+  trash,
+  calendar,
+  clock,
 };
