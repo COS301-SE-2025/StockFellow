@@ -22,7 +22,6 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 *.class
-*.jar
 *.war
 *.ear
 *.nar
