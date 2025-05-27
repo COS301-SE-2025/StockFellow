@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
-// import CustomButton from '../../src/components/CustomButton';
+import CustomButton from '../../src/components/CustomButton';
+import { icons } from '../../src/constants';
 
 const Stokvels = () => {
   const router = useRouter();
@@ -19,16 +20,17 @@ const Stokvels = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      <View className="px-6">
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search for a Stokvel"
+        />
+      </View>
+      
       <ScrollView className="flex-1 px-6">
-        <View className="py-4">
-
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search for a Stokvel"
-          />
-
-          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-4">
+        <View className="py-2">
+          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2">
             Your Stokvels
           </Text>
 
@@ -55,17 +57,21 @@ const Stokvels = () => {
               onPress={() => router.push(`/stokvel/${stokvel.id}`)}
             />
           ))}
-
         </View>
       </ScrollView>
 
-      <View className="p-6 border-t border-gray-100">
-        {/* <CustomButton
-          title="Create"
-          containerStyles="bg-[#1DA1FA] rounded-xl px-8 py-4"
-          textStyles="text-white text-lg font-['PlusJakartaSans-SemiBold']"
-          handlePress={() => router.push('/create-stokvel')}
-        /> */}        rm -rf node_modules/.cache
+      <View className="p-6 border-t border-gray-100 items-center">
+        <TouchableOpacity 
+          className="bg-[#1DA1FA] rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
+          onPress={() => router.push('/create-stokvel')}
+        >
+          <Image 
+            source={icons.plus} 
+            style={{ width: 19, height: 19, tintColor: 'white' }}
+            resizeMode="contain"
+          />
+          <Text className="text-white text-base font-['PlusJakartaSans-Regular']">Create</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

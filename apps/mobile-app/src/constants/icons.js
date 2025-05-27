@@ -8,6 +8,7 @@ import avoidObjects from "../../assets/icons/avoid-objects.png";
 import light from "../../assets/icons/light.png";
 import search from "../../assets/icons/search.png";
 import group from "../../assets/icons/group.png";
+import plus from "../../assets/icons/plus.png";
 
 export default {
   eyehide,
@@ -20,4 +21,5 @@ export default {
   light,
   search,
   group,
+  plus,
 };
