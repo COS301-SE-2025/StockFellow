@@ -83,6 +83,13 @@ export default function RootLayout() {
             animation: "fade" 
           }} 
         />
+        <Stack.Screen 
+          name="stokvels" 
+          options={{ 
+            headerShown: false,
+            animation: "fade" 
+          }} 
+        />
       </Stack>
     </ThemeContext.Provider>
   );
