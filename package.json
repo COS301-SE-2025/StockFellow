@@ -20,10 +20,15 @@
     "mobile:install": "npm install --workspace=apps/mobile-app"
   },
   "devDependencies": {
+    "@types/react": "^19.1.6",
+    "@types/react-native": "^0.73.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^8.8.0",
     "lint-staged": "^13.2.2",
+    "postcss": "^8.5.3",
     "prettier": "^2.8.8",
+    "tailwindcss": "^3.4.17",
     "turbo": "^1.10.0"
   },
   "engines": {
@@ -33,5 +38,10 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix",
     "*.{js,jsx,ts,tsx,json,md}": "prettier --write"
+  },
+  "dependencies": {
+    "@react-native-community/datetimepicker": "github:react-native-community/datetimepicker",
+    "expo-image-picker": "^16.1.4",
+    "nativewind": "^4.1.23"
   }
 }
