@@ -9,15 +9,15 @@ interface RadioBoxProps {
 
 const RadioBox: React.FC<RadioBoxProps> = ({ options, selectedOption, onSelect }) => {
   return (
-    <View className="flex-row justify-between mb-6">
+    <View className="flex-row  mb-6">
       {options.map((option) => (
         <TouchableOpacity
           key={option}
           onPress={() => onSelect(option)}
-          className={`pb-2 ${selectedOption === option ? 'border-b-2 border-[#006FFD]' : 'border-b-2 border-transparent'}`}
+          className={`pb-2 px-4 mt-3 ${selectedOption === option ? 'border-b-4 border-[#006FFD]' : 'border-b-4 border-transparent'}`}
         >
           <Text 
-            className={`text-base ${selectedOption === option ? 'text-[#006FFD] font-bold' : 'text-gray-600'}`}
+            className={`text-lg ${selectedOption === option ? 'text-[#006FFD] font-semibold' : 'text-gray-900 font-light'}`}
           >
             {option}
           </Text>

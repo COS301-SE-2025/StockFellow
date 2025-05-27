@@ -73,10 +73,12 @@ const StokvelAvatar: React.FC<AvatarProps> = ({ profileImage, onImageUpdate }) =
       <TouchableOpacity onPress={openModal} className="relative mb-4">
         <Image
           source={currentImage ? { uri: currentImage } : icons.stokvelpfp}
-          className="w-45 h-45 rounded-full bg-blue-400"
+          className="w-45 h-45 rounded-full shadow-2xl shadow-black/60"
           resizeMode="contain"
         />
-        <View className=" bg-[#1DA1FA] absolute bottom-0 right-2 p-2 rounded-full ">
+        <View className=" bg-[#1DA1FA] absolute bottom-0 right-2 p-2 rounded-full shadow-lg shadow-black/20 "
+        style={{ elevation: 5 }}
+        >
           <Image
             source={icons.camera}
             className="w-8 h-8"

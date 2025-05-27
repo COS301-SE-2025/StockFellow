@@ -8,7 +8,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title }) => {
   return (
     <View className="p-4 bg-primary">
-      <Text className="text-white text-xl font-bold text-center">
+      <Text className="text-xl font-bold text-center">
         {title}
       </Text>
     </View>

@@ -27,7 +27,7 @@ const FormInputFlat: React.FC<FormInputFlatProps> = ({
   return (
     <View className="mb-5">
       {/* Label */}
-      {title && <Text className="text-lg font-normal mb-1">{title}</Text>}
+      {title && <Text className="text-lg font-light mb-1">{title}</Text>}
 
       {/* Input with Icon */}
       <View className="flex-row items-center border rounded-xl border-[#C5C6CC] pb-1">
@@ -37,7 +37,7 @@ const FormInputFlat: React.FC<FormInputFlatProps> = ({
           placeholder={placeholder}
           placeholderTextColor="#A0A0A0"
           onChangeText={handleChangeText}
-          className="flex-1 text-base text-gray-800 px-5 py-3" // Added py-3 for better vertical padding
+          className="flex-1 text-base text-gray-800 px-5 py-3 font-light" // Added py-3 for better vertical padding
           {...props}
         />
         {icon && (
