@@ -6,6 +6,8 @@ import noGlasses from "../../assets/icons/no-glasses.png";
 import noHat from "../../assets/icons/no-hat.png";
 import avoidObjects from "../../assets/icons/avoid-objects.png";
 import light from "../../assets/icons/light.png";
+import search from "../../assets/icons/search.png";
+import group from "../../assets/icons/group.png";
 
 export default {
   eyehide,
@@ -16,4 +18,6 @@ export default {
   noHat,
   avoidObjects,
   light,
+  search,
+  group,
 };
