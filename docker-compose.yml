@@ -42,7 +42,7 @@ services:
       - stockfellow-net
     volumes:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
-      - ./keycloak-extensions:/opt/keycloak/providers
+      - ./keycloak-extensions/keycloak-user-sync-1.0.0.jar:/opt/keycloak/providers/keycloak-user-sync-1.0.0.jar
     command: start-dev --import-realm
 
   # api-gateway

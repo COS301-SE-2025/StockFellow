@@ -62,7 +62,8 @@ public class UserSyncEventListener implements EventListenerProvider {
                 userData.emailVerified = user.isEmailVerified();
                 
                 Map<String, List<String>> attributes = user.getAttributes();
-                userData.phoneNumber = getFirstAttribute(attributes, "phoneNumber");
+                userData.contactNumber = getFirstAttribute(attributes, "contactNumber");
+                userData.idNumber = getFirstAttribute(attributes, "idNumber");
                 
                 sendToUserService(userData);
             }
@@ -86,7 +87,8 @@ public class UserSyncEventListener implements EventListenerProvider {
                 userData.emailVerified = user.isEmailVerified();
                 
                 Map<String, List<String>> attributes = user.getAttributes();
-                userData.phoneNumber = getFirstAttribute(attributes, "phoneNumber");
+                userData.contactNumber = getFirstAttribute(attributes, "contactNumber");
+                userData.idNumber = getFirstAttribute(attributes, "idNumber");
                 
                 sendToUserService(userData);
             }
@@ -114,7 +116,8 @@ public class UserSyncEventListener implements EventListenerProvider {
                     userData.emailVerified = user.isEmailVerified();
                     
                     Map<String, List<String>> attributes = user.getAttributes();
-                    userData.phoneNumber = getFirstAttribute(attributes, "phoneNumber");
+                    userData.contactNumber = getFirstAttribute(attributes, "contactNumber");
+                    userData.idNumber = getFirstAttribute(attributes, "idNumber");
                     
                     sendToUserService(userData);
                 }
@@ -128,18 +131,29 @@ public class UserSyncEventListener implements EventListenerProvider {
         try {
             HttpClient client = HttpClient.newHttpClient();
             
-            String jsonBody = "{"
-                + "\"keycloakId\": \"" + userData.keycloakId + "\","
-                + "\"username\": \"" + userData.username + "\","
-                + "\"email\": \"" + userData.email + "\","
-                + "\"firstName\": \"" + (userData.firstName != null ? userData.firstName : "") + "\","
-                + "\"lastName\": \"" + (userData.lastName != null ? userData.lastName : "") + "\","
-                + "\"emailVerified\": " + userData.emailVerified + ","
-                + "\"phoneNumber\": \"" + (userData.phoneNumber != null ? userData.phoneNumber : "") + "\""
-                + "}";
+            String jsonBody = String.format("""
+                {
+                    "keycloakId": "%s",
+                    "username": "%s",
+                    "email": "%s",
+                    "firstName": "%s",
+                    "lastName": "%s",
+                    "emailVerified": %s,
+                    "contactNumber": "%s",
+                    "idNumber": "%s"
+                }""",
+                userData.keycloakId,
+                userData.username,
+                userData.email,
+                userData.firstName != null ? userData.firstName : "",
+                userData.lastName != null ? userData.lastName : "",
+                userData.emailVerified,
+                userData.contactNumber != null ? userData.contactNumber : "",
+                userData.idNumber != null ? userData.idNumber : ""
+            );
             
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(userServiceUrl + "/api/users/sync"))
+                .uri(URI.create(userServiceUrl + "/sync"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + getServiceToken())
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
@@ -182,6 +196,7 @@ public class UserSyncEventListener implements EventListenerProvider {
         String firstName;
         String lastName;
         boolean emailVerified;
-        String phoneNumber;
+        String contactNumber;
+        String idNumber;
     }
 }
