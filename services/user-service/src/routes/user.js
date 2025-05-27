@@ -49,7 +49,7 @@ router.get('/:id', jwtMiddleware, async (req, res) => {
 });
 
 // POST /api/users/register - Register new user
-router.post('/register', jwtMiddleware, async (req, res) => {
+router.post('/register', /*jwtMiddleware,*/ async (req, res) => {
   try {
     const { name, email, saId, mobileNumber } = req.body;
 
@@ -58,10 +58,13 @@ router.post('/register', jwtMiddleware, async (req, res) => {
     }
 
     const event = await registerUserCommand.execute(req.user, { name, email, saId, mobileNumber });
+    const user = 'e20f93e2-d283-4100-a5fa-92c61d85b4f4';
+
     
     res.status(201).json({ 
       message: 'User registered successfully',
-      userId: req.user.sub,
+      //userId: req.user.sub,
+      userId: user,
       eventId: event._id
     });
   } catch (error) {
