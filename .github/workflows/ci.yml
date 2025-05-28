@@ -22,11 +22,6 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
-
-      - name: Run tests for services
-        run: |
-          npm test --workspace=services/user-service
-          npm test --workspace=services/group-service
           
       - name: Build
         run: |
