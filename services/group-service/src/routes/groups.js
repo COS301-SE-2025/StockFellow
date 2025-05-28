@@ -26,6 +26,8 @@ router.get('/', async (req, res) => {
 // POST /api/groups/create - Create a new stokvel group
 router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
   try {
+    // console.log('====Paylaod body====');
+    // console.log(req.body);
     const { name, contributionAmount, contributionType, numberOfMembers, description, payoutAmount, memberIds } = req.body;
 
     // Validate required fields

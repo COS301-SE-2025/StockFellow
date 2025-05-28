@@ -66,6 +66,27 @@ const StokvelForm: React.FC = () => {
         return;
       }
 
+      setIsSubmitting(true);
+
+//     const payload = {
+//     ...form,
+//     contributionDate: form.contributionDate?.toISOString(),
+//     payoutDate: form.payoutDate?.toISOString(),
+//     };
+
+//     const response = await fetch("http://localhost::3000/api/groups/create", {
+//     method: "POST",
+//     headers: {
+//         "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify(payload),
+//     });
+
+//     if (!response.ok) {
+//     throw new Error("Failed to create stokvel");
+//     }
+
+
       
       router.push('/stokvels');
     } catch (error) {
