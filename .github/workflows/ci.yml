@@ -1,4 +1,3 @@
-# This is a placeholder yml file for CI, it will be updated as we begin to add dependencies and test scripts
 name: CI
 
 on:
@@ -22,9 +21,7 @@ jobs:
           node-version: '18'
           
       - name: Install dependencies
-        run: |
-          echo "Installation command will go here"
-          # npm ci
+        run: npm ci
 
       - name: Run tests for services
         run: |
