@@ -26,10 +26,10 @@ jobs:
           echo "Installation command will go here"
           # npm ci
 
-      - name: Run tests
+      - name: Run tests for services
         run: |
-          echo "Test commands will go here"
-          # npm test
+          npm test --workspace=services/user-service
+          npm test --workspace=services/group-service
           
       - name: Build
         run: |
