@@ -124,12 +124,7 @@ See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for 
 
 | Link                   | Description                   |
 |------------------------|-------------------------------|
-| [Software Requirements Specification](docs/System%20Requirement%20Specification.pdf) | Project Requirements            |
-| [Architecture Document](your-link-here) | System Design & Architecture   |
-| [API Documentation](your-link-here)     | API Endpoints & Usage          |
-| [User Manual](your-link-here)           | End-user Instructions          |
-| [Development Guide](your-link-here)     | Setup & Contribution Process   |
-| [Testing Strategy](your-link-here)      | QA Approach & Test Cases       |
+| [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Software%20Requirement%20Specification.md) | Project Requirements            |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
