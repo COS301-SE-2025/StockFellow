@@ -24,9 +24,9 @@
     while introducing innovative features to enhance user experience.
     <br />
     <br />
-    <a href="https://github.com/COS301-SE-2025/StockFellow">View Project Board</a>
+    <a href="https://github.com/orgs/COS301-SE-2025/projects/182">View Project Board</a>
     &middot;
-    <a href="https://github.com/COS301-SE-2025/StockFellow/issues/new?labels=bug&template=bug-report---.md">View Documentation</a>
+    <a href="#documentation">View Documentation</a>
   </p>
 </div>
 
@@ -107,9 +107,9 @@
 ## Roadmap
 
 - [ ] Demo 1
-  - [ ] Use Case 1
-  - [ ] Use Case 2
-  - [ ] Use Case 3
+  - [ ] Register and Login
+  - [ ] Create Stokvel
+  - [ ] View Stokvel Groups
 - [ ] Demo 2
 - [ ] Demo 3
 - [ ] Demo 4
@@ -124,7 +124,7 @@ See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for 
 
 | Link                   | Description                   |
 |------------------------|-------------------------------|
-| [Software Requirements Specification](your-link-here) | Project Requirements            |
+| [Software Requirements Specification](docs/System%20Requirement%20Specification.pdf) | Project Requirements            |
 | [Architecture Document](your-link-here) | System Design & Architecture   |
 | [API Documentation](your-link-here)     | API Endpoints & Usage          |
 | [User Manual](your-link-here)           | End-user Instructions          |

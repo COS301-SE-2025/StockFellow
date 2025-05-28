@@ -26,33 +26,38 @@ router.get('/', async (req, res) => {
 // POST /api/groups/create - Create a new stokvel group
 router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
   try {
-    // console.log('====Paylaod body====');
-    // console.log(req.body);
-    const { name, contributionAmount, contributionType, numberOfMembers, description, payoutAmount, memberIds } = req.body;
+    const { name, minContribution, maxMembers, description, profileImage, visibility, contributionFrequency, contributionDate, payoutFrequency, payoutDate, memberIds } = req.body;
 
     // Validate required fields
-    if (!name || !contributionAmount || !contributionType || !numberOfMembers || !payoutAmount) {
+    if (!name || !minContribution || !maxMembers || !visibility || !contributionFrequency || !payoutFrequency) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Validate contributionType
-    if (!['monthly', 'bi-weekly', 'weekly'].includes(contributionType)) {
-      return res.status(400).json({ error: 'Invalid contribution type' });
+    // Validate contributionFrequency
+    if (!['Monthly', 'Bi-weekly', 'Weekly'].includes(contributionFrequency)) {
+      return res.status(400).json({ error: 'Invalid contribution frequency' });
     }
 
-    // Validate contributionAmount
-    if (typeof contributionAmount !== 'number' || contributionAmount <= 0) {
-      return res.status(400).json({ error: 'Invalid contribution amount' });
+    // Validate payoutFrequency
+    if (!['Monthly', 'Bi-weekly', 'Weekly'].includes(payoutFrequency)) {
+      return res.status(400).json({ error: 'Invalid payout frequency' });
     }
 
-    // Validate numberOfMembers
-    if (!Number.isInteger(numberOfMembers) || numberOfMembers <= 0) {
-      return res.status(400).json({ error: 'Invalid number of members' });
+    // Validate visibility
+    if (!['Private', 'Public'].includes(visibility)) {
+      return res.status(400).json({ error: 'Invalid visibility' });
     }
 
-    // Validate payoutAmount
-    if (typeof payoutAmount !== 'number' || payoutAmount <= 0) {
-      return res.status(400).json({ error: 'Invalid payout amount' });
+    // Validate minContribution (convert from string to number)
+    const minContributionNum = parseFloat(minContribution);
+    if (isNaN(minContributionNum) || minContributionNum <= 0) {
+      return res.status(400).json({ error: 'Invalid minimum contribution' });
+    }
+
+    // Validate maxMembers (convert from string to number)
+    const maxMembersNum = parseInt(maxMembers, 10);
+    if (isNaN(maxMembersNum) || maxMembersNum <= 0) {
+      return res.status(400).json({ error: 'Invalid maximum number of members' });
     }
 
     // Validate memberIds (optional, but must be an array of strings if provided)
@@ -60,20 +65,38 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
       return res.status(400).json({ error: 'memberIds must be an array of strings' });
     }
 
+    // Validate number of memberIds against maxMembers
+    if (memberIds && memberIds.length > maxMembersNum) {
+      return res.status(400).json({ error: 'Number of memberIds cannot exceed maxMembers' });
+    }
+
+    // Validate contributionDate and payoutDate (optional, but must be valid dates if provided)
+    if (contributionDate && isNaN(new Date(contributionDate).getTime())) {
+      return res.status(400).json({ error: 'Invalid contribution date' });
+    }
+    if (payoutDate && isNaN(new Date(payoutDate).getTime())) {
+      return res.status(400).json({ error: 'Invalid payout date' });
+    }
+
     const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     //const adminId = req.user.sub;
     const adminId = 'e20f93e2-d283-4100-a5fa-92c61d85b4f4'; // Placeholder for admin ID, replace with actual user ID from JWT
+
 
     const event = await createGroupCommand.execute({
       groupId,
       adminId,
       name,
-      contributionAmount,
-      contributionType,
-      numberOfMembers,
+      minContribution: minContributionNum,
+      maxMembers: maxMembersNum,
       description,
-      payoutAmount,
-      memberIds: memberIds || [] // Default to empty array if not provided
+      profileImage: profileImage || null,
+      visibility,
+      contributionFrequency,
+      contributionDate: contributionDate ? new Date(contributionDate) : null,
+      payoutFrequency,
+      payoutDate: payoutDate ? new Date(payoutDate) : null,
+      memberIds: memberIds || []
     });
 
     res.status(201).json({
@@ -86,6 +109,8 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+
 
 // GET /api/groups/user - Get groups for authenticated user
 router.get('/user', /*jwtMiddleware,*/ async (req, res) => {
