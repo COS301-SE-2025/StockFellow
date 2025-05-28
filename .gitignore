@@ -10,7 +10,7 @@ coverage/
 *.env
 
 # Java
-# target/
+target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -21,8 +21,8 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# *.tar
-# *.class
+#*.tar
+*.class
 *.war
 *.ear
 *.nar
