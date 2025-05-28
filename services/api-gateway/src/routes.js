@@ -4,14 +4,12 @@ const ROUTES = [
         auth: false,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
-            max: 5
+            max: 10
         },
         proxy: {
             target: "http://user-service:4000",
             changeOrigin: true,
-            pathRewrite: {
-                [`^/auth`]: '/auth',
-            },
+            pathRewrite: {},
             // Add CORS headers
             onProxyRes: function(proxyRes, req, res) {
                 proxyRes.headers['Access-Control-Allow-Origin'] = '*';
@@ -25,14 +23,12 @@ const ROUTES = [
         auth: false,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
-            max: 5
+            max: 10
         },
         proxy: {
-            target: "http://user-service:4040",
+            target: "http://group-service:4040",
             changeOrigin: true,
-            pathRewrite: {
-                [`^/api`]: '',
-            },
+            pathRewrite: {},
         }
     },
     {
@@ -40,14 +36,12 @@ const ROUTES = [
         auth: true,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
-            max: 5
+            max: 10
         },
         proxy: {
             target: "http://transaction-service:4080", //Unkown endpoint currently 
             changeOrigin: true,
-            pathRewrite: {
-                [`^/api`]: '',
-            },
+            pathRewrite: {},
         }
     },
     {
@@ -55,14 +49,12 @@ const ROUTES = [
         auth: false,
         rateLimit: {
             windowMs: 15 * 60 * 1000,
-            max: 5
+            max: 10
         },
         proxy: {
             target: "http://user-service:4000",
             changeOrigin: true,
-            pathRewrite: {
-                [`^/api`]: '', 
-            },
+            pathRewrite: {},
         }
     }
 ]

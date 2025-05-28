@@ -3,7 +3,7 @@
 [![Issues][issues-shield]][issues-url]
 [![Build][build-shield]][build-url]
 [![Monitor][monitor-shield]][monitor-url]
-[![Requirements][requirements-shield]][requirements-url]
+
 <div align="center">
     <a href="https://github.com/COS301-SE-2025/StockFellow">
         <img src="docs/images/load.gif" alt="Logo" width="100" height="100">
@@ -80,7 +80,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,rabbitmq" />
+    <img src="https://skillicons.dev/icons?i=nodejs,express,java" />
   </a>
 </p>
 
@@ -88,7 +88,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,aws,docker" />
+    <img src="https://skillicons.dev/icons?i=git,mongo,docker" />
   </a>
 </p>
 
@@ -97,7 +97,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=postman" />
+    <img src="https://skillicons.dev/icons?i=postman,jest" />
   </a>
 </p>
 
@@ -308,15 +308,13 @@ Project Link: [https://github.com/COS301-SE-2025/StockFellow](https://github.com
 [cov-url]: https://github.com/COS301-SE-2025/StockFellow/network/members
 [issues-shield]: https://img.shields.io/github/issues/COS301-SE-2025/StockFellow.svg?style=for-the-badge
 [issues-url]: https://github.com/COS301-SE-2025/StockFellow/issues
-[build-shield]: https://img.shields.io/github/actions/workflow/status/COS301-SE-2025/StockFellow/main.yml?style=for-the-badge
+[build-shield]: https://img.shields.io/github/actions/workflow/status/COS301-SE-2025/StockFellow/ci.yml?style=for-the-badge
 [build-url]: https://github.com/COS301-SE-2025/StockFellow/blob/master/LICENSE.txt
-[monitor-shield]: https://img.shields.io/nodeping/status/bc2d0f53-5041-46e8-a14c-267875a49f0c?style=for-the-badge
+[monitor-shield]: https://img.shields.io/librariesio/github/COS301-SE-2025/StockFellow?style=for-the-badge
 [monitor-url]: https://github.com/COS301-SE-2025/StockFellow
-[requirements-shield]: https://img.shields.io/depfu/dependencies/github/StockFellow?style=for-the-badge
 
 <!-- IMAGES -->
-[requirements-url]: https://github.com/COS301-SE-2025/StockFellow
-[product-screenshot]: images/screenshot.png
+
 
 <!-- TECHNOLOGIES -->
 [Express.js]: https://img.shields.io/badge/express.js-000000?style=for-the-badge&logo=express&logoColor=white
