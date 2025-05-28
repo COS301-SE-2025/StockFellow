@@ -24,9 +24,7 @@ StockFellow is a modern financial solution designed to streamline and secure tra
 
 # Domain model 
 
-# ![][image1]
-
-# 
+![Domain Model](../images/domain.jpg)
 
 # 
 
@@ -40,15 +38,16 @@ StockFellow is a modern financial solution designed to streamline and secure tra
 * As a user, I want to receive notifications about upcoming contributions and payouts to stay informed.  
 * As a system administrator, I want to monitor the system for fraudulent activities to protect users
 
-# Use cases![][image2]![][image3]
-
-# ![][image4]![][image5]
-
-![][image6]
-
+# Use cases
+![Use case 1](../images/use1.jpg)
 # 
-
+![Use case 2](../images/use2.jpg)
 # 
+![Use case 3](../images/use3.jpg)
+# 
+![Use case 4](../images/use4.jpg)
+# 
+![Use case 5](../images/use5.jpg)
 
 # Functional requirements 
 
@@ -224,8 +223,7 @@ StockFellow is a modern financial solution designed to streamline and secure tra
 
 We will implement a **microservices architecture** to ensure modularity and scalability, allowing independent scaling of services like payments and notifications, reducing costs by leveraging  free cloud tiers initially (e.g., AWS Free Tier). The following architecture overview diagram uses  AWS symbols, however the actual technologies and frameworks used may vary and include in house infrastructure.
 
-![][image7]
-
+![architecture](../images/arch.jpg)
 # 
 
 # Non-functional requirements 
