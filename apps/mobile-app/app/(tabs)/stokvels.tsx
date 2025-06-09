@@ -43,7 +43,7 @@ const Stokvels = () => {
               name={stokvel.name}
               memberCount={stokvel.members}
               balance={stokvel.balance}
-              onPress={() => router.push(`/stokvel/${stokvel.id}`)}
+              onPress={() => router.push(`/stokvels/${stokvel.id}`)}
             />
           ))}
 
@@ -57,7 +57,7 @@ const Stokvels = () => {
               name={stokvel.name}
               memberCount={stokvel.members}
               balance={stokvel.balance}
-              onPress={() => router.push(`/stokvel/${stokvel.id}`)}
+              onPress={() => router.push(`/stokvels/${stokvel.id}/index`)}
             />
           ))}
         </View>

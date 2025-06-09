@@ -117,7 +117,7 @@ const StokvelForm: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View className="w-full flex-1 justify-start px-7">
-            <Text className="text-xl font-semibold my-7">Create a New Stokvel</Text>
+            <Text className="text-xl font-['PlusJakartaSans-SemiBold'] my-7">Create a New Stokvel</Text>
 
             <StokvelAvatar
               profileImage={form.profileImage}
