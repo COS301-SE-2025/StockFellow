@@ -1,4 +1,4 @@
-package main.java.com.stockfellow.userservice.repository;
+package com.stockfellow.userservice.repository;
 
 import com.stockfellow.userservice.model.Event;
 import org.springframework.data.mongodb.repository.MongoRepository;

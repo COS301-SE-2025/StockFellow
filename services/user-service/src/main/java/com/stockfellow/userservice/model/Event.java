@@ -1,4 +1,4 @@
-package main.java.com.stockfellow.userservice.model;
+package com.stockfellow.userservice.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
