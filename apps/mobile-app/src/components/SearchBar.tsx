@@ -18,7 +18,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, placeholder 
         backgroundColor: isDarkMode ? '#2C2C2C' : 'white',
         borderColor: isDarkMode ? '#444444' : '#F0F0F0'
       }}
-      className="flex-row items-center border rounded-full px-4 py-2 shadow-sm"
+      className="flex-row items-center border rounded-full px-4 py-1 shadow-sm"
     >
       <TextInput
         value={value}

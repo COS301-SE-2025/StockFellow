@@ -13,3 +13,8 @@ const logger = winston.createLogger({
 });
 
 module.exports = logger;
+// ./services/group-service/src/utils/logger.js (example)
+/*module.exports = {
+  info: jest.fn(),
+  error: jest.fn()
+};*/

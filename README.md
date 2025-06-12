@@ -3,7 +3,7 @@
 [![Issues][issues-shield]][issues-url]
 [![Build][build-shield]][build-url]
 [![Monitor][monitor-shield]][monitor-url]
-[![Requirements][requirements-shield]][requirements-url]
+
 <div align="center">
     <a href="https://github.com/COS301-SE-2025/StockFellow">
         <img src="docs/images/load.gif" alt="Logo" width="100" height="100">
@@ -12,6 +12,18 @@
 
 <h1 align="center" style="border-bottom: none; margin-bottom: 0;" >StockFellow</h1>
 <h4 align="center" style="margin-top: 5px;">A Capstone Project by Dev Opps</h4>
+<hr style="margin-top: 20px; margin-bottom: 20px;">
+
+<div align="center" style="background-color: #f0f8ff; border: 2px solid #4169e1; border-radius: 8px; padding: 15px; margin: 20px 0;">
+  <h3 style="color: #4169e1; margin-top: 0;">📦 Demo 1 Release (v1.0.0)</h3>
+  <p style="margin-bottom: 0; color: #333;">
+    <strong>This branch contains the Node.js/Express.js backend version presented for Demo 1.</strong><br>
+    Features implemented: User Registration/Login, Stokvel Creation, and Basic Group Viewing.<br>
+    <em>Note: This is a partially implemented version for demonstration purposes.</em><br>
+    <strong>Current development continues on the <code>main</code> branch with Java backend.</strong>
+  </p>
+</div>
+
 <hr style="margin-top: 20px; margin-bottom: 20px;">
 
 <!-- PROJECT LOGO -->
@@ -24,9 +36,9 @@
     while introducing innovative features to enhance user experience.
     <br />
     <br />
-    <a href="https://github.com/COS301-SE-2025/StockFellow">View Project Board</a>
+    <a href="https://github.com/orgs/COS301-SE-2025/projects/182">View Project Board</a>
     &middot;
-    <a href="https://github.com/COS301-SE-2025/StockFellow/issues/new?labels=bug&template=bug-report---.md">View Documentation</a>
+    <a href="#documentation">View Documentation</a>
   </p>
 </div>
 
@@ -80,7 +92,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,rabbitmq" />
+    <img src="https://skillicons.dev/icons?i=nodejs,express,java" />
   </a>
 </p>
 
@@ -88,7 +100,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,aws,docker" />
+    <img src="https://skillicons.dev/icons?i=git,mongo,docker" />
   </a>
 </p>
 
@@ -97,7 +109,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=postman" />
+    <img src="https://skillicons.dev/icons?i=postman,jest" />
   </a>
 </p>
 
@@ -106,10 +118,10 @@
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Demo 1
-  - [ ] Use Case 1
-  - [ ] Use Case 2
-  - [ ] Use Case 3
+- [x] Demo 1
+  - [x] Register and Login
+  - [x] Create Stokvel
+  - [x] View Stokvel Groups
 - [ ] Demo 2
 - [ ] Demo 3
 - [ ] Demo 4
@@ -124,12 +136,7 @@ See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for 
 
 | Link                   | Description                   |
 |------------------------|-------------------------------|
-| [Software Requirements Specification](your-link-here) | Project Requirements            |
-| [Architecture Document](your-link-here) | System Design & Architecture   |
-| [API Documentation](your-link-here)     | API Endpoints & Usage          |
-| [User Manual](your-link-here)           | End-user Instructions          |
-| [Development Guide](your-link-here)     | Setup & Contribution Process   |
-| [Testing Strategy](your-link-here)      | QA Approach & Test Cases       |
+| [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Software%20Requirement%20Specification.md) | Project Requirements            |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -308,15 +315,13 @@ Project Link: [https://github.com/COS301-SE-2025/StockFellow](https://github.com
 [cov-url]: https://github.com/COS301-SE-2025/StockFellow/network/members
 [issues-shield]: https://img.shields.io/github/issues/COS301-SE-2025/StockFellow.svg?style=for-the-badge
 [issues-url]: https://github.com/COS301-SE-2025/StockFellow/issues
-[build-shield]: https://img.shields.io/github/actions/workflow/status/COS301-SE-2025/StockFellow/main.yml?style=for-the-badge
+[build-shield]: https://img.shields.io/github/actions/workflow/status/COS301-SE-2025/StockFellow/ci.yml?style=for-the-badge
 [build-url]: https://github.com/COS301-SE-2025/StockFellow/blob/master/LICENSE.txt
-[monitor-shield]: https://img.shields.io/nodeping/status/bc2d0f53-5041-46e8-a14c-267875a49f0c?style=for-the-badge
+[monitor-shield]: https://img.shields.io/librariesio/github/COS301-SE-2025/StockFellow?style=for-the-badge
 [monitor-url]: https://github.com/COS301-SE-2025/StockFellow
-[requirements-shield]: https://img.shields.io/depfu/dependencies/github/StockFellow?style=for-the-badge
 
 <!-- IMAGES -->
-[requirements-url]: https://github.com/COS301-SE-2025/StockFellow
-[product-screenshot]: images/screenshot.png
+
 
 <!-- TECHNOLOGIES -->
 [Express.js]: https://img.shields.io/badge/express.js-000000?style=for-the-badge&logo=express&logoColor=white
