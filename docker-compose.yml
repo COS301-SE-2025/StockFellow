@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database for Keycloak
   postgres:
@@ -66,26 +64,28 @@ services:
       - /usr/src/app/node_modules
     command: npx nodemon --inspect=0.0.0.0:9229 src/server.js
 
-  # user-service
+  # user-service (Spring Boot)
   user-service:
     build:
       context: ./services/user-service
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev  # Use development Dockerfile
     container_name: user-service
     depends_on:
       - keycloak
     ports:
       - "4000:4000"
+      - "5005:5005"  # Debug port for Java
     environment:
-      - PORT=4000
-      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
-      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - SPRING_PROFILES_ACTIVE=development
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
     networks:
       - stockfellow-net
-    command: npm start
+    volumes:
+      - ./services/user-service/src:/app/src  # For development hot reload
+      - ./services/user-service/pom.xml:/app/pom.xml
   
-  # group-service
+  # group-service (Spring Boot)
   group-service:
     build:
       context: ./services/group-service
@@ -93,16 +93,28 @@ services:
     container_name: group-service
     depends_on:
       - keycloak
+      - user-service
     ports:
       - "4040:4040"
+      - "5006:5006"  # Debug port for Java
     environment:
-      - PORT=4040
+      - SERVER_PORT=4040
+      - SPRING_PROFILES_ACTIVE=docker
       - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+      - USER_SERVICE_URL=http://user-service:4000
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     networks:
       - stockfellow-net
-    command: npm start
+    volumes:
+      - ./services/group-service/src:/app/src  # For development hot reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   stockfellow-net:
