@@ -1,2 +1,41 @@
-node_modules
-npm-debug.log
+# Maven build outputs
+target/
+!target/api-gateway-1.0.0.jar
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README*
+
+# Node.js files (if any remain)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Other
+.env
+.env.local
+.env.*.local

@@ -45,7 +45,7 @@ services:
       - ./keycloak-extensions/:/opt/keycloak/providers/
     command: start-dev --import-realm
 
-  # api-gateway
+  # api-gateway (Java Spring Boot)
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -54,17 +54,20 @@ services:
     depends_on:
       - keycloak
     ports:
-      - "3000:3000"
-      - "9229:9229"  # For debugging
+      - "3000:3000"      # Application port
+      - "5005:5005"      # Java debugging port (changed from 9229)
     environment:
-      - NODE_ENV=development
-      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stokvel-realm
+      - SPRING_PROFILES_ACTIVE=docker
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/
+      - KEYCLOAK_REALM=stockfellow
+      - KEYCLOAK_RESOURCE=public-client
+      - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      - JVM_OPTS=-Xmx512m -Xms256m
     networks:
       - stockfellow-net
     volumes:
-      - ./services/api-gateway/src:/usr/src/app/src
-      - /usr/src/app/node_modules
-    command: npx nodemon --inspect=0.0.0.0:9229 src/server.js
+      - ./services/api-gateway/src:/app/src
+      - ./services/api-gateway/src/main/resources/keycloak.json:/app/src/main/resources/keycloak.json
 
   # user-service
   user-service:
