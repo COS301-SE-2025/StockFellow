@@ -24,5 +24,9 @@
        private String payoutFrequency;
        private Date payoutDate;
        private List<String> memberIds;
+
+       public Group(String groupId) {
+           this.groupId = groupId;
+       }
    }
 

@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -44,6 +46,12 @@ public class GroupsController {
     @PostMapping("/create")
     public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> request) {
         try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || auth.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            }
+            String adminId = auth.getPrincipal().toString();
+
             String name = (String) request.get("name");
             Object minContributionObj = request.get("minContribution");
             Object maxMembersObj = request.get("maxMembers");
@@ -92,11 +100,13 @@ public class GroupsController {
                     new Date(payoutDateStr) : null;
 
             String groupId = "group_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-            String adminId = "e20f93e2-d283-4100-a5fa-92c61d85b4f4"; // Placeholder, replace with JWT subject
 
             String eventId = createGroupCommand.execute(groupId, adminId, name, minContribution, maxMembers,
                     description, profileImage, visibility, contributionFrequency, contributionDate,
                     payoutFrequency, payoutDate, memberIds);
+            
+            System.out.println("created with ID: " + groupId);
+            logger.info("Group ID debug : {}", groupId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Group created successfully");
@@ -115,7 +125,12 @@ public class GroupsController {
     @GetMapping("/user")
     public ResponseEntity<?> getUserGroups() {
         try {
-            String userId = "userId1"; // Placeholder, replace with JWT subject
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || auth.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            }
+            String userId = auth.getPrincipal().toString();
+
             List<Group> groups = readModelService.getUserGroups(userId);
             return ResponseEntity.ok(groups);
         } catch (Exception e) {
@@ -127,7 +142,12 @@ public class GroupsController {
     @PostMapping("/{groupId}/join")
     public ResponseEntity<?> joinGroup(@PathVariable String groupId) {
         try {
-            String userId = "3372d535-05a1-4189-b6ff-a2291cb1145c"; // Placeholder, replace with JWT subject
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || auth.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            }
+            String userId = auth.getPrincipal().toString();
+
             readModelService.getGroup(groupId).orElseThrow(() -> new IllegalStateException("Group not found"));
             String eventId = joinGroupCommand.execute(groupId, userId);
 

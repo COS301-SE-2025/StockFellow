@@ -40,7 +40,7 @@ public class RegisterUserService {
         eventData.put("lastName", request.getName().split(" ").length > 1 ? request.getName().split(" ")[1] : "");
         eventData.put("emailVerified", false);
         eventData.put("contactNumber", request.getMobileNumber());
-        eventData.put("idNumber", request.getSaId());
+        eventData.put("SAId", request.getSaId());
         eventData.put("createdAt", new Date());
         eventData.put("updatedAt", new Date());
 

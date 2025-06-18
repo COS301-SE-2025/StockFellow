@@ -1,4 +1,4 @@
-# Multi-stage build for user-service
+# Multi-stage build for group-service
 FROM maven:3-openjdk-17-slim AS build
 
 WORKDIR /app
@@ -36,11 +36,11 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose the port
-EXPOSE 4000
+EXPOSE 4040
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:4000/actuator/health || exit 1
+  CMD curl -f http://localhost:4040/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
