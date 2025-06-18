@@ -23,21 +23,48 @@ public class JoinGroupCommand {
     }
 
     public String execute(String groupId, String userId) {
+        // Get the current group state
         Group group = readModelService.getGroup(groupId)
                 .orElseThrow(() -> new IllegalStateException("Group not found"));
-        if (group.getMemberIds().contains(userId)) {
-            throw new IllegalStateException("User is already a member of this group");
-        }
 
+        // Validate that the group exists and user can join
+        validateJoinRequest(group, userId);
+
+        // Create the event data
         Map<String, Object> data = new HashMap<>();
         data.put("groupId", groupId);
         data.put("userId", userId);
+        data.put("role", "member"); // New members get member role by default
 
-        Event event = eventStoreService.appendEvent("MemberAdded", data);
+        // Append the event
+        Event event = eventStoreService.appendEvent("UserJoinedGroup", data);
+        
+        // Rebuild the read model
         readModelService.rebuildState(groupId);
+        
         logger.info("User {} joined group {}", userId, groupId);
-
         return event.getId();
     }
-}
 
+    private void validateJoinRequest(Group group, String userId) {
+        // Check if user is already a member
+        boolean alreadyMember = group.getMembers().stream()
+                .anyMatch(member -> member.getUserId().equals(userId));
+        
+        if (alreadyMember) {
+            throw new IllegalStateException("User is already a member of this group");
+        }
+
+        // Check if group is full
+        if (group.getMembers().size() >= group.getMaxMembers()) {
+            throw new IllegalStateException("Group is full");
+        }
+
+        // For private groups, you might want to add additional validation
+        // such as invitation-only logic
+        if ("Private".equals(group.getVisibility())) {
+            // Add any private group join validation logic here
+            logger.info("User {} attempting to join private group {}", userId, group.getGroupId());
+        }
+    }
+}

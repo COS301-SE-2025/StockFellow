@@ -12,6 +12,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @RestController
@@ -21,6 +23,7 @@ public class GroupsController {
     private final CreateGroupCommand createGroupCommand;
     private final JoinGroupCommand joinGroupCommand;
     private final ReadModelService readModelService;
+    private final SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     public GroupsController(CreateGroupCommand createGroupCommand,
                             JoinGroupCommand joinGroupCommand,
@@ -28,6 +31,7 @@ public class GroupsController {
         this.createGroupCommand = createGroupCommand;
         this.joinGroupCommand = joinGroupCommand;
         this.readModelService = readModelService;
+        isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
     @GetMapping
@@ -52,6 +56,7 @@ public class GroupsController {
             }
             String adminId = auth.getPrincipal().toString();
 
+            // Extract fields from request matching frontend payload
             String name = (String) request.get("name");
             Object minContributionObj = request.get("minContribution");
             Object maxMembersObj = request.get("maxMembers");
@@ -64,60 +69,116 @@ public class GroupsController {
             String payoutDateStr = (String) request.get("payoutDate");
             List<String> memberIds = (List<String>) request.getOrDefault("memberIds", new ArrayList<>());
 
-            if (name == null || minContributionObj == null || maxMembersObj == null || visibility == null ||
-                    contributionFrequency == null || payoutFrequency == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
+            // Validate required fields
+            if (name == null || name.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Group name is required"));
+            }
+            if (minContributionObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Minimum contribution is required"));
+            }
+            if (maxMembersObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Maximum members is required"));
+            }
+            if (visibility == null || visibility.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Visibility is required"));
+            }
+            if (contributionFrequency == null || contributionFrequency.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Contribution frequency is required"));
+            }
+            if (payoutFrequency == null || payoutFrequency.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Payout frequency is required"));
             }
 
-            Double minContribution = minContributionObj instanceof Number ?
-                    ((Number) minContributionObj).doubleValue() :
-                    Double.parseDouble(minContributionObj.toString());
-            Integer maxMembers = maxMembersObj instanceof Number ?
-                    ((Number) maxMembersObj).intValue() :
-                    Integer.parseInt(maxMembersObj.toString());
+            // Parse numeric values
+            Double minContribution;
+            Integer maxMembers;
+            
+            try {
+                minContribution = minContributionObj instanceof Number ?
+                        ((Number) minContributionObj).doubleValue() :
+                        Double.parseDouble(minContributionObj.toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid minimum contribution format"));
+            }
 
+            try {
+                maxMembers = maxMembersObj instanceof Number ?
+                        ((Number) maxMembersObj).intValue() :
+                        Integer.parseInt(maxMembersObj.toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid maximum members format"));
+            }
+
+            // Validate values
             if (!Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(contributionFrequency)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid contribution frequency"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid contribution frequency. Must be: Monthly, Bi-weekly, or Weekly"));
             }
             if (!Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(payoutFrequency)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid payout frequency"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid payout frequency. Must be: Monthly, Bi-weekly, or Weekly"));
             }
             if (!Arrays.asList("Private", "Public").contains(visibility)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid visibility"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid visibility. Must be: Private or Public"));
             }
             if (minContribution <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid minimum contribution"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Minimum contribution must be greater than 0"));
             }
             if (maxMembers <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid maximum number of members"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Maximum members must be greater than 0"));
             }
             if (memberIds.size() > maxMembers) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Number of memberIds cannot exceed maxMembers"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Number of initial members cannot exceed maximum members"));
             }
-            Date contributionDate = contributionDateStr != null && !contributionDateStr.isEmpty() ?
-                    new Date(contributionDateStr) : null;
-            Date payoutDate = payoutDateStr != null && !payoutDateStr.isEmpty() ?
-                    new Date(payoutDateStr) : null;
 
+            // Parse dates from ISO format
+            Date contributionDate = null;
+            Date payoutDate = null;
+            
+            if (contributionDateStr != null && !contributionDateStr.trim().isEmpty()) {
+                try {
+                    contributionDate = isoFormatter.parse(contributionDateStr);
+                } catch (ParseException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid contribution date format. Expected ISO format"));
+                }
+            }
+            
+            if (payoutDateStr != null && !payoutDateStr.trim().isEmpty()) {
+                try {
+                    payoutDate = isoFormatter.parse(payoutDateStr);
+                } catch (ParseException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid payout date format. Expected ISO format"));
+                }
+            }
+
+            // Generate unique group ID
             String groupId = "group_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
 
+            // Initialize memberIds with admin as the first member if empty
+            if (memberIds.isEmpty()) {
+                memberIds.add(adminId);
+            } else if (!memberIds.contains(adminId)) {
+                // Ensure admin is always included
+                memberIds.add(0, adminId); // Add admin at the beginning
+            }
+
+            // Execute command
             String eventId = createGroupCommand.execute(groupId, adminId, name, minContribution, maxMembers,
                     description, profileImage, visibility, contributionFrequency, contributionDate,
                     payoutFrequency, payoutDate, memberIds);
             
-            System.out.println("created with ID: " + groupId);
-            logger.info("Group ID debug : {}", groupId);
+            logger.info("Group created with ID: {}", groupId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Group created successfully");
             response.put("groupId", groupId);
             response.put("eventId", eventId);
+            
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
         } catch (IllegalArgumentException e) {
-            logger.error("Group creation error: {}", e.getMessage());
+            logger.error("Group creation validation error: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            logger.error("Unexpected error: {}", e.getMessage(), e);
+            logger.error("Unexpected error during group creation: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal server error"));
         }
     }
@@ -148,7 +209,23 @@ public class GroupsController {
             }
             String userId = auth.getPrincipal().toString();
 
-            readModelService.getGroup(groupId).orElseThrow(() -> new IllegalStateException("Group not found"));
+            // Check if group exists
+            Group group = readModelService.getGroup(groupId)
+                    .orElseThrow(() -> new IllegalStateException("Group not found"));
+            
+            // Check if user is already a member
+            boolean alreadyMember = group.getMembers().stream()
+                    .anyMatch(member -> member.getUserId().equals(userId));
+            
+            if (alreadyMember) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User is already a member of this group"));
+            }
+            
+            // Check if group is full
+            if (group.getMembers().size() >= group.getMaxMembers()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Group is full"));
+            }
+
             String eventId = joinGroupCommand.execute(groupId, userId);
 
             Map<String, Object> response = new HashMap<>();
@@ -156,11 +233,12 @@ public class GroupsController {
             response.put("groupId", groupId);
             response.put("eventId", eventId);
             return ResponseEntity.ok(response);
+            
         } catch (IllegalStateException e) {
             logger.error("Error joining group: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            logger.error("Unexpected error: {}", e.getMessage(), e);
+            logger.error("Unexpected error during group join: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal server error"));
         }
     }
