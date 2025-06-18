@@ -100,7 +100,7 @@ services:
     environment:
       - SERVER_PORT=4040
       - SPRING_PROFILES_ACTIVE=docker
-      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
+      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/groups_stokvel_db?retryWrites=true&w=majority&appName=Cluster0
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
       - USER_SERVICE_URL=http://user-service:4000
