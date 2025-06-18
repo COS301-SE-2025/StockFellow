@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface GroupRepository extends MongoRepository<Group, String> {
     
     // Find groups where the user is a member
-    List<Group> findByMemberIdsContaining(String userId);
+    List<Group> findByMembersContaining(String userId);
     
     // Find groups by admin ID
     List<Group> findByAdminId(String adminId);
@@ -29,10 +29,10 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     List<Group> findByNameContainingIgnoreCase(String name);
     
     // Check if a user is already a member of a group
-    @Query("{ '_id': ?0, 'memberIds': ?1 }")
-    Optional<Group> findByGroupIdAndMemberIdsContaining(String groupId, String userId);
+    @Query("{ '_id': ?0, 'members': ?1 }")
+    Optional<Group> findByGroupIdAndMembersContaining(String groupId, String userId);
     
     // Count total members in a group
-    @Query(value = "{ '_id': ?0 }", fields = "{ 'memberIds': 1 }")
+    @Query(value = "{ '_id': ?0 }", fields = "{ 'members': 1 }")
     Optional<Group> findGroupMembersOnly(String groupId);
 }
