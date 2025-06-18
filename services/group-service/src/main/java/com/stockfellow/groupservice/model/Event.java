@@ -26,5 +26,9 @@
            this.data = data;
            this.timestamp = new Date();
        }
+
+       public String getType() {
+           return eventType;
+       }
    }
 
