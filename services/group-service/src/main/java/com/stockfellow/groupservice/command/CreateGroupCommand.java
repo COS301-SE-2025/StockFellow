@@ -24,16 +24,16 @@ public class CreateGroupCommand {
     public String execute(String groupId, String adminId, String name, Double minContribution,
                          Integer maxMembers, String description, String profileImage,
                          String visibility, String contributionFrequency, Date contributionDate,
-                         String payoutFrequency, Date payoutDate, List<String> memberIds) {
+                         String payoutFrequency, Date payoutDate, List<String> members) {
         
         // Validate inputs
-        validateInputs(name, minContribution, maxMembers, visibility, contributionFrequency, payoutFrequency, memberIds);
+        validateInputs(name, minContribution, maxMembers, visibility, contributionFrequency, payoutFrequency, members);
 
         // Create the members list with proper roles and initial contributions
-        List<Group.Member> members = new ArrayList<>();
+        List<Group.Member> groupMembers = new ArrayList<>();
         
-        if (memberIds != null && !memberIds.isEmpty()) {
-            for (String memberId : memberIds) {
+        if (members != null && !members.isEmpty()) {
+            for (String memberId : members) {
                 Group.Member member;
                 if (memberId.equals(adminId)) {
                     // Admin gets founder role and initial contribution set to minContribution
@@ -44,13 +44,13 @@ public class CreateGroupCommand {
                     member = new Group.Member(memberId, "member");
                     member.setContribution(0.0); // Members start with no contribution
                 }
-                members.add(member);
+                groupMembers.add(member);
             }
         } else {
-            // If no memberIds provided, just add the admin
+            // If no members provided, just add the admin
             Group.Member adminMember = new Group.Member(adminId, "founder");
             adminMember.setContribution(minContribution); // Admin starts with minimum contribution
-            members.add(adminMember);
+            groupMembers.add(adminMember);
         }
 
         Map<String, Object> data = new HashMap<>();
@@ -68,19 +68,19 @@ public class CreateGroupCommand {
         data.put("payoutFrequency", payoutFrequency);
         data.put("payoutDate", payoutDate != null ? payoutDate.toString() : null);
         data.put("createdAt", new Date());
-        data.put("members", convertMembersToMap(members));
+        data.put("members", convertMembersToMap(groupMembers));
 
         Event event = eventStoreService.appendEvent("GroupCreated", data);
         readModelService.rebuildState(groupId);
         
-        logger.info("Group {} created by admin {} with {} initial members", groupId, adminId, members.size());
+        logger.info("Group {} created by admin {} with {} initial members", groupId, adminId, groupMembers.size());
 
         return event.getId();
     }
 
     private void validateInputs(String name, Double minContribution, Integer maxMembers, 
                                String visibility, String contributionFrequency, String payoutFrequency, 
-                               List<String> memberIds) {
+                               List<String> members) {
         
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Group name cannot be empty");
@@ -106,7 +106,7 @@ public class CreateGroupCommand {
             throw new IllegalArgumentException("Maximum members must be greater than 0");
         }
         
-        if (memberIds != null && memberIds.size() >= maxMembers) {
+        if (members != null && members.size() >= maxMembers) {
             throw new IllegalArgumentException("Number of initial members cannot exceed maximum members (admin takes one slot)");
         }
     }

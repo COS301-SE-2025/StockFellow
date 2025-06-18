@@ -67,7 +67,7 @@ public class GroupsController {
             String contributionDateStr = (String) request.get("contributionDate");
             String payoutFrequency = (String) request.get("payoutFrequency");
             String payoutDateStr = (String) request.get("payoutDate");
-            List<String> memberIds = (List<String>) request.getOrDefault("memberIds", new ArrayList<>());
+            List<String> members = (List<String>) request.getOrDefault("members", new ArrayList<>());
 
             // Validate required fields
             if (name == null || name.trim().isEmpty()) {
@@ -125,7 +125,7 @@ public class GroupsController {
             if (maxMembers <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Maximum members must be greater than 0"));
             }
-            if (memberIds.size() > maxMembers) {
+            if (members.size() > maxMembers) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Number of initial members cannot exceed maximum members"));
             }
 
@@ -152,18 +152,18 @@ public class GroupsController {
             // Generate unique group ID
             String groupId = "group_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
 
-            // Initialize memberIds with admin as the first member if empty
-            if (memberIds.isEmpty()) {
-                memberIds.add(adminId);
-            } else if (!memberIds.contains(adminId)) {
+            // Initialize members with admin as the first member if empty
+            if (members.isEmpty()) {
+                members.add(adminId);
+            } else if (!members.contains(adminId)) {
                 // Ensure admin is always included
-                memberIds.add(0, adminId); // Add admin at the beginning
+                members.add(0, adminId); // Add admin at the beginning
             }
 
             // Execute command
             String eventId = createGroupCommand.execute(groupId, adminId, name, minContribution, maxMembers,
                     description, profileImage, visibility, contributionFrequency, contributionDate,
-                    payoutFrequency, payoutDate, memberIds);
+                    payoutFrequency, payoutDate, members);
             
             logger.info("Group created with ID: {}", groupId);
 
