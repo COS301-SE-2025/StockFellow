@@ -49,7 +49,7 @@ const Stokvel = () => {
   useEffect(() => {
     const fetchStokvelDetails = async () => {
       try {
-        const token = await SecureStore.getItemAsync('accessToken');
+        const token = await SecureStore.getItemAsync('access_token');
         if (!token) {
           throw new Error('No authentication token found');
         }

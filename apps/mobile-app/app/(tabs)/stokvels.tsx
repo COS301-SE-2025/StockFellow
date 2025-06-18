@@ -10,24 +10,23 @@ import { useTheme } from '../_layout';
 import * as SecureStore from 'expo-secure-store';
 
 interface Stokvel {
-  id: string;
+  groupId: string;
   name: string;
-  memberCount: number;
-  balance: string;
+  memberCount: number; // This should be derived from memberIds.length
+  balance?: string; // Not in your schema, but keeping for UI
 }
 
 const Stokvels = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [yourStokvels, setYourStokvels] = useState<Stokvel[]>([]);
-  const [joinedStokvels, setJoinedStokvels] = useState<Stokvel[]>([]);
+  const [stokvels, setStokvels] = useState<Stokvel[]>([]);
   const { colors } = useTheme();
 
   useEffect(() => {
     const fetchStokvels = async () => {
       try {
-        const token = await SecureStore.getItemAsync('accessToken');
+        const token = await SecureStore.getItemAsync('access_token');
         if (!token) {
           throw new Error('No authentication token found');
         }
@@ -44,9 +43,14 @@ const Stokvels = () => {
         }
 
         const data = await response.json();
-        // Assuming the API returns ownedGroups and joinedGroups
-        setYourStokvels(data.ownedGroups || []);
-        setJoinedStokvels(data.joinedGroups || []);
+        // Transform the API response to match our frontend needs
+        const transformedStokvels = data.map((group: any) => ({
+          groupId: group.groupId,
+          name: group.name,
+          memberCount: group.memberIds?.length || 0,
+          balance: "0.00" // Placeholder since balance isn't in your schema
+        }));
+        setStokvels(transformedStokvels);
       } catch (error) {
         console.error('Error fetching stokvels:', error);
         Alert.alert('Error', 'Failed to load stokvels');
@@ -62,11 +66,7 @@ const Stokvels = () => {
     setSearchQuery(text);
   };
 
-  const filteredYourStokvels = yourStokvels.filter(stokvel =>
-    stokvel.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredJoinedStokvels = joinedStokvels.filter(stokvel =>
+  const filteredStokvels = stokvels.filter(stokvel =>
     stokvel.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -99,39 +99,19 @@ const Stokvels = () => {
             Your Stokvels
           </Text>
 
-          {filteredYourStokvels.length > 0 ? (
-            filteredYourStokvels.map((stokvel) => (
+          {filteredStokvels.length > 0 ? (
+            filteredStokvels.map((stokvel) => (
               <StokvelCard
-                key={stokvel.id}
+                key={stokvel.groupId}
                 name={stokvel.name}
                 memberCount={stokvel.memberCount}
-                balance={stokvel.balance}
-                onPress={() => router.push(`/stokvel/${stokvel.id}`)}
+                balance={stokvel.balance || "0.00"} // Default value if not provided
+                onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
               />
             ))
           ) : (
             <Text style={{ color: colors.text, textAlign: 'center', padding: 20 }} className="text-sm">
-              No stokvels found
-            </Text>
-          )}
-
-          <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-4">
-            Joined Stokvels
-          </Text>
-
-          {filteredJoinedStokvels.length > 0 ? (
-            filteredJoinedStokvels.map((stokvel) => (
-              <StokvelCard
-                key={stokvel.id}
-                name={stokvel.name}
-                memberCount={stokvel.memberCount}
-                balance={stokvel.balance}
-                onPress={() => router.push(`/stokvel/${stokvel.id}`)}
-              />
-            ))
-          ) : (
-            <Text style={{ color: colors.text, textAlign: 'center', padding: 20 }} className="text-sm">
-              No joined stokvels found
+              {searchQuery ? 'No matching stokvels found' : 'You have no stokvels yet'}
             </Text>
           )}
         </View>
