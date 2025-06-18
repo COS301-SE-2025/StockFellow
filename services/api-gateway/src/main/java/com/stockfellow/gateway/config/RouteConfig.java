@@ -25,7 +25,7 @@ public class RouteConfig {
         return Arrays.asList(
             // User service route
             new Route(
-                "/api/user",
+                "/api/users",
                 false,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(userServiceUrl, true)
