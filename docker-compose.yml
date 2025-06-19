@@ -53,13 +53,13 @@ services:
       - keycloak
     ports:
       - "3000:3000"      # Application port
-      - "5005:5005"      # Java debugging port (changed from 9229)
+      - "5007:5007"      # Java debugging port (changed from 9229)
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/
       - KEYCLOAK_REALM=stockfellow
       - KEYCLOAK_RESOURCE=public-client
-      - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      # - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
       - JVM_OPTS=-Xmx512m -Xms256m
     networks:
       - stockfellow-net
@@ -107,7 +107,7 @@ services:
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
       - USER_SERVICE_URL=http://user-service:4000
-      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+      # - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     networks:
       - stockfellow-net
     volumes:

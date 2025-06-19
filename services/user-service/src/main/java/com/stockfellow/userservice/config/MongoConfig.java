@@ -24,6 +24,6 @@ public class MongoConfig {
 
     @Bean
     public MongoClient mongoClient() {
-        return MongoClients.create(System.getenv("MONGODB_URI"));
+        return MongoClients.create(System.getenv("SPRING_DATA_MONGODB_URI"));
     }
 }
