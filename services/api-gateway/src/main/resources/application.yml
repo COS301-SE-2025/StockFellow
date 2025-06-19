@@ -14,6 +14,15 @@ keycloak:
   public-client: true
   confidential-port: 0
 
+# Custom admin config for Keycloak
+app:
+  keycloak:
+    admin:
+      username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+      realm: master
+      client-id: admin-cli
+
 # Logging configuration (replaces morgan)
 logging:
   level:
