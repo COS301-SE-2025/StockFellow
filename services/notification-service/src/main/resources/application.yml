@@ -1,0 +1,26 @@
+server:
+  port: 4080
+spring:
+  application:
+    name: notification-service
+  data:
+    mongodb:
+      uri: mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/notification_stokvel_db?retryWrites=true&w=majority&appName=Cluster0
+      database: notificationdb
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+    packages:
+      trust-all: true
+  jms:
+    pub-sub-domain: true # Enable topic (pub-sub) mode
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-service/issuer
+logging:
+  level:
+    com.stockfellow: INFO
+    org.springframework.jms: DEBUG

@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class GroupServiceClient {
