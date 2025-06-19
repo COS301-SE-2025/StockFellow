@@ -2,12 +2,13 @@ package com.stockfellow.gateway.controller;
 
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
-import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.AccessTokenResponse;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
+
 
 @RestController
 public class AuthController {
@@ -157,11 +160,17 @@ public class AuthController {
                 // User created successfully, now set password
                 String userId = CreatedResponseUtil.getCreatedId(response);
                 
+                // Clear required actions
+                UserResource userResource = usersResource.get(userId);
+                UserRepresentation user = userResource.toRepresentation();
+                user.setRequiredActions(new ArrayList<>());  
+                userResource.update(user);
+
                 // Set password
                 CredentialRepresentation credential = new CredentialRepresentation();
                 credential.setType(CredentialRepresentation.PASSWORD);
                 credential.setValue(registerRequest.getPassword());
-                credential.setTemporary(false); // Set to true if you want user to change password on first login
+                credential.setTemporary(false);
                 
                 usersResource.get(userId).resetPassword(credential);
                 

@@ -28,14 +28,21 @@ public class ProxyController {
             @RequestHeader MultiValueMap<String, String> headers) {
         
         String requestPath = request.getRequestURI();
+
+        System.out.println("=== GATEWAY DEBUG ===");
+        System.out.println("Received request: " + method + " " + requestPath);
+        System.out.println("Headers: " + headers);
         
         Route matchingRoute = findMatchingRoute(requestPath);
         if (matchingRoute == null) {
             return ResponseEntity.notFound().build();
         }
+
+        System.out.println("Matched route: " + matchingRoute.getUrl() + " -> " + matchingRoute.getProxy().getTarget());
         
         try {
             String targetUrl = matchingRoute.getProxy().getTarget() + requestPath;
+            System.out.println("Proxying to: " + targetUrl);
             
             HttpHeaders proxyHeaders = new HttpHeaders();
             headers.forEach((key, values) -> {

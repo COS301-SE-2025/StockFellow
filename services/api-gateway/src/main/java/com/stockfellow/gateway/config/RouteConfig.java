@@ -25,7 +25,7 @@ public class RouteConfig {
         return Arrays.asList(
             // User service route
             new Route(
-                "/api/users",
+                "/api/users/**",
                 false,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(userServiceUrl, true)
@@ -33,7 +33,7 @@ public class RouteConfig {
             
             // Group service route
             new Route(
-                "/api/group",
+                "/api/group/**",
                 false,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(groupServiceUrl, true)
@@ -41,7 +41,7 @@ public class RouteConfig {
             
             // Transaction service route (requires auth)
             new Route(
-                "/api/transaction",
+                "/api/transaction/**",
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(transactionServiceUrl, true)
