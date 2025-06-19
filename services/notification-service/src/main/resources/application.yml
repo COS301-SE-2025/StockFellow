@@ -24,3 +24,18 @@ logging:
   level:
     com.stockfellow: INFO
     org.springframework.jms: DEBUG
+
+  # Artemis Configuration
+  # spring.artemis.mode=embedded
+  # spring.artemis.embedded.enabled=true
+  # spring.artemis.embedded.persistent=false
+  # spring.artemis.embedded.data-directory=target/artemis-data
+  # spring.artemis.embedded.queues=group.events
+  # spring.artemis.embedded.topics=group.events
+
+  # If using external Artemis broker instead:
+  # spring.artemis.mode=native
+  # spring.artemis.host=localhost
+  # spring.artemis.port=61616
+  # spring.artemis.user=admin
+  # spring.artemis.password=admin
