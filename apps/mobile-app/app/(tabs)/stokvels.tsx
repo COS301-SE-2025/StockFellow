@@ -14,6 +14,7 @@ interface Stokvel {
   name: string;
   memberCount: number; // This should be derived from memberIds.length
   balance?: string; // Not in your schema, but keeping for UI
+  profileImage?: string | null;
 }
 
 const Stokvels = () => {
@@ -43,13 +44,16 @@ const Stokvels = () => {
         }
 
         const data = await response.json();
+
         // Transform the API response to match our frontend needs
         const transformedStokvels = data.map((group: any) => ({
-          groupId: group.groupId,
+          groupId: group._id || group.groupId, // Use _id if that's what backend returns
           name: group.name,
-          memberCount: group.memberIds?.length || 0,
-          balance: "0.00" // Placeholder since balance isn't in your schema
+          memberCount: group.members?.length || 0, // Changed from memberIds to members
+          balance: "0.00",
+          profileImage: group.profileImage || null // Add this line
         }));
+
         setStokvels(transformedStokvels);
       } catch (error) {
         console.error('Error fetching stokvels:', error);
@@ -84,7 +88,7 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-      
+
       <View className="px-6 pt-4">
         <SearchBar
           value={searchQuery}
@@ -92,7 +96,7 @@ const Stokvels = () => {
           placeholder="Search for a Stokvel"
         />
       </View>
-      
+
       <ScrollView className="flex-1 px-6">
         <View className="py-2">
           <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2">
@@ -105,7 +109,8 @@ const Stokvels = () => {
                 key={stokvel.groupId}
                 name={stokvel.name}
                 memberCount={stokvel.memberCount}
-                balance={stokvel.balance || "0.00"} // Default value if not provided
+                balance={stokvel.balance || "0.00"}
+                profileImage={stokvel.profileImage} // Add this line
                 onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
               />
             ))
@@ -117,13 +122,13 @@ const Stokvels = () => {
         </View>
 
         <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ backgroundColor: colors.primary }}
             className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
             onPress={() => router.push('/stokvels/create')}
           >
-            <Image 
-              source={icons.plus} 
+            <Image
+              source={icons.plus}
               style={{ width: 19, height: 19, tintColor: 'white' }}
               resizeMode="contain"
             />
