@@ -463,13 +463,157 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              
+  /api/groups/{groupId}:
+    get:
+      summary: Get details of a specific group
+      description: |
+        Returns details of a specific group. The response fields vary based on the requesting user's role in the group.
+        - Admin/Founder: Full group details including balance, all member contributions, and join requests (Group Activities are handled by Notification service)
+        - Member: Group details but hides other members' contribution amounts and requests
+        - Non-member: Basic group details (hides balance, all contribution amounts, and requests)
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: MongoDB document ID
+                  groupId:
+                    type: string
+                    description: Business identifier for the group
+                  name:
+                    type: string
+                  adminId:
+                    type: string
+                  minContribution:
+                    type: number
+                    format: double
+                  balance:
+                    type: number
+                    format: double
+                    description: Only visible to group members
+                  maxMembers:
+                    type: integer
+                  description:
+                    type: string
+                  profileImage:
+                    type: string
+                  visibility:
+                    type: string
+                  contributionFrequency:
+                    type: string
+                  payoutFrequency:
+                    type: string
+                  contributionDate:
+                    type: string
+                    format: date-time
+                  payoutDate:
+                    type: string
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                        role:
+                          type: string
+                          enum: [founder, admin, member]
+                        joinedAt:
+                          type: string
+                          format: date-time
+                        lastActive:
+                          type: string
+                          format: date-time
+                        contribution:
+                          type: number
+                          format: double
+                          description: Only visible to admins/founders for other members
+                  activities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [contribution, payout, missed_contribution]
+                        userId:
+                          type: string
+                        amount:
+                          type: number
+                          format: double
+                        timestamp:
+                          type: string
+                          format: date-time
+                  requests:
+                    type: array
+                    description: Only visible to admins and founders
+                    items:
+                      type: object
+                      properties:
+                        requestId:
+                          type: string
+                        userId:
+                          type: string
+                        status:
+                          type: string
+                          enum: [accepted, rejected, pending]
+                        timestamp:
+                          type: string
+                          format: date-time
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User doesn't have permission to view this group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/groups/{groupId}/join:
     post:
-      summary: Join a group
-      description: Join an existing group as a member
+      summary: Request to join a group
+      description: |
+        Creates and sends a join request to the group with status "pending".
+        The request must be approved by a group admin/founder.
       tags:
-        - Groups
+        - Group Requests
       security:
         - bearerAuth: []
       parameters:
@@ -480,8 +624,8 @@ paths:
             type: string
           description: Group ID to join
       responses:
-        '200':
-          description: Successfully joined group
+        '201':
+          description: Join request sent
           content:
             application/json:
               schema:
@@ -489,13 +633,26 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Successfully joined group"
+                    example: "Join request sent"
+                  requestId:
+                    type: string
                   groupId:
                     type: string
-                  eventId:
+                  userId:
                     type: string
+                  status:
+                    type: string
+                    enum: [pending, accepted, rejected]
+                    default: pending
+                  timestamp:
+                    type: string
+                    format: date-time
         '400':
-          description: Bad request - User already member or group full
+          description: |
+            Bad request - Possible reasons:
+            - User already has a pending request
+            - User is already a member
+            - Group is full
           content:
             application/json:
               schema:
@@ -506,8 +663,181 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Group is private and doesn't accept requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/groups/{groupId}/requests:
+    get:
+      summary: Get all pending join requests for a group, where status is "pending"
+      description: |
+        Returns all pending join requests for a specific group.
+        Only accessible to group admins and founders.
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of pending join requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JoinRequest'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/requests/{requestId}/accept:
+    post:
+      summary: Accept a join request
+      description: |
+        Accepts a join request, adding the user to the group members with:
+        - Role: "member"
+        - Contribution: group's minContribution
+        Updates the request status to "accepted"
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+        - name: requestId
+          in: path
+          description: ID of the request to accept
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request accepted and user added to group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Join request accepted and user added to group"
+                  group:
+                    $ref: '#/components/schemas/Group'
+        '400':
+          description: Bad request - User is already a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/requests/{requestId}/reject:
+    post:
+      summary: Reject a join request
+      description: |
+        Rejects a join request without adding the user to the group.
+        Updates the request status to "rejected"
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+        - name: requestId
+          in: path
+          description: ID of the request to reject
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request rejected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Join request rejected"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or request not found
           content:
             application/json:
               schema:
@@ -627,6 +957,26 @@ components:
         joinedAt:
           type: string
           format: date-time
+    
+    JoinRequest:
+      type: object
+      properties:
+        requestId:
+          type: string
+        userId:
+          type: string
+        profileName:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+          default: pending
 
     ErrorResponse:
       type: object
