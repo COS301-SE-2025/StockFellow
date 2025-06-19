@@ -26,6 +26,12 @@ import trash from "../../assets/icons/trash.png";
 import calendar from "../../assets/icons/calendar.png";
 import clock from "../../assets/icons/clock.png";
 
+import request from '../../assets/icons/request.png';
+import bell from '../../assets/icons/bell.png';
+import bell_filled from '../../assets/icons/bell_filled.png';
+import settings from '../../assets/icons/settings.png';
+import avatar from '../../assets/icons/avatar.png';
+
 export default {
   eyehide,
   eye,
@@ -52,4 +58,9 @@ export default {
   trash,
   calendar,
   clock,
+  request,
+  bell,
+  bell_filled,
+  settings,
+  avatar,
 };
