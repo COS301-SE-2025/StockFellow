@@ -15,7 +15,7 @@
    public class MongoConfig {
        @Bean
        public MongoTemplate mongoTemplate(MongoClient mongoClient, MongoMappingContext context) {
-           MongoTemplate template = new MongoTemplate(mongoClient, "stokvel_db");
+           MongoTemplate template = new MongoTemplate(mongoClient, "groups_stokvel_db");
            IndexResolver resolver = new MongoPersistentEntityIndexResolver(context);
            IndexOperations indexOps = template.indexOps(Event.class);
            resolver.resolveIndexFor(Event.class).forEach(indexOps::ensureIndex);
