@@ -682,6 +682,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   
+  /api/groups/{groupId}/leave:
+    delete:
+      summary: Leave a group
+      description: |
+        Removes the authenticated user from the group members list.
+        Admins/founders cannot leave unless they transfer ownership first.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Group ID to leave
+      responses:
+        '200':
+          description: Successfully left the group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully left the group"
+                  groupId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - User is not a member
+            - User is the last admin/founder (must transfer ownership first)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
   /api/groups/{groupId}/requests:
     get:
       summary: Get all pending join requests for a group, where status is "pending"
@@ -838,6 +896,331 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Group or request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              
+  /api/groups/{groupId}/transfer-ownership:
+    post:
+      summary: Transfer group ownership
+      description: |
+        Transfers group ownership to another member.
+        Only accessible to current group founder/admin.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newOwnerId:
+                  type: string
+                  description: ID of the member to become new owner
+      responses:
+        '200':
+          description: Ownership transferred successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ownership transferred successfully"
+                  newAdminId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - New owner is not a group member
+            - New owner is already an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not current owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or new owner not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}:
+    patch:
+      summary: Update group information
+      description: |
+        Updates group information. Only accessible to group admins/founders.
+        Cannot update members' information through this endpoint.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                minContribution:
+                  type: number
+                  format: double
+                maxMembers:
+                  type: integer
+                description:
+                  type: string
+                profileImage:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [Public, Private]
+                contributionFrequency:
+                  type: string
+                payoutFrequency:
+                  type: string
+      responses:
+        '200':
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Invalid field values
+            - Attempt to update restricted fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not admin/founder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/members/{memberId}/role:
+    patch:
+      summary: Update member role
+      description: |
+        Updates a member's role. Only accessible to group founder/admin.
+        Founder/Admin cannot change their own role.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Member role updated successfully"
+                  memberId:
+                    type: string
+                  newRole:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Attempt to change founder role
+            - Invalid role value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not founder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/contribution:
+    patch:
+      summary: Update member contribution
+      description: |
+        Updates the authenticated member's contribution amount.
+        New amount must be ≥ group's minContribution.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0
+                  description: Must be ≥ group's minContribution
+      responses:
+        '200':
+          description: Contribution updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Contribution updated successfully"
+                  newAmount:
+                    type: number
+                    format: double
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Amount < minContribution
+            - User is not a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/members/{memberId}:
+    delete:
+      summary: Remove a member from the group
+      description: |
+        Removes a member from the group with role-based permissions:
+        - Founders can remove admins and members
+        - Admins can only remove members
+        - Founders cannot be removed (must transfer ownership first)
+        - Members cannot remove anyone
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Member removed successfully"
+                  removedMemberId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Attempt to remove founder
+            - Attempt to remove yourself
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden - Possible reasons:
+            - User lacks permission to remove this member
+            - Admin trying to remove another admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or member not found
           content:
             application/json:
               schema:
