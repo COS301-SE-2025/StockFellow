@@ -7,6 +7,7 @@ import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
+import authService from '../../src/services/authService';
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -49,37 +50,20 @@ const Login = () => {
       try {
         console.log('Attempting login...');
 
-        // Create URLSearchParams to match the working Postman request
-        const formData = new URLSearchParams();
-        formData.append('grant_type', 'password');
-        formData.append('client_id', 'public-client');
-        formData.append('username', form.username);
-        formData.append('password', form.password);
+        // Auth service instead of direct KC call
+        const result = await authService.login(form.username, form.password);
 
-        const response = await fetch('http://10.0.2.2:8080/realms/stockfellow/protocol/openid-connect/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData.toString(),
-        }).catch(error => {
-          console.error('Network error details:', error);
-          throw new Error('Network request failed');
-        });
-
-        console.log('Response received:', response.status);
-        const data = await response.json();
-
-        if (!response.ok) {
-          console.error('Login failed:', data);
-          throw new Error(data.error_description || 'Login failed');
+        if (result.success) {
+          console.log('Login successful');
+          router.push('/(tabs)/home');
+        } else {
+          // Handle login failure
+          console.error('Login failed:', result.error);
+          setErrors({
+            ...errors,
+            username: result.error,
+          });
         }
-
-        console.log('Login successful');
-        await SecureStore.setItemAsync('access_token', data.access_token);
-        await SecureStore.setItemAsync('refresh_token', data.refresh_token);
-
-        router.push('/(tabs)/home');
       } catch (error) {
         console.error('Login error:', error);
         setErrors({

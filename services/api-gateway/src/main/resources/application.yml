@@ -4,30 +4,52 @@ server:
 spring:
   application:
     name: api-gateway
+  # Redic Config
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
 
-# Keycloak configuration
 keycloak:
-  realm: stockfellow
-  auth-server-url: http://localhost:8080/
+  realm: ${KEYCLOAK_REALM:stockfellow}
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://localhost:8080/}
   ssl-required: external
-  resource: public-client
+  resource: ${KEYCLOAK_FRONTEND_CLIENT_ID:frontend-client}
   public-client: true
   confidential-port: 0
 
-# Custom admin config for Keycloak
+# Admin configuration
 app:
   keycloak:
+    # Gateway client (confidential)
+    gateway:
+      client-id: ${KEYCLOAK_GATEWAY_CLIENT_ID:api-gateway-client}
+      client-secret: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:}
+    
+    # Frontend client (public)  
+    frontend:
+      client-id: ${KEYCLOAK_FRONTEND_CLIENT_ID:public-client}
+      redirect-uri: ${KEYCLOAK_FRONTEND_REDIRECT_URI:http://localhost:3000/auth/callback}
+    
+    # Admin configuration
     admin:
       username: ${KEYCLOAK_ADMIN_USERNAME:admin}
       password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
-      realm: master
-      client-id: admin-cli
+      realm: ${KEYCLOAK_ADMIN_REALM:master}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
 
 # Logging configuration (replaces morgan)
 logging:
   level:
     org.springframework.web: DEBUG
     com.stockfellow.gateway: DEBUG
+    com.stockfellow.gateway.service: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
