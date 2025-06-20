@@ -13,7 +13,7 @@ export default function SplashPage() {
   useEffect(() => {
     // Auto-navigate after delay
     const timer = setTimeout(() => {
-      router.push('/(auth)/login');
+      router.push('/(tabs)/home');
     }, 3000);
     return () => clearTimeout(timer);
   }, []);

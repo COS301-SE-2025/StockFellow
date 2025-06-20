@@ -32,6 +32,10 @@ import bell_filled from '../../assets/icons/bell_filled.png';
 import settings from '../../assets/icons/settings.png';
 import avatar from '../../assets/icons/avatar.png';
 
+// transaction page
+import fnb from '../../assets/icons/fnb.png';
+import mastercard from '../../assets/icons/mastercard.png';
+
 export default {
   eyehide,
   eye,
@@ -63,4 +67,6 @@ export default {
   bell_filled,
   settings,
   avatar,
+  fnb,
+  mastercard,
 };
