@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
 // POST /api/groups/create - Create a new stokvel group
 router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
   try {
+    console.log("creating group.....");
     const { name, minContribution, maxMembers, description, profileImage, visibility, contributionFrequency, contributionDate, payoutFrequency, payoutDate, memberIds } = req.body;
 
     // Validate required fields
@@ -35,12 +36,12 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
 
     // Validate contributionFrequency
     if (!['Monthly', 'Bi-weekly', 'Weekly'].includes(contributionFrequency)) {
-      return res.status(400).json({ error: 'Invalid contribution frequency' });
+      return res.status(400).json({ error: 'Invalid contribution frequency. Valid values: Monthly, Bi-weekly, Weekly' });
     }
 
     // Validate payoutFrequency
     if (!['Monthly', 'Bi-weekly', 'Weekly'].includes(payoutFrequency)) {
-      return res.status(400).json({ error: 'Invalid payout frequency' });
+      return res.status(400).json({ error: 'Invalid payout frequency. Valid values: Monthly, Bi-weekly, Weekly' });
     }
 
     // Validate visibility
@@ -48,16 +49,14 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
       return res.status(400).json({ error: 'Invalid visibility' });
     }
 
-    // Validate minContribution (convert from string to number)
-    const minContributionNum = parseFloat(minContribution);
-    if (isNaN(minContributionNum) || minContributionNum <= 0) {
-      return res.status(400).json({ error: 'Invalid minimum contribution' });
+    // Validate minContribution
+    if (typeof minContribution !== 'number' || minContribution <= 0) {
+      return res.status(400).json({ error: 'Invalid minimum contribution. Must be a positive number' });
     }
 
-    // Validate maxMembers (convert from string to number)
-    const maxMembersNum = parseInt(maxMembers, 10);
-    if (isNaN(maxMembersNum) || maxMembersNum <= 0) {
-      return res.status(400).json({ error: 'Invalid maximum number of members' });
+    // Validate maxMembers
+    if (typeof maxMembers !== 'number' || maxMembers <= 0 || maxMembers > 30) {
+      return res.status(400).json({ error: 'Invalid maximum members. Must be between 1-30' });
     }
 
     // Validate memberIds (optional, but must be an array of strings if provided)
@@ -66,7 +65,7 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
     }
 
     // Validate number of memberIds against maxMembers
-    if (memberIds && memberIds.length > maxMembersNum) {
+    if (memberIds && memberIds.length > maxMembers) {
       return res.status(400).json({ error: 'Number of memberIds cannot exceed maxMembers' });
     }
 
@@ -87,8 +86,8 @@ router.post('/create', /*jwtMiddleware,*/ async (req, res) => {
       groupId,
       adminId,
       name,
-      minContribution: minContributionNum,
-      maxMembers: maxMembersNum,
+      minContribution,
+      maxMembers,
       description,
       profileImage: profileImage || null,
       visibility,
@@ -130,8 +129,8 @@ router.post('/:groupId/join', /*jwtMiddleware,*/ async (req, res) => {
   try {
     //const groupId = req.params.groupId;
     const groupId = 'group_1748367693647_nmnukn659'; // Placeholder for group ID, replace with actual group ID from request params
-   // const userId = req.user.sub;
-   const userId ='3372d535-05a1-4189-b6ff-a2291cb1145c'; // Placeholder for user ID, replace with actual user ID from JWT
+    // const userId = req.user.sub;
+    const userId = '3372d535-05a1-4189-b6ff-a2291cb1145c'; // Placeholder for user ID, replace with actual user ID from JWT
 
     // Check if group exists
     const group = await readModel.getGroup(groupId);

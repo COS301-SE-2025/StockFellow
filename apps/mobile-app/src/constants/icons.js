@@ -32,6 +32,12 @@ import growth from "../../assets/icons/growth.png";
 import contribute from "../../assets/icons/contribute.png";
 import notifications from "../../assets/icons/notifications.png";
 
+import request from '../../assets/icons/request.png';
+import bell from '../../assets/icons/bell.png';
+import bell_filled from '../../assets/icons/bell_filled.png';
+import settings from '../../assets/icons/settings.png';
+import avatar from '../../assets/icons/avatar.png';
+
 export default {
   eyehide,
   eye,
@@ -63,4 +69,9 @@ export default {
   contribute,
   notifications,
 
+  request,
+  bell,
+  bell_filled,
+  settings,
+  avatar,
 };

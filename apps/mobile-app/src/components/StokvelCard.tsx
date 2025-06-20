@@ -25,13 +25,16 @@ const StokvelCard: React.FC<StokvelCardProps> = ({ name, memberCount, balance, o
       <View className="flex-row items-center flex-1 ml-[-10px]">
         <Image 
           source={icons.group}
-          className="w-13 h-13"
+          className=""
+          resizeMode="contain"
           style={{ 
-            opacity: 0.9
+            opacity: 0.9,
+            width:90,
+         
           }}
         />
 
-        <View>
+        <View className='flex-1 justify-center'>
           <Text 
             style={{ color: isDarkMode ? '#CCCCCC' : '#1A1A1A' }}
             className="text-base font-['PlusJakartaSans-SemiBold']"
