@@ -32,6 +32,8 @@ import bell_filled from '../../assets/icons/bell_filled.png';
 import settings from '../../assets/icons/settings.png';
 import avatar from '../../assets/icons/avatar.png';
 
+import help from '../../assets/icons/help.png';
+
 export default {
   eyehide,
   eye,
@@ -63,4 +65,5 @@ export default {
   bell_filled,
   settings,
   avatar,
+  help,
 };
