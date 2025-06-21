@@ -1,52 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-//import { StatusBar } from 'expo-status-bar';
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
 import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
+import * as SecureStore from 'expo-secure-store';
 
 interface Stokvel {
-  id: number;
+  groupId: string;
   name: string;
-  members: number;
-  balance: string;
+  memberCount: number; // This should be derived from memberIds.length
+  balance?: string; // Not in your schema, but keeping for UI
+  profileImage?: string | null;
 }
 
 const Stokvels = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [stokvels, setStokvels] = useState<Stokvel[]>([]);
   const { colors } = useTheme();
 
-  const mockStokvels = [
-    { id: 1, name: 'Stokvel Group 1', members: 23, balance: '15435.95' },
-    { id: 2, name: 'Stokvel Group 2', members: 15, balance: '8570.00' },
-  ];
+  useEffect(() => {
+    const fetchStokvels = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('access_token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
 
-  const joinedStokvels = [
-    { id: 1, name: 'Stokvel Group 3', members: 23, balance: '15435.95' },
-    { id: 2, name: 'Stokvel Group 4', members: 18, balance: '8570.00' },
-  ];
+        const response = await fetch('http://10.0.2.2:4040/api/groups/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-  const filteredYourStokvels = mockStokvels.filter(stokvel =>
-    stokvel.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        if (!response.ok) {
+          throw new Error('Failed to fetch stokvels');
+        }
 
-  const filteredJoinedStokvels = joinedStokvels.filter(stokvel =>
-    stokvel.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        const data = await response.json();
+
+        // Transform the API response to match our frontend needs
+        const transformedStokvels = data.map((group: any) => ({
+          groupId: group._id || group.groupId, // Use _id if that's what backend returns
+          name: group.name,
+          memberCount: group.members?.length || 0, // Changed from memberIds to members
+          balance: "0.00",
+          profileImage: group.profileImage || null // Add this line
+        }));
+
+        setStokvels(transformedStokvels);
+      } catch (error) {
+        console.error('Error fetching stokvels:', error);
+        Alert.alert('Error', 'Failed to load stokvels');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStokvels();
+  }, []);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
   };
 
+  const filteredStokvels = stokvels.filter(stokvel =>
+    stokvel.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <TopBar title="Stokvels" />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-      
+
       <View className="px-6 pt-4">
         <SearchBar
           value={searchQuery}
@@ -54,61 +96,46 @@ const Stokvels = () => {
           placeholder="Search for a Stokvel"
         />
       </View>
-      
+
       <ScrollView className="flex-1 px-6">
         <View className="py-2">
           <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2">
             Your Stokvels
           </Text>
 
-          {filteredYourStokvels.length > 0 ? (
-            filteredYourStokvels.map((stokvel) => (
+          {filteredStokvels.length > 0 ? (
+            filteredStokvels.map((stokvel) => (
               <StokvelCard
-                key={stokvel.id}
+                key={stokvel.groupId}
                 name={stokvel.name}
-                memberCount={stokvel.members}
-                balance={stokvel.balance}
-                onPress={() => router.push(`/stokvel/${stokvel.id}`)}
+                memberCount={stokvel.memberCount}
+                balance={stokvel.balance || "0.00"}
+                profileImage={stokvel.profileImage} // Add this line
+                onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
               />
             ))
           ) : (
             <Text style={{ color: colors.text, textAlign: 'center', padding: 20 }} className="text-sm">
-              No matching stokvels found
+              {searchQuery ? 'No matching stokvels found' : 'You have no stokvels yet'}
             </Text>
           )}
-
-          <Text style={{ color: colors.text }} className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-4">
-            Joined Stokvels
-          </Text>
-
-          {filteredJoinedStokvels.map((stokvel) => (
-            <StokvelCard
-              key={stokvel.id}
-              name={stokvel.name}
-              memberCount={stokvel.members}
-              balance={stokvel.balance}
-              onPress={() => router.push(`/stokvel/${stokvel.id}`)}
-            />
-          ))}
         </View>
 
         <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
-        <TouchableOpacity 
-          style={{ backgroundColor: colors.primary }}
-          className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
-          onPress={() => router.push('/stokvels/create')}
-        >
-          <Image 
-            source={icons.plus} 
-            style={{ width: 19, height: 19, tintColor: 'white' }}
-            resizeMode="contain"
-          />
-          <Text className="text-white text-base font-['PlusJakartaSans-Regular']">Create</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={{ backgroundColor: colors.primary }}
+            className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"
+            onPress={() => router.push('/stokvels/create')}
+          >
+            <Image
+              source={icons.plus}
+              style={{ width: 19, height: 19, tintColor: 'white' }}
+              resizeMode="contain"
+            />
+            <Text className="text-white text-base font-['PlusJakartaSans-Regular']">Create</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-
-      
     </SafeAreaView>
   );
 };

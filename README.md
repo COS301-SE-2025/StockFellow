@@ -14,18 +14,6 @@
 <h4 align="center" style="margin-top: 5px;">A Capstone Project by Dev Opps</h4>
 <hr style="margin-top: 20px; margin-bottom: 20px;">
 
-<div align="center" style="background-color: #f0f8ff; border: 2px solid #4169e1; border-radius: 8px; padding: 15px; margin: 20px 0;">
-  <h3 style="color: #4169e1; margin-top: 0;">📦 Demo 1 Release (v1.0.0)</h3>
-  <p style="margin-bottom: 0; color: #333;">
-    <strong>This branch contains the Node.js/Express.js backend version presented for Demo 1.</strong><br>
-    Features implemented: User Registration/Login, Stokvel Creation, and Basic Group Viewing.<br>
-    <em>Note: This is a partially implemented version for demonstration purposes.</em><br>
-    <strong>Current development continues on the <code>main</code> branch with Java backend.</strong>
-  </p>
-</div>
-
-<hr style="margin-top: 20px; margin-bottom: 20px;">
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -118,10 +106,10 @@
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Demo 1
-  - [x] Register and Login
-  - [x] Create Stokvel
-  - [x] View Stokvel Groups
+- [ ] Demo 1
+  - [ ] Register and Login
+  - [ ] Create Stokvel
+  - [ ] View Stokvel Groups
 - [ ] Demo 2
 - [ ] Demo 3
 - [ ] Demo 4

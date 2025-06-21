@@ -1,0 +1,14 @@
+{
+  "realm": "test-realm",
+  "auth-server-url": "http://localhost:8080/",
+  "ssl-required": "external",
+  "resource": "test-client",
+  "public-client": true,
+  "confidential-port": 0,
+  "policy-enforcer": {
+    "enforcement-mode": "DISABLED"
+  },
+  "enable-cors": true,
+  "disable-trust-manager": true,
+  "allow-any-hostname": true
+}
