@@ -1,4 +1,3 @@
-// src/services/authService.js
 import * as SecureStore from 'expo-secure-store';
 
 const API_BASE_URL = 'http://10.0.2.2:3000/api';
@@ -36,7 +35,6 @@ class AuthService {
     }
   }
 
-  // Check if user authenticated
   async isAuthenticated() {
     const { accessToken } = await this.getTokens();
     return !!accessToken;
@@ -62,7 +60,6 @@ class AuthService {
         throw new Error(data.error || data.details || 'Login failed');
       }
 
-      // Save tokens
       await this.saveTokens(data.access_token, data.refresh_token);
 
       return {
@@ -92,7 +89,6 @@ class AuthService {
           lastName: userData.lastName,
           email: userData.email,
           password: userData.password,
-          // Add custom attributes if your backend supports them
           contactNumber: userData.contactNumber,
           idNumber: userData.idNumber,
         }),
