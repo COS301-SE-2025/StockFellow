@@ -10,7 +10,7 @@ import { useTheme } from '../_layout';
 import * as SecureStore from 'expo-secure-store';
 
 interface Stokvel {
-  groupId: string;
+  id: string;
   name: string;
   memberCount: number; // This should be derived from memberIds.length
   balance?: string; // Not in your schema, but keeping for UI
@@ -47,7 +47,7 @@ const Stokvels = () => {
 
         // Transform the API response to match our frontend needs
         const transformedStokvels = data.map((group: any) => ({
-          groupId: group._id || group.groupId, // Use _id if that's what backend returns
+          id: group.id , // Use _id if that's what backend returns
           name: group.name,
           memberCount: group.members?.length || 0, // Changed from memberIds to members
           balance: "0.00",
@@ -106,12 +106,12 @@ const Stokvels = () => {
           {filteredStokvels.length > 0 ? (
             filteredStokvels.map((stokvel) => (
               <StokvelCard
-                key={stokvel.groupId}
+                key={stokvel.id}
                 name={stokvel.name}
                 memberCount={stokvel.memberCount}
                 balance={stokvel.balance || "0.00"}
                 profileImage={stokvel.profileImage} // Add this line
-                onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
+                onPress={() => router.push(`/stokvels/${stokvel.id}`)}
               />
             ))
           ) : (
