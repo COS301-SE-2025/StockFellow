@@ -1,5 +1,6 @@
 package com.stockfellow.groupservice.controller;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.stockfellow.groupservice.command.CreateGroupCommand;
 import com.stockfellow.groupservice.command.JoinGroupCommand;
 import com.stockfellow.groupservice.command.ProcessJoinRequestCommand;
@@ -106,14 +107,56 @@ public class GroupsController {
         }
     }
 
+    /**
+     * Helper method to extract user ID from the authentication object.
+     * 
+     * @param auth The authentication object.
+     * @return The user ID or null if not found.
+     */
+    private String getUserIdFromAuthentication(Authentication auth) {
+        if (auth == null) {
+            return null;
+        }
+        
+        // First try to get from principal directly
+        Object principal = auth.getPrincipal();
+        if (principal instanceof String && !principal.equals("anonymousUser")) {
+            return (String) principal;
+        }
+        
+        // If principal is not a string or is anonymousUser, try to get from JWT details
+        if (auth.getDetails() instanceof DecodedJWT) {
+            DecodedJWT jwt = (DecodedJWT) auth.getDetails();
+            return jwt.getSubject();
+        }
+        
+        // Fallback to name
+        String name = auth.getName();
+        if (name != null && !name.equals("anonymousUser")) {
+            return name;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Create a new group with the provided details.
+     * 
+     * @param request The request body containing group details.
+     * @return ResponseEntity with the result of the group creation.
+     */
     @PostMapping("/create")
     public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> request) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
+            if (auth == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
             }
-            String adminId = auth.getPrincipal().toString();
+            
+            String adminId = getUserIdFromAuthentication(auth);
+            if (adminId == null || adminId.equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Valid authentication required"));
+            }
 
             // Extract fields from request matching frontend payload
             String name = (String) request.get("name");
@@ -224,7 +267,7 @@ public class GroupsController {
                     description, profileImage, visibility, contributionFrequency, contributionDate,
                     payoutFrequency, payoutDate, members);
             
-            logger.info("Group created with ID: {}", groupId);
+            logger.info("Group created with ID: {} by admin: {}", groupId, adminId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Group created successfully");
