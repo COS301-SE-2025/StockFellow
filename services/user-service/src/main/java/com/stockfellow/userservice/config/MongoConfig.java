@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClients;
 import com.stockfellow.userservice.model.Event;
 
 import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -18,6 +19,7 @@ public class MongoConfig {
 
     @Value("${spring.data.mongodb.uri}")
     private String mongoUri;
+
     @Bean
     public MongoTemplate mongoTemplate(MongoClient mongoClient, MongoMappingContext context) {
         MongoTemplate template = new MongoTemplate(mongoClient, "stokvel_db");
