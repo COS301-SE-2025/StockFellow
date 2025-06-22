@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -48,13 +49,17 @@ public class GroupsController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            String adminId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (adminId == null || adminId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
             }
-            String adminId = auth.getPrincipal().toString();
+            
+            logger.info("Creating group for adminId: {}, username: {}", adminId, username);
 
             // Extract fields from request matching frontend payload
             String name = (String) request.get("name");
