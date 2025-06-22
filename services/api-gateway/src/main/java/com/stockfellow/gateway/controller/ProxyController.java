@@ -2,6 +2,9 @@ package com.stockfellow.gateway.controller;
 
 import com.stockfellow.gateway.config.RouteConfig;
 import com.stockfellow.gateway.model.Route;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -152,6 +155,20 @@ public class ProxyController {
     
     private HttpHeaders buildProxyHeaders(HttpServletRequest request) {
         HttpHeaders headers = new HttpHeaders();
+
+        String token = extractTokenFromRequest(request);
+        if (token != null) {
+            String sub = extractClaimFromToken(token, "sub");
+            String username = extractClaimFromToken(token, "preferred_username");
+            
+            // Set user context headers
+            if (sub != null) {
+                headers.set("X-User-Id", sub);
+            }
+            if (username != null) {
+                headers.set("X-User-Name", username);
+            }
+        }
         
         // Copy headers from original request, excluding some
         Enumeration<String> headerNames = request.getHeaderNames();
@@ -233,6 +250,39 @@ public class ProxyController {
     private String generateRequestId() {
         return "req-" + System.currentTimeMillis() + "-" + 
                Integer.toHexString((int) (Math.random() * 0x10000));
+    }
+
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
+    private String extractClaimFromToken(String token, String claimName) {
+        try {
+            // Split the JWT token into its three parts
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                logger.warn("Invalid JWT token format");
+                return null;
+            }
+            
+            // Decode the payload (second part)
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Parse JSON to extract the claim
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode claims = mapper.readTree(payload);
+            
+            JsonNode claimNode = claims.get(claimName);
+            return claimNode != null ? claimNode.asText() : null;
+            
+        } catch (Exception e) {
+            logger.error("Error extracting claim '{}' from JWT token", claimName, e);
+            return null;
+        }
     }
     
     // Health check endpoint that doesn't require authentication
