@@ -154,8 +154,12 @@ public class GroupsController {
             }
             
             String adminId = getUserIdFromAuthentication(auth);
-            if (adminId == null || adminId.equals("anonymousUser")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Valid authentication required"));
+            if (adminId.equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Valid authentication required - anonymous user cannot create groups"));
+            }
+
+            if (adminId == null || adminId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User ID not found in authentication"));
             }
 
             // Extract fields from request matching frontend payload
