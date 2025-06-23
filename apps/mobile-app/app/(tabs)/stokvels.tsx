@@ -108,7 +108,7 @@ const Stokvels = () => {
                 name={stokvel.name}
                 memberCount={stokvel.memberCount}
                 balance={stokvel.balance || "0.00"}
-                profileImage={stokvel.profileImage} // Add this line
+                profileImage={stokvel.profileImage}
                 onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
               />
             ))
