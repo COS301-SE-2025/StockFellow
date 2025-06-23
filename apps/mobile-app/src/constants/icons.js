@@ -81,10 +81,7 @@ export default {
   bell_filled,
   settings,
   avatar,
-<<<<<<< HEAD
   help,
-=======
   fnb,
   mastercard,
->>>>>>> mobile-app
 };
