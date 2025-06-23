@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -38,14 +39,27 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<?> getProfile() {
+    public ResponseEntity<?> getProfile(HttpServletRequest request) {
         try {
-            // Mocked userId since jwtMiddleware is commented out
-            String userId = "e20f93e2-d283-4100-a5fa-92c61d85b4f4";
+            // Extract user ID from gateway headers
+            String userId = request.getHeader("X-User-Id");
+            String username = request.getHeader("X-User-Name");
+            
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+            
             User user = readModelService.getUser(userId);
             if (user == null) {
                 return ResponseEntity.status(404).body(Map.of("error", "User not found"));
             }
+            
+            // Optionally enhance user object with additional context
+            if (username != null && !username.equals(user.getUsername())) {
+                // Log discrepancy if needed
+                System.out.println("Username from token: " + username + ", from DB: " + user.getUsername());
+            }
+            
             return ResponseEntity.ok(user);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
@@ -53,8 +67,24 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable String id) {
+    public ResponseEntity<?> getUserById(@PathVariable String id, HttpServletRequest request) {
         try {
+            // Extract requesting user ID from gateway headers for authorization
+            String requestingUserId = request.getHeader("X-User-Id");
+            String userRoles = request.getHeader("X-User-Roles");
+            
+            if (requestingUserId == null || requestingUserId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+            
+            // Check if user is requesting their own data or has admin role
+            boolean isOwnData = id.equals(requestingUserId);
+            boolean isAdmin = userRoles != null && userRoles.contains("admin");
+            
+            if (!isOwnData && !isAdmin) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+            }
+            
             User user = readModelService.getUser(id);
             if (user == null) {
                 return ResponseEntity.status(404).body(Map.of("error", "User not found"));
@@ -66,15 +96,20 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterUserRequest request) {
+    public ResponseEntity<?> registerUser(@RequestBody RegisterUserRequest request, HttpServletRequest httpRequest) {
         try {
             if (request.getName() == null || request.getEmail() == null || 
                 request.getSaId() == null || request.getMobileNumber() == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
             }
 
-            // Mocked userId since jwtMiddleware is commented out
-            String userId = "e20f93e2-d283-4100-a5fa-92c61d85b4f4";
+            // Extract user ID from gateway headers
+            String userId = httpRequest.getHeader("X-User-Id");
+            
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+            
             Map<String, Object> event = registerUserService.execute(userId, request);
 
             return ResponseEntity.status(201).body(Map.of(

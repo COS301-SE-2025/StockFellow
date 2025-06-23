@@ -26,11 +26,21 @@ import trash from "../../assets/icons/trash.png";
 import calendar from "../../assets/icons/calendar.png";
 import clock from "../../assets/icons/clock.png";
 
+//onboarding
+import savings from "../../assets/icons/savings.png";
+import growth from "../../assets/icons/growth.png";
+import contribute from "../../assets/icons/contribute.png";
+import notifications from "../../assets/icons/notifications.png";
+
 import request from '../../assets/icons/request.png';
 import bell from '../../assets/icons/bell.png';
 import bell_filled from '../../assets/icons/bell_filled.png';
 import settings from '../../assets/icons/settings.png';
 import avatar from '../../assets/icons/avatar.png';
+
+// transaction page
+import fnb from '../../assets/icons/fnb.png';
+import mastercard from '../../assets/icons/mastercard.png';
 
 export default {
   eyehide,
@@ -58,9 +68,16 @@ export default {
   trash,
   calendar,
   clock,
+  savings,
+  growth,
+  contribute,
+  notifications,
+
   request,
   bell,
   bell_filled,
   settings,
   avatar,
+  fnb,
+  mastercard,
 };

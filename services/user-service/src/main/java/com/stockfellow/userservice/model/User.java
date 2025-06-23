@@ -1,6 +1,7 @@
 package com.stockfellow.userservice.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -8,7 +9,11 @@ import java.util.Date;
 @Document(collection = "users")
 public class User {
     @Id
-    private String userId;
+    private String id;           // MongoDB auto-generated _id
+    
+    @Indexed(unique = true)
+    private String userId;       //Keycloak Id
+
     private String username;
     private String email;
     private String firstName;
@@ -25,6 +30,8 @@ public class User {
     }
 
     // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getUsername() { return username; }

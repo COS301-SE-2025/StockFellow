@@ -8,7 +8,7 @@ import CustomButton from "../../../src/components/CustomButton";
 import MemberCard from "../../../src/components/MemberCard";
 import StokvelActivity from "../../../src/components/StokvelActivity";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as SecureStore from 'expo-secure-store';
+import authService from '../../../src/services/authService';
 
 interface Member {
   id: string;
@@ -49,16 +49,8 @@ const Stokvel = () => {
   useEffect(() => {
     const fetchStokvelDetails = async () => {
       try {
-        const token = await SecureStore.getItemAsync('access_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`http://10.0.2.2:4040/api/groups/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await authService.apiRequest(`/groups/${id}`, {
+            method: 'GET'
         });
 
         if (!response.ok) {

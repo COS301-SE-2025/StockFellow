@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
 
@@ -18,10 +19,16 @@ public class AuthController {
     private ReadModelService readModelService;
 
     @GetMapping("/login")
-    public ResponseEntity<?> login(HttpSession session) {
+    public ResponseEntity<?> login(HttpServletRequest request, HttpSession session) {
         try {
-            // Mocked userId since jwtMiddleware is commented out
-            String userId = "e20f93e2-d283-4100-a5fa-92c61d85b4f4";
+            // Extract user ID from gateway headers
+            String userId = request.getHeader("X-User-Id");
+            String username = request.getHeader("X-User-Name");
+            
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+            
             User user = readModelService.getUser(userId);
 
             if (user == null) {
@@ -32,6 +39,7 @@ public class AuthController {
                 "message", "Login successful",
                 "user", Map.of(
                     "userId", userId,
+                    "username", username != null ? username : user.getUsername(),
                     "email", user.getEmail(),
                     "name", user.getFirstName() + " " + user.getLastName(),
                     "saId", user.getIdNumber() != null ? user.getIdNumber() : "",

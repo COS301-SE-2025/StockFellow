@@ -1,4 +1,20 @@
 services:
+  #Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - stockfellow-net
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # PostgreSQL Database for Keycloak
   postgres:
     image: postgres:15
@@ -43,7 +59,7 @@ services:
       - ./keycloak-extensions/:/opt/keycloak/providers/
     command: start-dev --import-realm
 
-  # api-gateway
+  # api-gateway (Java Spring Boot)
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -51,18 +67,41 @@ services:
     container_name: api-gateway
     depends_on:
       - keycloak
+      - redis
     ports:
-      - "3000:3000"
-      - "9229:9229"  # For debugging
+      - "3000:3000"      # Application port
+      - "5007:5007"      # Java debugging port (changed from 9229)
     environment:
-      - NODE_ENV=development
-      - KEYCLOAK_REALM_URL=http://keycloak:8080/realms/stokvel-realm
+      - SPRING_PROFILES_ACTIVE=docker
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/
+      - KEYCLOAK_REALM=stockfellow
+
+      # Gateway Client (Confidential) - for token validation & admin operations
+      - KEYCLOAK_GATEWAY_CLIENT_ID=api-gateway-client
+      - KEYCLOAK_GATEWAY_CLIENT_SECRET=CCoz2FCbBYKshvsxHQrTsIbyUlr4Vqad
+
+      # Frontend Client (Public) - for user authentication flows
+      - KEYCLOAK_FRONTEND_CLIENT_ID=public-client
+      - KEYCLOAK_FRONTEND_REDIRECT_URI=http://localhost:3000/auth/callback
+
+
+      # Admin Client - for user management
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_ADMIN_REALM=master
+      - KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+
+      # Redis Config
+      - REDIS_HOST=redis  
+      - REDIS_PORT=6379    
+
+      # - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
+      - JVM_OPTS=-Xmx512m -Xms256m
     networks:
       - stockfellow-net
     volumes:
-      - ./services/api-gateway/src:/usr/src/app/src
-      - /usr/src/app/node_modules
-    command: npx nodemon --inspect=0.0.0.0:9229 src/server.js
+      - ./services/api-gateway/src:/app/src
+      - ./services/api-gateway/src/main/resources/keycloak.json:/app/src/main/resources/keycloak.json
 
   # user-service (Spring Boot)
   user-service:
@@ -104,7 +143,7 @@ services:
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
       - USER_SERVICE_URL=http://user-service:4000
-      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+      # - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     networks:
       - stockfellow-net
     volumes:
@@ -123,3 +162,4 @@ networks:
 volumes:
   postgres_data:
   mongodb_data:
+  redis_data:
