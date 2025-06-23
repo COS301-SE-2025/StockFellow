@@ -7,7 +7,7 @@ import StokvelCard from '../../src/components/StokvelCard';
 import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
-import * as SecureStore from 'expo-secure-store';
+import authService from '../../src/services/authService';
 
 interface Stokvel {
   groupId: string;
@@ -27,16 +27,8 @@ const Stokvels = () => {
   useEffect(() => {
     const fetchStokvels = async () => {
       try {
-        const token = await SecureStore.getItemAsync('access_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://10.0.2.2:4040/api/groups/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await authService.apiRequest('/groups/user', {
+          method: 'GET'
         });
 
         if (!response.ok) {
@@ -51,13 +43,19 @@ const Stokvels = () => {
           name: group.name,
           memberCount: group.members?.length || 0, // Changed from memberIds to members
           balance: "0.00",
-          profileImage: group.profileImage || null // Add this line
+          profileImage: group.profileImage || null
         }));
 
         setStokvels(transformedStokvels);
       } catch (error) {
         console.error('Error fetching stokvels:', error);
-        Alert.alert('Error', 'Failed to load stokvels');
+        if (error instanceof Error && error.message.includes('Authentication failed')) {
+          Alert.alert('Session Expired', 'Please login again', [
+            { text: 'OK', onPress: () => router.push('/login') }
+          ]);
+        } else {
+          Alert.alert('Error', 'Failed to load stokvels');
+        }
       } finally {
         setLoading(false);
       }
