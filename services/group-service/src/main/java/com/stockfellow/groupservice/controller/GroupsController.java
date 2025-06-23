@@ -61,13 +61,15 @@ public class GroupsController {
     }
 
     @GetMapping("/{groupId}/view")
-    public ResponseEntity<?> viewGroup(@PathVariable String groupId) {
+    public ResponseEntity<?> viewGroup(@PathVariable String groupId, HttpServletRequest httpRequest) {
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            String userId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (userId == null || userId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
             }
-            String userId = auth.getPrincipal().toString();
 
             // Get group details
             Optional<Group> groupOpt = readModelService.getGroup(groupId);
@@ -287,13 +289,15 @@ public class GroupsController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<?> getUserGroups() {
+    public ResponseEntity<?> getUserGroups(HttpServletRequest httpRequest) {
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            String userId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (userId == null || userId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
             }
-            String userId = auth.getPrincipal().toString();
 
             List<Group> groups = readModelService.getUserGroups(userId);
             return ResponseEntity.ok(groups);
