@@ -13,8 +13,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
-public class TransactionScheduler {
-    private static final Logger logger = LoggerFactory.getLogger(TransactionScheduler.class);
+public class PaymentScheduler {
+    private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
 
     @Autowired
     private GroupCycleRepository groupCycleRepository;
@@ -27,7 +27,8 @@ public class TransactionScheduler {
         for (GroupCycle groupCycle : groupCycles) {
             try {
                 if (groupCycle.getType().equals("DEBIT_ORDER")) {
-                    transactionService.processDebitOrder(groupCycle.getUserId(), groupCycle.getGroupId(), groupCycle.getAmount());
+                    transactionService.processDebitOrder(groupCycle.getUserId(), groupCycle.getGroupId(),
+                            groupCycle.getAmount());
                     updateNextRun(groupCycle);
                 }
             } catch (Exception e) {
@@ -42,7 +43,8 @@ public class TransactionScheduler {
         for (GroupCycle groupCycle : groupCycles) {
             try {
                 if (groupCycle.getType().equals("PAYOUT")) {
-                    transactionService.processPayout(groupCycle.getUserId(), groupCycle.getGroupId(), groupCycle.getAmount());
+                    transactionService.processPayout(groupCycle.getUserId(), groupCycle.getGroupId(),
+                            groupCycle.getAmount());
                     updateNextRun(groupCycle);
                 }
             } catch (Exception e) {
