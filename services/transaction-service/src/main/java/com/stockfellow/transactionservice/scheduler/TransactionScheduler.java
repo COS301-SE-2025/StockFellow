@@ -1,7 +1,7 @@
 package com.stockfellow.transactionservice.scheduler;
 
-import com.stockfellow.transactionservice.model.Schedule;
-import com.stockfellow.transactionservice.repository.ScheduleRepository;
+import com.stockfellow.transactionservice.model.GroupCycle;
+import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.service.TransactionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,43 +17,43 @@ public class TransactionScheduler {
     private static final Logger logger = LoggerFactory.getLogger(TransactionScheduler.class);
 
     @Autowired
-    private ScheduleRepository scheduleRepository;
+    private GroupCycleRepository groupCycleRepository;
     @Autowired
     private TransactionService transactionService;
 
     @Scheduled(cron = "${scheduler.debit-order-cron}")
     public void processDebitOrders() {
-        List<Schedule> schedules = scheduleRepository.findByNextRunAndStatus(LocalDate.now(), "ACTIVE");
-        for (Schedule schedule : schedules) {
+        List<GroupCycle> groupCycles = groupCycleRepository.findByNextRunAndStatus(LocalDate.now(), "ACTIVE");
+        for (GroupCycle groupCycle : groupCycles) {
             try {
-                if (schedule.getType().equals("DEBIT_ORDER")) {
-                    transactionService.processDebitOrder(schedule.getUserId(), schedule.getGroupId(), schedule.getAmount());
-                    updateNextRun(schedule);
+                if (groupCycle.getType().equals("DEBIT_ORDER")) {
+                    transactionService.processDebitOrder(groupCycle.getUserId(), groupCycle.getGroupId(), groupCycle.getAmount());
+                    updateNextRun(groupCycle);
                 }
             } catch (Exception e) {
-                logger.error("Debit order failed for schedule {}: {}", schedule.getScheduleId(), e.getMessage());
+                logger.error("Debit order failed for groupCycle {}: {}", groupCycle.getScheduleId(), e.getMessage());
             }
         }
     }
 
     @Scheduled(cron = "${scheduler.payout-cron}")
     public void processPayouts() {
-        List<Schedule> schedules = scheduleRepository.findByNextRunAndStatus(LocalDate.now(), "ACTIVE");
-        for (Schedule schedule : schedules) {
+        List<GroupCycle> groupCycles = groupCycleRepository.findByNextRunAndStatus(LocalDate.now(), "ACTIVE");
+        for (GroupCycle groupCycle : groupCycles) {
             try {
-                if (schedule.getType().equals("PAYOUT")) {
-                    transactionService.processPayout(schedule.getUserId(), schedule.getGroupId(), schedule.getAmount());
-                    updateNextRun(schedule);
+                if (groupCycle.getType().equals("PAYOUT")) {
+                    transactionService.processPayout(groupCycle.getUserId(), groupCycle.getGroupId(), groupCycle.getAmount());
+                    updateNextRun(groupCycle);
                 }
             } catch (Exception e) {
-                logger.error("Payout failed for schedule {}: {}", schedule.getScheduleId(), e.getMessage());
+                logger.error("Payout failed for groupCycle {}: {}", groupCycle.getScheduleId(), e.getMessage());
             }
         }
     }
 
-    private void updateNextRun(Schedule schedule) {
-        LocalDate nextRun = schedule.getNextRun();
-        switch (schedule.getFrequency()) {
+    private void updateNextRun(GroupCycle groupCycle) {
+        LocalDate nextRun = groupCycle.getNextRun();
+        switch (groupCycle.getFrequency()) {
             case "MONTHLY":
                 nextRun = nextRun.plusMonths(1);
                 break;
@@ -64,7 +64,7 @@ public class TransactionScheduler {
                 nextRun = nextRun.plusWeeks(1);
                 break;
         }
-        schedule.setNextRun(nextRun);
-        scheduleRepository.save(schedule);
+        groupCycle.setNextRun(nextRun);
+        groupCycleRepository.save(groupCycle);
     }
 }
