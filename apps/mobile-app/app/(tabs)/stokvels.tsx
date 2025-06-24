@@ -10,7 +10,7 @@ import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
 
 interface Stokvel {
-  id: string;
+  groupId: string;
   name: string;
   memberCount: number; // This should be derived from memberIds.length
   balance?: string; // Not in your schema, but keeping for UI
@@ -39,9 +39,9 @@ const Stokvels = () => {
 
         // Transform the API response to match our frontend needs
         const transformedStokvels = data.map((group: any) => ({
-          id: group.id , // Use _id if that's what backend returns
+          groupId: group.id || group._id || group.groupId, // Try all possible ID fields
           name: group.name,
-          memberCount: group.members?.length || 0, // Changed from memberIds to members
+          memberCount: group.members?.length || 0,
           balance: "0.00",
           profileImage: group.profileImage || null
         }));
@@ -104,12 +104,22 @@ const Stokvels = () => {
           {filteredStokvels.length > 0 ? (
             filteredStokvels.map((stokvel) => (
               <StokvelCard
-                key={stokvel.id}
+                key={stokvel.groupId}
                 name={stokvel.name}
                 memberCount={stokvel.memberCount}
                 balance={stokvel.balance || "0.00"}
-                profileImage={stokvel.profileImage} // Add this line
-                onPress={() => router.push(`/stokvels/${stokvel.id}`)}
+                profileImage={stokvel.profileImage}
+                onPress={() => {
+                  console.log('Navigating with ID:', stokvel.groupId);
+                  router.push({
+                    pathname: '/stokvels/[id]',
+                    params: {
+                      id: stokvel.groupId,
+                      // Ensure you're passing the same ID that exists in your database
+                      // If your backend uses 'id' field primarily, use group.id instead
+                    }
+                  });
+                }}
               />
             ))
           ) : (
