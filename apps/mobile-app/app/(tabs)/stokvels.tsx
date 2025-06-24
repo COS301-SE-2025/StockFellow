@@ -39,9 +39,9 @@ const Stokvels = () => {
 
         // Transform the API response to match our frontend needs
         const transformedStokvels = data.map((group: any) => ({
-          groupId: group._id || group.groupId, // Use _id if that's what backend returns
+          groupId: group.id || group._id || group.groupId, // Try all possible ID fields
           name: group.name,
-          memberCount: group.members?.length || 0, // Changed from memberIds to members
+          memberCount: group.members?.length || 0,
           balance: "0.00",
           profileImage: group.profileImage || null
         }));
@@ -109,7 +109,17 @@ const Stokvels = () => {
                 memberCount={stokvel.memberCount}
                 balance={stokvel.balance || "0.00"}
                 profileImage={stokvel.profileImage}
-                onPress={() => router.push(`/stokvel/${stokvel.groupId}`)}
+                onPress={() => {
+                  console.log('Navigating with ID:', stokvel.groupId);
+                  router.push({
+                    pathname: '/stokvels/[id]',
+                    params: {
+                      id: stokvel.groupId,
+                      // Ensure you're passing the same ID that exists in your database
+                      // If your backend uses 'id' field primarily, use group.id instead
+                    }
+                  });
+                }}
               />
             ))
           ) : (
