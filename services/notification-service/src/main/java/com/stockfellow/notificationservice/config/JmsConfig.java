@@ -10,6 +10,7 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+import org.springframework.web.client.RestTemplate;
 
 import jakarta.jms.ConnectionFactory;
 
@@ -47,5 +48,10 @@ public class JmsConfig {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }
