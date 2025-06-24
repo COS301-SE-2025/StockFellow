@@ -14,4 +14,12 @@ public interface MandateRepository extends JpaRepository<Mandate, UUID> {
     // Find mandate by payer and group
     Optional<Mandate> findByPayerUserIdAndGroupId(UUID payerUserId, UUID groupId);
 
+    // Find mandates by group
+    List<Mandate> findByGroupId(UUID groupId);
+
+    // Find mandates by status
+    List<Mandate> findByStatus(String status);
+
+    // Find active mandates for a group
+    List<Mandate> findByGroupIdAndStatus(UUID groupId, String status);
 }
