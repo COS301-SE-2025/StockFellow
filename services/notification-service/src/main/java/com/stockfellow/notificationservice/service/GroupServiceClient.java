@@ -1,42 +1,62 @@
 package com.stockfellow.notificationservice.service;
 
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.client.HttpClientErrorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
+import java.time.Duration;
 import java.util.Map;
 
-@Component
+@Service
 public class GroupServiceClient {
-    private final RestTemplate restTemplate;
-    private final String groupServiceUrl = "http://localhost:4040/api/groups";
-
-    public GroupServiceClient(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    private static final Logger logger = LoggerFactory.getLogger(GroupServiceClient.class);
+    
+    private final WebClient webClient;
+    
+    @Value("${services.group-service.url:http://localhost:4040}")
+    private String groupServiceUrl;
+    
+    public GroupServiceClient(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
     }
-
-    public boolean groupExists(String groupId) {
+    
+    public Map<String, Object> getGroupDetails(String groupId) {
         try {
-            restTemplate.getForEntity(groupServiceUrl + "/{groupId}", Object.class, groupId);
-            return true;
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                return false;
-            }
-            throw e;
+            return webClient.get()
+                    .uri(groupServiceUrl + "/api/groups/{groupId}/view", groupId)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(10))
+                    .block();
+        } catch (Exception e) {
+            logger.error("Error fetching group details for groupId {}: {}", groupId, e.getMessage());
+            return null;
         }
     }
-
-    public List<String> getGroupMemberIds(String groupId) {
-        // Mock implementation; replace with actual API call
-        return restTemplate.getForObject(groupServiceUrl + "/{groupId}/members", List.class, groupId);
-    }
-
+    
     public String getGroupName(String groupId) {
-        // Mock implementation; replace with actual API call
-        Map<String, Object> group = restTemplate.getForObject(groupServiceUrl + "/{groupId}", Map.class, groupId);
-        return group != null ? (String) group.get("name") : "Unknown Group";
+        Map<String, Object> groupDetails = getGroupDetails(groupId);
+        if (groupDetails != null && groupDetails.containsKey("group")) {
+            Map<String, Object> group = (Map<String, Object>) groupDetails.get("group");
+            return (String) group.get("name");
+        }
+        return "Unknown Group";
+    }
+    
+    public boolean isUserGroupMember(String userId, String groupId) {
+        try {
+            Map<String, Object> groupDetails = getGroupDetails(groupId);
+            if (groupDetails != null && groupDetails.containsKey("userPermissions")) {
+                Map<String, Object> permissions = (Map<String, Object>) groupDetails.get("userPermissions");
+                return Boolean.TRUE.equals(permissions.get("isMember"));
+            }
+            return false;
+        } catch (Exception e) {
+            logger.error("Error checking group membership for user {} in group {}: {}", userId, groupId, e.getMessage());
+            return false;
+        }
     }
 }
