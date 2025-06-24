@@ -30,7 +30,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, placeholder 
       />
       <View style={[
         styles.iconWrapper,
-        { backgroundColor: '#1DA1FA' } // Darker blue in dark mode
+        { backgroundColor: '#1DA1FA' }
       ]}>
         <Image 
           source={icons.search}
