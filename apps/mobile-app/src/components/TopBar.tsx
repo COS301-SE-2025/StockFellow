@@ -3,12 +3,14 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { icons } from '../constants';
 import { useTheme } from '../../app/_layout';
+import HelpButton from './help/HelpButton';
 
 interface TopBarProps {
   title?: string;
   showBackButton?: boolean;
   rightComponent?: React.ReactNode;
   onBackPress?: () => void;
+
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -52,6 +54,9 @@ const TopBar: React.FC<TopBarProps> = ({
 
       <View className="flex-row items-center">
         {rightComponent}
+
+        {/* Help Button */}
+        <HelpButton />
         
         {/* Theme Toggle Button - No background */}
         <TouchableOpacity

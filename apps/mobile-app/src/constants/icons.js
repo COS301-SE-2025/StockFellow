@@ -38,6 +38,17 @@ import bell_filled from '../../assets/icons/bell_filled.png';
 import settings from '../../assets/icons/settings.png';
 import avatar from '../../assets/icons/avatar.png';
 
+// help page
+import help from '../../assets/icons/help.png';
+import tutorial from '../../assets/icons/tutorial.png';
+import support from '../../assets/icons/support.png';
+import close from '../../assets/icons/close.png';
+import faq from '../../assets/icons/faq.png';
+
+// transaction page
+import fnb from '../../assets/icons/fnb.png';
+import mastercard from '../../assets/icons/mastercard.png';
+
 export default {
   eyehide,
   eye,
@@ -74,4 +85,12 @@ export default {
   bell_filled,
   settings,
   avatar,
+  help,
+  fnb,
+  mastercard,
+
+  tutorial,
+  support,
+  close,
+  faq,
 };

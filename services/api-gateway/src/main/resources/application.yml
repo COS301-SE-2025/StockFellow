@@ -1,0 +1,38 @@
+server:
+  port: 3000
+
+spring:
+  application:
+    name: api-gateway
+
+# Keycloak configuration
+keycloak:
+  realm: stockfellow
+  auth-server-url: http://localhost:8080/
+  ssl-required: external
+  resource: public-client
+  public-client: true
+  confidential-port: 0
+
+# Custom admin config for Keycloak
+app:
+  keycloak:
+    admin:
+      username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+      realm: master
+      client-id: admin-cli
+
+# Logging configuration (replaces morgan)
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.stockfellow.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# CORS configuration
+cors:
+  allowed-origins: "*"
+  allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+  allowed-headers: "Content-Type,Authorization"

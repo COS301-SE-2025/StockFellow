@@ -9,6 +9,7 @@ import RadioBox from "../../src/components/RadioBox";
 import DateTimeInput from "../../src/components/DateTimeInput";
 import { router } from "expo-router";
 import { icons } from "../../src/constants";
+import * as SecureStore from 'expo-secure-store';
 //import { StatusBar } from 'expo-status-bar';
 interface FormData {
   name: string;
@@ -69,6 +70,12 @@ const StokvelForm: React.FC = () => {
 
   const submit = async () => {
     console.log("creating group.....");
+
+    const token = await SecureStore.getItemAsync('access_token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
     setIsSubmitting(true);
     try {
       const minContributionNum = parseFloat(form.minContribution);
@@ -105,7 +112,10 @@ const StokvelForm: React.FC = () => {
 
       const response = await fetch("http://10.0.2.2:4040/api/groups/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
 
@@ -245,7 +255,7 @@ const StokvelForm: React.FC = () => {
 
             <CustomButton
               title="Create"
-              containerStyles="bg-[#1DA1FA] rounded-full py-4 px-8 my-4 self-center"
+              containerStyles="bg-[#006FFD] rounded-full py-4 px-8 my-4 self-center"
               textStyles="text-white text-base font-normal"
               handlePress={submit}
               isLoading={isSubmitting}

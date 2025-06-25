@@ -1,13 +1,46 @@
-FROM node:18
+# Multi-stage build for group-service
+FROM maven:3-openjdk-17-slim AS build
 
 WORKDIR /app
 
-COPY package.json . 
+# Copy pom.xml first for better Docker layer caching
+COPY pom.xml .
 
-RUN npm install
+# Download dependencies (this layer will be cached if pom.xml doesn't change)
+RUN mvn dependency:go-offline -B
 
-COPY . .
+# Copy source code
+COPY src ./src
 
-EXPOSE 5001
+# Build the application
+RUN mvn clean package -DskipTests
 
-CMD ["npm", "start"]
+# Runtime stage
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Copy the built JAR from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Change ownership of the app directory
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port
+EXPOSE 4040
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:4040/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
