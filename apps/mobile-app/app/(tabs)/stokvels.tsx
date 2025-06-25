@@ -88,9 +88,10 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-
+      
       <View className="px-6 pt-4">
         <SearchBar
+          nativeID="search-bar"
           value={searchQuery}
           onChangeText={handleSearch}
           placeholder="Search for a Stokvel"
@@ -121,7 +122,11 @@ const Stokvels = () => {
           )}
         </View>
 
-        <View style={{ borderTopColor: colors.border }} className="p-6 border-t items-center">
+        <View 
+          nativeID="create-stokvel-button"
+          style={{ borderTopColor: colors.border }} 
+          className="p-6 border-t items-center"
+        >
           <TouchableOpacity
             style={{ backgroundColor: colors.primary }}
             className="rounded-full px-5 py-3 flex-row items-center justify-center gap-2"

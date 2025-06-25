@@ -4,6 +4,7 @@ import { icons } from '../../constants';
 import { useTheme } from '../../../app/_layout';
 import { useRouter } from 'expo-router';
 import { Linking } from 'react-native';
+import { useTutorial } from '../help/TutorialContext';
 
 interface HelpMenuProps {
   isVisible: boolean;
@@ -13,12 +14,18 @@ interface HelpMenuProps {
 const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
   const { isDarkMode, colors } = useTheme();
   const router = useRouter();
+  const { startTutorial } = useTutorial();
 
   const [showFAQ, setShowFAQ] = useState(false);
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
     setOpenFAQIndex(openFAQIndex === index ? null : index);
+  };
+
+  const handleStartTutorial = () => {
+    onClose();
+    startTutorial();
   };
 
   const faqItems = [
@@ -49,7 +56,7 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
       title: 'App Tutorial',
       description: 'Take a guided tour of StockFellow',
       icon: icons.help,
-      onPress: () => {}
+      onPress: handleStartTutorial
     },
     {
       title: 'Contact Support',
