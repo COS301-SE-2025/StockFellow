@@ -10,6 +10,7 @@ import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
 
 interface Stokvel {
+  id: string;
   groupId: string;
   name: string;
   memberCount: number;
@@ -41,7 +42,8 @@ const Stokvels = () => {
         const data = await response.json();
 
         const transformedStokvels = data.map((group: any) => ({
-          groupId: group.id || group._id || group.groupId,
+          id: group.id, // Keep the id for your own stokvels
+          groupId: group.groupId || group.id || group._id, // Keep groupId for public stokvels
           name: group.name,
           memberCount: group.members?.length || 0,
           balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
@@ -87,11 +89,15 @@ const Stokvels = () => {
         }
 
         const data = await response.json();
-        
-        const transformedResults = data.map((group: any) => ({
-          groupId: group.id || group._id || group.groupId,
+
+        // Access the groups array from the response
+        const groups = data.groups || [];
+
+        const transformedResults = groups.map((group: any) => ({
+          id: group.id, // Include id field
+          groupId: group.groupId || group.id || group._id,
           name: group.name,
-          memberCount: group.members?.length || 0,
+          memberCount: group.currentMembers || group.members?.length || 0,
           balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
           profileImage: group.profileImage || null,
           visibility: group.visibility
@@ -166,9 +172,11 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
+                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
+                        const routeId = stokvel.id || stokvel.groupId;
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: stokvel.groupId }
+                          params: { id: routeId }
                         });
                       }}
                     />
@@ -194,9 +202,11 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
+                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
+                        const routeId = stokvel.id || stokvel.groupId;
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: stokvel.groupId }
+                          params: { id: routeId }
                         });
                       }}
                     />
@@ -220,9 +230,11 @@ const Stokvels = () => {
                     balance={stokvel.balance || "R 0.00"}
                     profileImage={stokvel.profileImage}
                     onPress={() => {
+                      // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
+                      const routeId = stokvel.id || stokvel.groupId;
                       router.push({
                         pathname: '/stokvels/[id]',
-                        params: { id: stokvel.groupId }
+                        params: { id: routeId }
                       });
                     }}
                   />
@@ -238,8 +250,8 @@ const Stokvels = () => {
       </View>
 
       {/* Fixed Create Button */}
-      <View 
-        style={{ 
+      <View
+        style={{
           position: 'absolute',
           bottom: 140,
           left: 0,
@@ -248,7 +260,7 @@ const Stokvels = () => {
         }}
       >
         <TouchableOpacity
-          style={{ 
+          style={{
             backgroundColor: colors.primary,
             width: '30%',
             maxWidth: 400

@@ -82,6 +82,7 @@ public class GroupsController {
             List<Map<String, Object>> searchResults = new ArrayList<>();
             for (Group group : groups) {
                 Map<String, Object> groupInfo = new HashMap<>();
+                groupInfo.put("id", group.getId());
                 groupInfo.put("groupId", group.getGroupId());
                 groupInfo.put("name", group.getName());
                 groupInfo.put("description", group.getDescription());
