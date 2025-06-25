@@ -116,6 +116,30 @@ services:
       retries: 3
       start_period: 40s
 
+  # Transaction Service
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile
+    container_name: transaction-service
+    depends_on:
+      - group-service
+    ports:
+      - "4080:4080"
+    environment:
+      - SERVER_PORT=4080
+      - TRANSACTIONDB_URI=postgresql://postgres.lcrdisuesrfbohqvudus:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/transaction-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   stockfellow-net:
     driver: bridge
