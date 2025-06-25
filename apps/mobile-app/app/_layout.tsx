@@ -97,6 +97,13 @@ export default function RootLayout() {
             animation: "fade" 
           }} 
         />
+        <Stack.Screen 
+          name="transactions" 
+          options={{ 
+            headerShown: false,
+            animation: "fade" 
+          }} 
+        />
       </Stack>
     </ThemeContext.Provider>
   );

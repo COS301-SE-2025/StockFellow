@@ -40,7 +40,12 @@ import avatar from '../../assets/icons/avatar.png';
 
 // transaction page
 import fnb from '../../assets/icons/fnb.png';
+import nedbank from '../../assets/icons/nedbank.png';
+import capitec from '../../assets/icons/capitec.png';
+import standardbank from '../../assets/icons/standardbank.png';
+import absa from '../../assets/icons/absa.png';
 import mastercard from '../../assets/icons/mastercard.png';
+import visa from '../../assets/icons/visa.png';
 
 export default {
   eyehide,
@@ -78,6 +83,12 @@ export default {
   bell_filled,
   settings,
   avatar,
+
   fnb,
+  nedbank,
+  capitec,
+  absa,
+  standardbank,
   mastercard,
+  visa,
 };

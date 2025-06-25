@@ -1,14 +1,27 @@
+// apps/mobile-app/app/(tabs)/transactions.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DebitCard from '../../src/components/DebitCard';
 import TopBar from '../../src/components/TopBar';
-import TransactionLog, { Transaction } from '../../src/components/TransactionLog'; // Import Transaction type
+import TransactionLog, { Transaction } from '../../src/components/TransactionLog';
 import { icons } from '../../src/constants';
+import { useRouter } from 'expo-router';
+
+interface Card {
+  id: string;
+  bank: string;
+  cardNumber: string;
+  cardHolderName: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cardType: 'mastercard' | 'visa' | 'paypal';
+  isActive?: boolean;
+}
 
 const Transactions = () => {
-  // Sample transaction data with proper typing
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: '1',
@@ -67,15 +80,34 @@ const Transactions = () => {
       profileImage: null,
     },
   ]);
-
   const [loading, setLoading] = useState(true);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [activeCard, setActiveCard] = useState<Card | null>(null);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      // In a real app, you would fetch cards from your API here
+      const mockCards: Card[] = []; // Explicitly typed empty array
+      setCards(mockCards);
+      setActiveCard(mockCards.length > 0 ? mockCards[0] : null);
       setLoading(false);
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  if (loading) {
+    return (
+      <GestureHandlerRootView className="flex-1">
+        <SafeAreaView className="flex-1 bg-white">
+          <TopBar title="Transactions" />
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView className="flex-1">
@@ -83,7 +115,7 @@ const Transactions = () => {
         <TopBar title="Transactions" />
 
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
+          contentContainerStyle={{ flexGrow: 1, paddingTop: 20, paddingBottom: 80 }}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
         >
@@ -93,28 +125,38 @@ const Transactions = () => {
             </Text>
 
             <View className="w-full px-1">
-              <DebitCard
-                bankName="My Bank"
-                cardNumber="•••• •••• •••• 1234"
-                cardHolderName="L SMITH"
-                expiryDate="10/26"
-                cardType="mastercard"
-              />
+              {activeCard ? (
+                <TouchableOpacity onPress={() => router.push('/transactions/cards')}>
+                  <DebitCard
+                    bankName={activeCard.bank}
+                    cardNumber={activeCard.cardNumber}
+                    cardHolderName={activeCard.cardHolderName}
+                    expiryDate={`${activeCard.expiryMonth}/${activeCard.expiryYear}`}
+                    cardType={activeCard.cardType}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  className="w-full h-[200px] border-2 border-dashed border-[#1DA1FA] rounded-2xl flex items-center justify-center"
+                  onPress={() => router.push('/transactions/cardform')}
+                >
+                  <View className="items-center">
+                    <Image source={icons.plus} className="w-12 h-12 mb-2" tintColor={"#1DA1FA"} />
+                    <Text className="text-[#1DA1FA]">Add a debit card</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
 
             <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start">
               Transaction History
             </Text>
 
-            {loading ? (
-              <ActivityIndicator size="large" color="#0000ff" className="mt-10" />
-            ) : (
-              <View className="w-full">
-                <TransactionLog transactions={transactions} />
-              </View>
-            )}
+            <View className="w-full">
+              <TransactionLog transactions={transactions} />
+            </View>
 
-            {!loading && transactions.length === 0 && (
+            {transactions.length === 0 && (
               <View className="w-full items-center justify-center py-10">
                 <Text className="text-gray-500 text-center">
                   No transactions found. Your transaction history will appear here.
@@ -123,6 +165,18 @@ const Transactions = () => {
             )}
           </View>
         </ScrollView>
+
+        {/* Fixed Add Card Button (shown only when no cards exist) */}
+        {!activeCard && (
+          <View className="absolute bottom-5 left-0 right-0 px-6">
+            <TouchableOpacity
+              className="bg-blue-500 p-4 rounded-lg items-center"
+              onPress={() => router.push('/transactions/cardform')}
+            >
+              <Text className="text-white font-bold">Add Card</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
