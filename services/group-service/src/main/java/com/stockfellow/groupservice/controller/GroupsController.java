@@ -7,6 +7,7 @@ import com.stockfellow.groupservice.command.ProcessJoinRequestCommand;
 import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.service.ReadModelService;
 import com.stockfellow.groupservice.service.EventStoreService;
+import com.stockfellow.groupservice.repository.GroupRepository;
 import com.stockfellow.groupservice.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,18 +31,21 @@ public class GroupsController {
     private final ProcessJoinRequestCommand processJoinRequestCommand;
     private final ReadModelService readModelService;
     private final EventStoreService eventStoreService;
+    private final GroupRepository groupRepository;
     private final SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     public GroupsController(CreateGroupCommand createGroupCommand,
                             JoinGroupCommand joinGroupCommand,
                             ProcessJoinRequestCommand processJoinRequestCommand,
                             ReadModelService readModelService,
-                            EventStoreService eventStoreService) {
+                            EventStoreService eventStoreService,
+                            GroupRepository groupRepository) {
         this.createGroupCommand = createGroupCommand;
         this.joinGroupCommand = joinGroupCommand;
         this.processJoinRequestCommand = processJoinRequestCommand;
         this.readModelService = readModelService;
         this.eventStoreService = eventStoreService;
+        this.groupRepository = groupRepository;
         isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
@@ -55,9 +59,62 @@ public class GroupsController {
                 "GET /api/groups/user - Get groups for authenticated user",
                 "GET /api/groups/{groupId}/view - View group details and events",
                 "POST /api/groups/{groupId}/join - Request to join a group",
-                "POST /api/groups/{groupId}/request - Process join request (accept/reject)"
+                "POST /api/groups/{groupId}/request - Process join request (accept/reject)",
+                "GET /api/groups/search?query=<search_term> - Search public groups"
         ));
         return response;
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchPublicGroups(@RequestParam(required = false) String query) {
+        try {
+            List<Group> groups;
+            
+            if (query == null || query.trim().isEmpty()) {
+                // If no query provided, return all public groups
+                groups = groupRepository.findPublicGroups();
+            } else {
+                // Search public groups by name containing the query (case-insensitive)
+                groups = groupRepository.findPublicGroupsByNameContaining(query.trim());
+            }
+            
+            // Create response with basic group information for search results
+            List<Map<String, Object>> searchResults = new ArrayList<>();
+            for (Group group : groups) {
+                Map<String, Object> groupInfo = new HashMap<>();
+                groupInfo.put("groupId", group.getGroupId());
+                groupInfo.put("name", group.getName());
+                groupInfo.put("description", group.getDescription());
+                groupInfo.put("profileImage", group.getProfileImage());
+                groupInfo.put("visibility", group.getVisibility());
+                groupInfo.put("minContribution", group.getMinContribution());
+                groupInfo.put("maxMembers", group.getMaxMembers());
+                groupInfo.put("contributionFrequency", group.getContributionFrequency());
+                groupInfo.put("payoutFrequency", group.getPayoutFrequency());
+                groupInfo.put("currentMembers", group.getMembers() != null ? group.getMembers().size() : 0);
+                groupInfo.put("balance", group.getBalance());
+                groupInfo.put("createdAt", group.getCreatedAt());
+                
+                // Add member status flags
+                groupInfo.put("isFull", group.getMembers() != null && group.getMembers().size() >= group.getMaxMembers());
+                groupInfo.put("availableSlots", group.getMaxMembers() - (group.getMembers() != null ? group.getMembers().size() : 0));
+                
+                searchResults.add(groupInfo);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("groups", searchResults);
+            response.put("totalCount", searchResults.size());
+            response.put("query", query);
+            
+            logger.info("Search performed for query: '{}', found {} public groups", query, searchResults.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error searching groups with query '{}': {}", query, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error during search"));
+        }
     }
 
     @GetMapping("/{groupId}/view")
