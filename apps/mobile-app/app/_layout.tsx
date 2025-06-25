@@ -9,7 +9,7 @@ import TutorialOverlay from "../src/components/help/TutorialOverlay";
 // Create a simple ThemeContext
 export const ThemeContext = createContext({
   isDarkMode: false,
-  toggleTheme: () => {},
+  toggleTheme: () => { },
   colors: {
     background: '#FFFFFF',
     text: '#000000',
@@ -29,9 +29,9 @@ export default function RootLayout() {
   // Theme state
   const deviceTheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(deviceTheme === 'dark');
-  
+
   const toggleTheme = () => setIsDarkMode(prev => !prev);
-  
+
   // Define colors based on theme
   const colors = {
     background: isDarkMode ? '#121212' : '#FFFFFF',
@@ -65,44 +65,53 @@ export default function RootLayout() {
       <TutorialProvider>
         <StatusBar style={isDarkMode ? "light" : "dark"} />
         <Stack>
-          <Stack.Screen 
-            name="splashpage" 
-            options={{ 
+          <Stack.Screen
+            name="splashpage"
+            options={{
               headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-          <Stack.Screen 
-            name="(onboarding)" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
+              animation: "fade"
             }}
           />
-          <Stack.Screen 
-            name="(auth)" 
-            options={{ 
+          <Stack.Screen
+            name="(onboarding)"
+            options={{
               headerShown: false,
-              animation: "slide_from_right" 
-            }} 
+              animation: "fade"
+            }}
           />
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
+          <Stack.Screen
+            name="(auth)"
+            options={{
               headerShown: false,
-              animation: "fade" 
-            }} 
+              animation: "slide_from_right"
+            }}
           />
-          <Stack.Screen 
-            name="stokvels" 
-            options={{ 
+          <Stack.Screen
+            name="(tabs)"
+            options={{
               headerShown: false,
-              animation: "fade" 
-            }} 
+              animation: "fade"
+            }}
+          />
+          <Stack.Screen
+            name="stokvels"
+            options={{
+              headerShown: false,
+              animation: "fade"
+            }}
+          />
+          <Stack.Screen
+            name="transactions"
+            options={{
+              headerShown: false,
+              animation: "fade"
+            }}
           />
         </Stack>
         <TutorialOverlay />
       </TutorialProvider>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      
     </ThemeContext.Provider>
   );
 }
