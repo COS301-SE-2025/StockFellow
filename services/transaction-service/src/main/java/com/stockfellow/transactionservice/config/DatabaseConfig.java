@@ -8,5 +8,5 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableJpaRepositories(basePackages = "com.stockfellow.transactionservice.repository")
 @EnableTransactionManagement
 public class DatabaseConfig {
-    // Database configuration for transaction service
+    // spring boot already does it?
 }
