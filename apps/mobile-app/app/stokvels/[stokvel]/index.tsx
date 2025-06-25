@@ -38,11 +38,15 @@ interface StokvelDetails {
   balance: string;
   members: Member[];
   activities: ActivityItem[];
+  userPermissions?: {
+    canViewRequests: boolean;
+    isAdmin: boolean;
+    isMember: boolean;
+  };
 }
 
 const Stokvel = () => {
   const router = useRouter();
-
   const [stokvel, setStokvel] = useState<StokvelDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -137,7 +141,8 @@ const Stokvel = () => {
               timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
               profileImage: null
             }
-          ]
+          ],
+          userPermissions: data.userPermissions
         };
 
         setStokvel(transformedData);
@@ -151,6 +156,35 @@ const Stokvel = () => {
 
     fetchStokvelDetails();
   }, [id]);
+
+  const handleManageButtonPress = async () => {
+    if (!stokvel?.userPermissions) return;
+
+    try {
+      if (stokvel.userPermissions.isAdmin) {
+        // Admin/Founder - navigate to edit page
+        router.push(`/stokvels/${id}/editStokvel`);
+      } else if (stokvel.userPermissions.isMember) {
+        // Member - leave group (disabled for now)
+        Alert.alert('Info', 'Leave functionality coming soon');
+      } else {
+        // Not a member - send join request
+        const response = await authService.apiRequest(`/groups/${id}/join`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          Alert.alert('Success', 'Join request sent successfully');
+        } else {
+          const errorData = await response.json();
+          Alert.alert('Error', errorData.error || 'Failed to send join request');
+        }
+      }
+    } catch (error) {
+      console.error('Manage button error:', error);
+      Alert.alert('Error', 'An error occurred');
+    }
+  };
 
   if (loading) {
     return (
@@ -194,19 +228,21 @@ const Stokvel = () => {
               <Text className="text-2xl font-['PlusJakartaSans-Bold']">
                 {stokvel.name}
               </Text>
-              <TouchableOpacity
-                className="flex-col items-center"
-                onPress={() => router.push(`/stokvels/${id}/requests`)}
-              >
-                <Image
-                  source={icons.request}
-                  className="w-10 h-10 mr-1"
-                  resizeMode="contain"
-                />
-                <Text className="text-xs font-['PlusJakartaSans-Regular'] text-[#1DA1FA]">
-                  Requests
-                </Text>
-              </TouchableOpacity>
+              {stokvel.userPermissions?.canViewRequests && (
+                <TouchableOpacity
+                  className="flex-col items-center"
+                  onPress={() => router.push(`/stokvels/${id}/requests`)}
+                >
+                  <Image
+                    source={icons.request}
+                    className="w-10 h-10 mr-1"
+                    resizeMode="contain"
+                  />
+                  <Text className="text-xs font-['PlusJakartaSans-Regular'] text-[#1DA1FA]">
+                    Requests
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Profile Image */}
@@ -221,10 +257,20 @@ const Stokvel = () => {
             </Text>
 
             <CustomButton
-              title="Manage"
-              containerStyles="bg-[#0C0C0F] rounded-full py-4 px-12 my-6 self-center"
+              title={
+                stokvel.userPermissions?.isAdmin
+                  ? "Manage"
+                  : stokvel.userPermissions?.isMember
+                    ? "Leave"
+                    : "Send Join Request"
+              }
+              containerStyles={`rounded-full py-4 px-12 my-6 self-center ${stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin
+                  ? "bg-gray-400"
+                  : "bg-[#0C0C0F]"
+                }`}
               textStyles="text-white text-base font-['PlusJakartaSans-SemiBold']"
-              handlePress={() => { }}
+              handlePress={handleManageButtonPress}
+              //isDisabled={stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin}
             />
 
             <View className="w-full py-3 pl-5">
