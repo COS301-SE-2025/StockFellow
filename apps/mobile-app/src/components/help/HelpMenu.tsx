@@ -55,13 +55,13 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
     {
       title: 'App Tutorial',
       description: 'Take a guided tour of StockFellow',
-      icon: icons.help,
+      icon: icons.tutorial,
       onPress: handleStartTutorial
     },
     {
       title: 'Contact Support',
       description: 'Get help from our team',
-      icon: icons.help,
+      icon: icons.support,
       onPress: () => {
         Linking.openURL('mailto:devopps.capstone@gmail.com?subject=Support Request')
       }
@@ -69,7 +69,7 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
     {
       title: 'FAQ',
       description: 'Learn about stokvel groups',
-      icon: icons.help,
+      icon: icons.faq,
       onPress: () => {
         setShowFAQ(!showFAQ);
       }
@@ -100,8 +100,8 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
             </Text>
             <TouchableOpacity onPress={onClose} className="p-2">
               <Image 
-                source={icons.help || icons.back}
-                className="w-6 h-6"
+                source={icons.close}
+                className="w-4 h-4"
                 style={{ tintColor: colors.text }}
                 resizeMode="contain"
               />
@@ -119,7 +119,7 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
                 <View className="items-center justify-center mr-6 ml-2">
                   <Image 
                     source={item.icon}
-                    className="w-6 h-6"
+                    className="w-7 h-7"
                     style={{ tintColor: '#1DA1FA' }}
                     resizeMode="contain"
                   />

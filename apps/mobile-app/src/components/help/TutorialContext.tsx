@@ -28,7 +28,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 'create_stokvel',
     title: 'Create a Stokvel',
-    description: 'Start a new stokvel group by tapping the "+ Create" button.',
+    description: 'Start your own stokvel group by tapping the "+ Create" button.',
     screen: '/(tabs)/stokvels',
     targetElement: 'create-stokvel-button',
     position: 'top',
@@ -42,7 +42,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 'search_stokvels',
     title: 'Find Stokvels',
-    description: 'Search for existing stokvel groups to join.',
+    description: 'Search for the stokvel groups you are part of, or for existing stokvel groups to join.',
     screen: '/(tabs)/stokvels',
     targetElement: 'search-bar',
     position: 'top',
@@ -64,7 +64,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 'profile',
     title: 'Your Profile',
-    description: 'Manage your account settings and preferences.',
+    description: 'View your tier and achievements. Manage your account settings and preferences.',
     screen: '/(tabs)/profile',
     targetElement: 'profile_tab',
     position: 'bottom'
