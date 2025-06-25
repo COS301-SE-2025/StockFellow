@@ -1,0 +1,687 @@
+openapi: 3.0.3
+info:
+  title: Mock Payment Service API
+  description: Mock P2P payment service for testing rotational transactions in the StockFellow platform
+  version: 1.0.0
+  contact:
+    name: StockFellow Team
+servers:
+  - url: http://localhost:3001
+    description: Mock payment service
+
+paths:
+  /system/health:
+    get:
+      summary: Health check
+      description: Returns the health status of the mock payment service
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /system/reset:
+    post:
+      summary: Reset system data
+      description: Clears all users, transactions, and configurations (for testing)
+      tags:
+        - System
+      responses:
+        '200':
+          description: System reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetResponse'
+
+  /users:
+    post:
+      summary: Create user
+      description: Create a new user with a mock bank account and initial balance
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userId}/payment-methods:
+    post:
+      summary: Add payment method
+      description: Add and verify a payment method for a user
+      tags:
+        - Payment Methods
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPaymentMethodRequest'
+      responses:
+        '201':
+          description: Payment method added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodResponse'
+        '400':
+          description: Payment method validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Get payment methods
+      description: Retrieve all payment methods for a user
+      tags:
+        - Payment Methods
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: Payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodsResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userId}/balance:
+    get:
+      summary: Get user balance
+      description: Get the current balance of a user's mock bank account
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userId}/transactions:
+    get:
+      summary: Get user transaction history
+      description: Get all transactions for a user (both sent and received)
+      tags:
+        - Transactions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: Transaction history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionHistoryResponse'
+
+  /users/{userId}/simulate-scenario:
+    post:
+      summary: Simulate test scenarios
+      description: Force specific scenarios for testing (insufficient funds, account frozen, etc.)
+      tags:
+        - Testing
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulateScenarioRequest'
+      responses:
+        '200':
+          description: Scenario applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulateScenarioResponse'
+        '400':
+          description: Unknown scenario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /transactions:
+    post:
+      summary: Create transaction
+      description: Initiate a P2P transaction from one user to another
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Transaction initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTransactionResponse'
+        '400':
+          description: Transaction failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /transactions/{transactionId}:
+    get:
+      summary: Get transaction details
+      description: Get the status and details of a specific transaction
+      tags:
+        - Transactions
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Transaction ID
+      responses:
+        '200':
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /webhooks/configure:
+    post:
+      summary: Configure webhooks
+      description: Configure webhook URLs to receive transaction status updates
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigureWebhookRequest'
+      responses:
+        '200':
+          description: Webhook configured successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigureWebhookResponse'
+        '400':
+          description: Webhook URL is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /webhooks/test:
+    post:
+      summary: Test webhook
+      description: Send a test webhook event
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: Test webhook sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestWebhookResponse'
+
+  /admin/transactions:
+    get:
+      summary: Get all transactions
+      description: Get all transactions across the system (admin endpoint)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: All transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTransactionsResponse'
+
+  /admin/users:
+    get:
+      summary: Get all users
+      description: Get all users in the system (admin endpoint)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: All users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUsersResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        uptime:
+          type: number
+          example: 3600.5
+        timestamp:
+          type: string
+          format: date-time
+        users:
+          type: integer
+          example: 5
+        transactions:
+          type: integer
+          example: 12
+
+    ResetResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "System reset successfully"
+        timestamp:
+          type: string
+          format: date-time
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+
+    CreateUserResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        accountNumber:
+          type: string
+          example: "1234567890"
+        balance:
+          type: number
+          format: float
+          example: 10000.00
+        message:
+          type: string
+          example: "User created successfully"
+
+    AddPaymentMethodRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "bank_account"
+        details:
+          type: object
+          example: {"accountNumber": "1234567890", "bankCode": "632005"}
+        forceInvalid:
+          type: boolean
+          example: false
+          description: "Force validation failure for testing"
+
+    PaymentMethodResponse:
+      type: object
+      properties:
+        methodId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        status:
+          type: string
+          example: "verified"
+        message:
+          type: string
+          example: "Payment method added successfully"
+
+    PaymentMethodErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Payment method validation failed"
+        code:
+          type: string
+          example: "INVALID_PAYMENT_METHOD"
+        details:
+          type: string
+          example: "Account number invalid or bank account frozen"
+
+    PaymentMethodsResponse:
+      type: object
+      properties:
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        details:
+          type: object
+        verified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    BalanceResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        balance:
+          type: number
+          format: float
+        accountNumber:
+          type: string
+
+    CreateTransactionRequest:
+      type: object
+      required:
+        - fromUserId
+        - toUserId
+        - amount
+      properties:
+        fromUserId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        toUserId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        amount:
+          type: number
+          format: float
+          example: 500.00
+        description:
+          type: string
+          example: "Monthly contribution"
+        mandateReference:
+          type: string
+          example: "mandate_123"
+
+    CreateTransactionResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440002"
+        status:
+          type: string
+          example: "processing"
+        message:
+          type: string
+          example: "Transaction initiated successfully"
+
+    TransactionErrorResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+        status:
+          type: string
+          example: "failed"
+        error:
+          type: string
+          example: "INSUFFICIENT_FUNDS"
+        message:
+          type: string
+          example: "Insufficient funds in source account"
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        fromUserId:
+          type: string
+        toUserId:
+          type: string
+        amount:
+          type: number
+          format: float
+        description:
+          type: string
+        mandateReference:
+          type: string
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TransactionHistoryResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+
+    SimulateScenarioRequest:
+      type: object
+      required:
+        - scenario
+      properties:
+        scenario:
+          type: string
+          enum: [insufficient_funds, restore_balance, freeze_account, unfreeze_account]
+          example: "insufficient_funds"
+
+    SimulateScenarioResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Scenario 'insufficient_funds' applied to user 550e8400-e29b-41d4-a716-446655440000"
+        newBalance:
+          type: number
+          format: float
+          example: 0.00
+        frozen:
+          type: boolean
+          example: false
+
+    ConfigureWebhookRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          example: "https://yourapp.com/api/payment-notifications"
+        events:
+          type: array
+          items:
+            type: string
+          example: ["transaction.completed", "transaction.failed"]
+
+    ConfigureWebhookResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Webhook configured successfully"
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+
+    TestWebhookResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Test webhook sent"
+
+    AdminTransactionsResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        count:
+          type: integer
+
+    AdminUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+        count:
+          type: integer
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        balance:
+          type: number
+          format: float
+        accountNumber:
+          type: string
+        paymentMethodsCount:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "User not found"
+
+tags:
+  - name: System
+    description: System health and management
+  - name: Users
+    description: User management and account operations
+  - name: Payment Methods
+    description: Payment method verification and management
+  - name: Transactions
+    description: P2P transaction processing
+  - name: Webhooks
+    description: Webhook configuration and testing
+  - name: Testing
+    description: Test scenario simulation
+  - name: Admin
+    description: Administrative endpoints

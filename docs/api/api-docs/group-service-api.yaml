@@ -1,0 +1,1017 @@
+openapi: 3.0.3
+info:
+  title: Group Service API
+  description: API for managing investment groups in the StockFellow platform
+  version: 1.0.0
+  contact:
+    name: StockFellow Team
+servers:
+  - url: http://localhost:8081
+    description: Development server
+
+paths:
+  /api/groups:
+    get:
+      summary: Get service information
+      description: Returns basic information about the Group Service
+      tags:
+        - Service Info
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "Group Service"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+
+  /api/groups/create:
+    post:
+      summary: Create a new group
+      description: Create a new investment group with specified parameters
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Group created successfully"
+                  groupId:
+                    type: string
+                  eventId:
+                    type: string
+        '400':
+          description: Bad request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/user:
+    get:
+      summary: Get user's groups
+      description: Get all groups that the authenticated user is a member of
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user's groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              
+  /api/groups/{groupId}:
+    get:
+      summary: Get details of a specific group
+      description: |
+        Returns details of a specific group. The response fields vary based on the requesting user's role in the group.
+        - Admin/Founder: Full group details including balance, all member contributions, and join requests (Group Activities are handled by Notification service)
+        - Member: Group details but hides other members' contribution amounts and requests
+        - Non-member: Basic group details (hides balance, all contribution amounts, and requests)
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: MongoDB document ID
+                  groupId:
+                    type: string
+                    description: Business identifier for the group
+                  name:
+                    type: string
+                  adminId:
+                    type: string
+                  minContribution:
+                    type: number
+                    format: double
+                  balance:
+                    type: number
+                    format: double
+                    description: Only visible to group members
+                  maxMembers:
+                    type: integer
+                  description:
+                    type: string
+                  profileImage:
+                    type: string
+                  visibility:
+                    type: string
+                  contributionFrequency:
+                    type: string
+                  payoutFrequency:
+                    type: string
+                  contributionDate:
+                    type: string
+                    format: date-time
+                  payoutDate:
+                    type: string
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  members:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                        role:
+                          type: string
+                          enum: [founder, admin, member]
+                        joinedAt:
+                          type: string
+                          format: date-time
+                        lastActive:
+                          type: string
+                          format: date-time
+                        contribution:
+                          type: number
+                          format: double
+                          description: Only visible to admins/founders for other members
+                  activities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [contribution, payout, missed_contribution]
+                        userId:
+                          type: string
+                        amount:
+                          type: number
+                          format: double
+                        timestamp:
+                          type: string
+                          format: date-time
+                  requests:
+                    type: array
+                    description: Only visible to admins and founders
+                    items:
+                      type: object
+                      properties:
+                        requestId:
+                          type: string
+                        userId:
+                          type: string
+                        status:
+                          type: string
+                          enum: [accepted, rejected, pending]
+                        timestamp:
+                          type: string
+                          format: date-time
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User doesn't have permission to view this group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/join:
+    post:
+      summary: Request to join a group
+      description: |
+        Creates and sends a join request to the group with status "pending".
+        The request must be approved by a group admin/founder.
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Group ID to join
+      responses:
+        '201':
+          description: Join request sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Join request sent"
+                  requestId:
+                    type: string
+                  groupId:
+                    type: string
+                  userId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, accepted, rejected]
+                    default: pending
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - User already has a pending request
+            - User is already a member
+            - Group is full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Group is private and doesn't accept requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/groups/{groupId}/leave:
+    delete:
+      summary: Leave a group
+      description: |
+        Removes the authenticated user from the group members list.
+        Admins/founders cannot leave unless they transfer ownership first.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Group ID to leave
+      responses:
+        '200':
+          description: Successfully left the group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully left the group"
+                  groupId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - User is not a member
+            - User is the last admin/founder (must transfer ownership first)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/groups/{groupId}/requests:
+    get:
+      summary: Get all pending join requests for a group, where status is "pending"
+      description: |
+        Returns all pending join requests for a specific group.
+        Only accessible to group admins and founders.
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of pending join requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JoinRequest'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/requests/{requestId}/accept:
+    post:
+      summary: Accept a join request
+      description: |
+        Accepts a join request, adding the user to the group members with:
+        - Role: "member"
+        - Contribution: group's minContribution
+        Updates the request status to "accepted"
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+        - name: requestId
+          in: path
+          description: ID of the request to accept
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request accepted and user added to group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Join request accepted and user added to group"
+                  group:
+                    $ref: '#/components/schemas/Group'
+        '400':
+          description: Bad request - User is already a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/requests/{requestId}/reject:
+    post:
+      summary: Reject a join request
+      description: |
+        Rejects a join request without adding the user to the group.
+        Updates the request status to "rejected"
+      tags:
+        - Group Requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          description: ID of the group
+          required: true
+          schema:
+            type: string
+        - name: requestId
+          in: path
+          description: ID of the request to reject
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request rejected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Join request rejected"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not an admin/founder of the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              
+  /api/groups/{groupId}/transfer-ownership:
+    post:
+      summary: Transfer group ownership
+      description: |
+        Transfers group ownership to another member.
+        Only accessible to current group founder/admin.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newOwnerId:
+                  type: string
+                  description: ID of the member to become new owner
+      responses:
+        '200':
+          description: Ownership transferred successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ownership transferred successfully"
+                  newAdminId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - New owner is not a group member
+            - New owner is already an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not current owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or new owner not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}:
+    patch:
+      summary: Update group information
+      description: |
+        Updates group information. Only accessible to group admins/founders.
+        Cannot update members' information through this endpoint.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                minContribution:
+                  type: number
+                  format: double
+                maxMembers:
+                  type: integer
+                description:
+                  type: string
+                profileImage:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [Public, Private]
+                contributionFrequency:
+                  type: string
+                payoutFrequency:
+                  type: string
+      responses:
+        '200':
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Invalid field values
+            - Attempt to update restricted fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not admin/founder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/members/{memberId}/role:
+    patch:
+      summary: Update member role
+      description: |
+        Updates a member's role. Only accessible to group founder/admin.
+        Founder/Admin cannot change their own role.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Member role updated successfully"
+                  memberId:
+                    type: string
+                  newRole:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Attempt to change founder role
+            - Invalid role value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User is not founder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/contribution:
+    patch:
+      summary: Update member contribution
+      description: |
+        Updates the authenticated member's contribution amount.
+        New amount must be ≥ group's minContribution.
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0
+                  description: Must be ≥ group's minContribution
+      responses:
+        '200':
+          description: Contribution updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Contribution updated successfully"
+                  newAmount:
+                    type: number
+                    format: double
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Amount < minContribution
+            - User is not a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/groups/{groupId}/members/{memberId}:
+    delete:
+      summary: Remove a member from the group
+      description: |
+        Removes a member from the group with role-based permissions:
+        - Founders can remove admins and members
+        - Admins can only remove members
+        - Founders cannot be removed (must transfer ownership first)
+        - Members cannot remove anyone
+      tags:
+        - Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Member removed successfully"
+                  removedMemberId:
+                    type: string
+        '400':
+          description: |
+            Bad request - Possible reasons:
+            - Attempt to remove founder
+            - Attempt to remove yourself
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden - Possible reasons:
+            - User lacks permission to remove this member
+            - Admin trying to remove another admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateGroupRequest:
+      type: object
+      required:
+        - name
+        - minContribution
+        - maxMembers
+        - visibility
+        - contributionFrequency
+        - payoutFrequency
+      properties:
+        name:
+          type: string
+          description: Group name
+        minContribution:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Minimum contribution amount
+        maxMembers:
+          type: integer
+          minimum: 1
+          description: Maximum number of members
+        description:
+          type: string
+          description: Group description
+        profileImage:
+          type: string
+          description: Profile image URL
+        visibility:
+          type: string
+          enum: [Private, Public]
+          description: Group visibility
+        contributionFrequency:
+          type: string
+          enum: [Monthly, Bi-weekly, Weekly]
+          description: How often members contribute
+        contributionDate:
+          type: string
+          format: date-time
+          description: Date for contributions (ISO format)
+        payoutFrequency:
+          type: string
+          enum: [Monthly, Bi-weekly, Weekly]
+          description: How often payouts occur
+        payoutDate:
+          type: string
+          format: date-time
+          description: Date for payouts (ISO format)
+        members:
+          type: array
+          items:
+            type: string
+          description: Initial member list (user IDs)
+
+    Group:
+      type: object
+      properties:
+        groupId:
+          type: string
+        name:
+          type: string
+        adminId:
+          type: string
+        minContribution:
+          type: number
+          format: double
+        maxMembers:
+          type: integer
+        description:
+          type: string
+        profileImage:
+          type: string
+        visibility:
+          type: string
+          enum: [Private, Public]
+        contributionFrequency:
+          type: string
+          enum: [Monthly, Bi-weekly, Weekly]
+        contributionDate:
+          type: string
+          format: date-time
+        payoutFrequency:
+          type: string
+          enum: [Monthly, Bi-weekly, Weekly]
+        payoutDate:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GroupMember:
+      type: object
+      properties:
+        userId:
+          type: string
+        joinedAt:
+          type: string
+          format: date-time
+    
+    JoinRequest:
+      type: object
+      properties:
+        requestId:
+          type: string
+        userId:
+          type: string
+        profileName:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+          default: pending
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string

@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: Transaction Service API
+  description: API for managing financial transactions in the StockFellow platform
+  version: 1.0.0
+  contact:
+    name: StockFellow Team
+servers:
+  - url: http://localhost:8082
+    description: Development server
+
+paths:
+  /api/transactions:
+    get:
+      summary: Get service information
+      description: Returns basic information about the Transaction Service
+      tags:
+        - Service Info
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "Transaction Service"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  endpoints:
+                    type: array
+                    items:
+                      type: string
+
+  /api/transactions/users:
+    post:
+      summary: Create user for transactions
+      description: Create a user in the transaction system
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionUserRequest'
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  financialTier:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/transactions/mandates:
+    post:
+      summary: Create debit order mandate
+      description: Create a mandate for debit order transactions
+      tags:
+        - Mandates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMandateRequest'
+      responses:
+        '200':
+          description: Mandate created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mandateId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/transactions/debit-orders:
+    post:
+      summary: Process debit order
+      description: Process a debit order transaction
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebitOrderRequest'
+      responses:
+        '200':
+          description: Debit order processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/transactions/payouts:
+    post:
+      summary: Process payout
+      description: Process a payout transaction
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutRequest'
+      responses:
+        '200':
+          description: Payout processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/transactions/schedules:
+    post:
+      summary: Schedule transaction
+      description: Schedule a recurring transaction
+      tags:
+        - Scheduling
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleTransactionRequest'
+      responses:
+        '200':
+          description: Transaction scheduled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduleId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateTransactionUserRequest:
+      type: object
+      required:
+        - userId
+        - email
+        - phone
+        - idNumber
+      properties:
+        userId:
+          type: string
+          description: User ID
+        email:
+          type: string
+          format: email
+          description: User email
+        phone:
+          type: string
+          description: User phone number
+        idNumber:
+          type: string
+          description: User ID number
+
+    CreateMandateRequest:
+      type: object
+      required:
+        - userId
+        - bankAccount
+      properties:
+        userId:
+          type: string
+          description: User ID
+        bankAccount:
+          type: string
+          description: Bank account details
+
+    DebitOrderRequest:
+      type: object
+      required:
+        - userId
+        - groupId
+        - amount
+      properties:
+        userId:
+          type: string
+          description: User ID
+        groupId:
+          type: string
+          description: Group ID
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Transaction amount
+
+    PayoutRequest:
+      type: object
+      required:
+        - userId
+        - groupId
+        - amount
+      properties:
+        userId:
+          type: string
+          description: User ID
+        groupId:
+          type: string
+          description: Group ID
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Payout amount
+
+    ScheduleTransactionRequest:
+      type: object
+      required:
+        - userId
+        - groupId
+        - type
+        - amount
+        - frequency
+        - nextRun
+      properties:
+        userId:
+          type: string
+          description: User ID
+        groupId:
+          type: string
+          description: Group ID
+        type:
+          type: string
+          enum: [debit, payout]
+          description: Transaction type
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Transaction amount
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly]
+          description: Schedule frequency
+        nextRun:
+          type: string
+          format: date
+          description: Next execution date (YYYY-MM-DD)
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
