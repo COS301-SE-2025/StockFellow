@@ -8,6 +8,9 @@ import TopBar from '../../src/components/TopBar';
 import TransactionLog, { Transaction } from '../../src/components/TransactionLog';
 import { icons } from '../../src/constants';
 import { useRouter } from 'expo-router';
+import CardForm from '../transactions/cardform';
+
+const mockCards = require('../transactions/mockData.json') as Card[];
 
 interface Card {
   id: string;
@@ -81,16 +84,12 @@ const Transactions = () => {
     },
   ]);
   const [loading, setLoading] = useState(true);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [activeCard, setActiveCard] = useState<Card | null>(null);
+  const [cards, setCards] = useState<Card[]>(mockCards);
+  const activeCard = cards.find(card => card.isActive) || null;
 
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      // In a real app, you would fetch cards from your API here
-      const mockCards: Card[] = []; // Explicitly typed empty array
-      setCards(mockCards);
-      setActiveCard(mockCards.length > 0 ? mockCards[0] : null);
       setLoading(false);
     }, 1000);
     return () => clearTimeout(timer);
@@ -129,16 +128,22 @@ const Transactions = () => {
                 <TouchableOpacity onPress={() => router.push('/transactions/cards')}>
                   <DebitCard
                     bankName={activeCard.bank}
-                    cardNumber={activeCard.cardNumber}
+                    cardNumber={`•••• •••• •••• ${activeCard.cardNumber.slice(-4)}`}
                     cardHolderName={activeCard.cardHolderName}
                     expiryDate={`${activeCard.expiryMonth}/${activeCard.expiryYear}`}
                     cardType={activeCard.cardType}
                   />
                 </TouchableOpacity>
               ) : (
+                // Update the navigation to only pass serializable data
                 <TouchableOpacity
                   className="w-full h-[200px] border-2 border-dashed border-[#1DA1FA] rounded-2xl flex items-center justify-center"
-                  onPress={() => router.push('/transactions/cardform')}
+                  onPress={() => router.push({
+                    pathname: '/transactions/cardform',
+                    params: {
+                      cards: JSON.stringify(cards)
+                    }
+                  })}
                 >
                   <View className="items-center">
                     <Image source={icons.plus} className="w-12 h-12 mb-2" tintColor={"#1DA1FA"} />

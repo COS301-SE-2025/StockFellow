@@ -6,6 +6,29 @@ import { icons } from '../../src/constants';
 import TopBar from '../../src/components/TopBar';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
+import { useLocalSearchParams } from 'expo-router';
+
+interface Card {
+    id: string;
+    bank: string;
+    cardNumber: string;
+    cardHolderName: string;
+    expiryMonth: string;
+    expiryYear: string;
+    cardType: 'mastercard' | 'visa';
+    isActive?: boolean;
+}
+
+interface CardData {
+    cardNumber: string;
+    cardHolderName: string;
+    expiryMonth: string;
+    expiryYear: string;
+    cvv: string;
+    bank: string;
+    cardType: 'mastercard' | 'visa'; 
+}
+
 const banks = [
     { name: 'Standard Bank', logo: icons.standardbank },
     { name: 'Absa', logo: icons.absa },
@@ -16,14 +39,17 @@ const banks = [
 
 const CardForm = () => {
     const router = useRouter();
-    const [cardData, setCardData] = useState({
+    const { cards: cardsString } = useLocalSearchParams();
+    const [cards, setCards] = useState<Card[]>(cardsString ? JSON.parse(cardsString as string) : []);
+
+    const [cardData, setCardData] = useState<CardData>({
         cardNumber: '',
         cardHolderName: '',
         expiryMonth: '',
         expiryYear: '',
         cvv: '',
         bank: '',
-        cardType: 'mastercard' // default to mastercard
+        cardType: 'mastercard' // Default value
     });
 
     const [errors, setErrors] = useState({
@@ -72,9 +98,19 @@ const CardForm = () => {
 
     const handleSubmit = () => {
         if (validateForm()) {
-            // Here you would typically call an API to save the card
-            // For now, we'll just navigate back to transactions
-            Alert.alert('Success', 'Card added successfully');
+            const newCard: Card = {
+                id: Date.now().toString(),
+                bank: cardData.bank,
+                cardNumber: cardData.cardNumber.replace(/\s/g, ''),
+                cardHolderName: cardData.cardHolderName,
+                expiryMonth: cardData.expiryMonth,
+                expiryYear: cardData.expiryYear,
+                cardType: cardData.cardType,
+                isActive: cards.length === 0
+            };
+
+            const updatedCards = [...cards, newCard];
+            setCards(updatedCards);
             router.back();
         }
     };
@@ -179,13 +215,15 @@ const CardForm = () => {
                         <Text className="text-sm text-gray-800 mb-2 font-['PlusJakartaSans-Medium']">Card Type</Text>
                         <View className="flex-row">
                             <TouchableOpacity
-                                className={`flex-1 p-3 border rounded-lg mr-2 items-center ${cardData.cardType === 'visa' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                                className={`flex-1 p-3 border rounded-lg mr-2 items-center ${cardData.cardType === 'visa' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                                    }`}
                                 onPress={() => handleInputChange('cardType', 'visa')}
                             >
                                 <Image source={icons.visa} className="w-12 h-8" resizeMode="contain" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                className={`flex-1 p-3 border rounded-lg items-center ${cardData.cardType === 'mastercard' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                                className={`flex-1 p-3 border rounded-lg items-center ${cardData.cardType === 'mastercard' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                                    }`}
                                 onPress={() => handleInputChange('cardType', 'mastercard')}
                             >
                                 <Image source={icons.mastercard} className="w-12 h-8" resizeMode="contain" />
