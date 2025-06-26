@@ -1,8 +1,11 @@
 // apps/mobile-app/app/transactions/cards.tsx
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useRouter } from 'expo-router';
 import DebitCard from '../../src/components/DebitCard';
+import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 
 const Cards = () => {
@@ -31,10 +34,11 @@ const Cards = () => {
   ]);
 
   const setActiveCard = (cardId: string) => {
-    setCards(cards.map(card => ({
+    const updatedCards = cards.map(card => ({
       ...card,
       isActive: card.id === cardId
-    })));
+    }));
+    setCards(updatedCards);
   };
 
   const deleteCard = (cardId: string) => {
@@ -50,11 +54,11 @@ const Cards = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            const newCards = cards.filter(card => card.id !== cardId);
-            setCards(newCards);
-            if (newCards.length > 0 && !newCards.some(card => card.isActive)) {
-              setActiveCard(newCards[0].id);
+            const updatedCards = cards.filter(card => card.id !== cardId);
+            if (updatedCards.length > 0 && !updatedCards.some(card => card.isActive)) {
+              updatedCards[0].isActive = true;
             }
+            setCards(updatedCards);
           }
         }
       ]
@@ -62,73 +66,79 @@ const Cards = () => {
   };
 
   return (
-    <View className="flex-1 bg-white">
-      <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 80 }}>
-        <Text className="text-xl font-bold mb-6">My Cards</Text>
-
-        {/* Current Active Card */}
-        <Text className="text-base font-semibold mb-4">Current Active Card</Text>
-        {cards.filter(card => card.isActive).map(card => (
-          <View key={card.id} className="mb-6">
-            <DebitCard
-              bankName={card.bank}
-              cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
-              cardHolderName={card.cardHolderName}
-              expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
-              cardType={card.cardType}
-            />
+    <GestureHandlerRootView className="flex-1">
+      <SafeAreaView className="flex-1 bg-white">
+        <TopBar title="Stokvels" />
+        <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 80 }}>
+          {/* Header with "My Cards" and Add Button */}
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-xl font-['PlusJakartaSans-Bold']">My Cards</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/transactions/cardform')}
+              className="p-2"
+            >
+              <Image 
+                source={icons.plus}
+                className="w-8 h-8"
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
           </View>
-        ))}
 
-        {/* Other Cards */}
-        {cards.filter(card => !card.isActive).length > 0 && (
-          <>
-            <Text className="text-base font-semibold mb-4 mt-6">Other Cards</Text>
-            {cards.filter(card => !card.isActive).map(card => (
-              <View key={card.id} className="mb-6">
-                <DebitCard
-                  bankName={card.bank}
-                  cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
-                  cardHolderName={card.cardHolderName}
-                  expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
-                  cardType={card.cardType}
-                />
-                <View className="flex-row justify-between mt-3">
-                  <TouchableOpacity
-                    className="bg-blue-500 px-4 py-2 rounded-lg"
-                    onPress={() => setActiveCard(card.id)}
-                  >
-                    <Text className="text-white">Set as Active</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="bg-red-500 px-4 py-2 rounded-lg"
-                    onPress={() => deleteCard(card.id)}
-                  >
-                    <Text className="text-white">Delete Card</Text>
-                  </TouchableOpacity>
+          {/* Current Active Card */}
+          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Current Active Card</Text>
+          {cards.filter(card => card.isActive).map(card => (
+            <View key={card.id} >
+              <DebitCard
+                bankName={card.bank}
+                cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
+                cardHolderName={card.cardHolderName}
+                expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
+                cardType={card.cardType}
+              />
+            </View>
+          ))}
+
+          {/* Other Cards */}
+          {cards.filter(card => !card.isActive).length > 0 && (
+            <>
+              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Other Cards</Text>
+              {cards.filter(card => !card.isActive).map(card => (
+                <View key={card.id} className="mb-6">
+                  <DebitCard
+                    bankName={card.bank}
+                    cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
+                    cardHolderName={card.cardHolderName}
+                    expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
+                    cardType={card.cardType}
+                  />
+                  <View className="flex-row justify-center mt-1">
+                    <TouchableOpacity
+                      className="bg-[#0C0C0F] px-4 py-3 mx-2 rounded-3xl"
+                      onPress={() => setActiveCard(card.id)}
+                    >
+                      <Text className="text-white">Set as Active</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="bg-[#D10000] px-4 py-3 mx-2 rounded-3xl"
+                      onPress={() => deleteCard(card.id)}
+                    >
+                      <Text className="text-white">Delete Card</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </>
-        )}
+              ))}
+            </>
+          )}
 
-        {cards.length === 0 && (
-          <View className="items-center justify-center py-10">
-            <Text className="text-gray-500">No cards added yet</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Fixed Add Card Button */}
-      <View className="absolute bottom-5 left-0 right-0 px-6">
-        <TouchableOpacity
-          className="bg-blue-500 p-4 rounded-lg items-center"
-          onPress={() => router.push('/transactions/cardform')}
-        >
-          <Text className="text-white font-bold">Add New Card</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          {cards.length === 0 && (
+            <View className="items-center justify-center py-10">
+              <Text className="text-gray-500">No cards added yet</Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 

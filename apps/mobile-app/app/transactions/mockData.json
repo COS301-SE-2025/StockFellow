@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1",
+    "bank": "First National Bank",
+    "cardNumber": "1234567890123456",
+    "cardHolderName": "L SMITH",
+    "expiryMonth": "10",
+    "expiryYear": "26",
+    "cvv": "123",
+    "cardType": "mastercard",
+    "isActive": true
+  },
+  {
+    "id": "2",
+    "bank": "Standard Bank",
+    "cardNumber": "9876543210987654",
+    "cardHolderName": "L SMITH",
+    "expiryMonth": "05",
+    "expiryYear": "25",
+    "cvv": "456",
+    "cardType": "visa",
+    "isActive": false
+  }
+]
