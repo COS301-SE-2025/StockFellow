@@ -10,7 +10,6 @@ interface TopBarProps {
   showBackButton?: boolean;
   rightComponent?: React.ReactNode;
   onBackPress?: () => void;
-
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -53,12 +52,14 @@ const TopBar: React.FC<TopBarProps> = ({
       </View>
 
       <View className="flex-row items-center">
+        
+
         {rightComponent}
 
         {/* Help Button */}
         <HelpButton />
         
-        {/* Theme Toggle Button - No background */}
+        {/* Theme Toggle Button */}
         <TouchableOpacity
           onPress={toggleTheme}
           className="p-2"
@@ -69,6 +70,22 @@ const TopBar: React.FC<TopBarProps> = ({
               width: 28,
               height: 28,
               tintColor: isDarkMode ? '#FFFFFF' : '#000000'
+            }}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
+        {/* Notifications Button */}
+        <TouchableOpacity 
+          onPress={() => router.push('/notifications')}
+          className="p-2 mr-2"
+        >
+          <Image 
+            source={icons.bell_filled}
+            style={{ 
+              width: 24,
+              height: 24,
+              // tintColor: colors.text
             }}
             resizeMode="contain"
           />
