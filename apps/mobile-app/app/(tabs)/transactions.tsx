@@ -8,9 +8,9 @@ import TopBar from '../../src/components/TopBar';
 import TransactionLog, { Transaction } from '../../src/components/TransactionLog';
 import { icons } from '../../src/constants';
 import { useRouter } from 'expo-router';
-import CardForm from '../transactions/cardform';
 
-const mockCards = require('../transactions/mockData.json') as Card[];
+
+const mockCards = require('../../src/services/mockData.json') as Card[];
 
 interface Card {
   id: string;
@@ -19,7 +19,7 @@ interface Card {
   cardHolderName: string;
   expiryMonth: string;
   expiryYear: string;
-  cardType: 'mastercard' | 'visa' | 'paypal';
+  cardType: 'mastercard' | 'visa';
   isActive?: boolean;
 }
 

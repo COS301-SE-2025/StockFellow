@@ -1,12 +1,12 @@
 // apps/mobile-app/app/transactions/cardform.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { icons } from '../../src/constants';
 import TopBar from '../../src/components/TopBar';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
-import { useLocalSearchParams } from 'expo-router';
+import { loadCards, saveCards } from '../../src/services/cardService';
 
 interface Card {
     id: string;
@@ -26,7 +26,7 @@ interface CardData {
     expiryYear: string;
     cvv: string;
     bank: string;
-    cardType: 'mastercard' | 'visa'; 
+    cardType: 'mastercard' | 'visa';
 }
 
 const banks = [
@@ -39,8 +39,7 @@ const banks = [
 
 const CardForm = () => {
     const router = useRouter();
-    const { cards: cardsString } = useLocalSearchParams();
-    const [cards, setCards] = useState<Card[]>(cardsString ? JSON.parse(cardsString as string) : []);
+    const [cards, setCards] = useState<Card[]>([]);
 
     const [cardData, setCardData] = useState<CardData>({
         cardNumber: '',
@@ -96,7 +95,16 @@ const CardForm = () => {
         return !Object.values(newErrors).some(error => error);
     };
 
-    const handleSubmit = () => {
+    useEffect(() => {
+        const fetchCards = async () => {
+            const loadedCards = await loadCards();
+            setCards(loadedCards);
+        };
+
+        fetchCards();
+    }, []);
+
+    const handleSubmit = async () => {
         if (validateForm()) {
             const newCard: Card = {
                 id: Date.now().toString(),
@@ -111,7 +119,11 @@ const CardForm = () => {
 
             const updatedCards = [...cards, newCard];
             setCards(updatedCards);
-            router.back();
+            await saveCards(updatedCards);
+            Alert.alert('Card Added', 'A new card has been added successfully', [
+                { text: 'OK', onPress: () => router.push('(tabs)/transactions') }
+            ]);
+            router.push('(tabs)/transactions');
         }
     };
 

@@ -1,5 +1,5 @@
 // apps/mobile-app/app/transactions/cards.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -7,41 +7,42 @@ import { useRouter } from 'expo-router';
 import DebitCard from '../../src/components/DebitCard';
 import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
+import { loadCards, saveCards } from '../../src/services/cardService';
+
+interface Card {
+  id: string;
+  bank: string;
+  cardNumber: string;
+  cardHolderName: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cardType: 'mastercard' | 'visa';
+  isActive?: boolean;
+}
 
 const Cards = () => {
   const router = useRouter();
-  const [cards, setCards] = useState([
-    {
-      id: '1',
-      bank: 'First National Bank',
-      cardNumber: '1234567890123456',
-      cardHolderName: 'L SMITH',
-      expiryMonth: '10',
-      expiryYear: '26',
-      cardType: 'mastercard',
-      isActive: true
-    },
-    {
-      id: '2',
-      bank: 'Standard Bank',
-      cardNumber: '9876543210987654',
-      cardHolderName: 'L SMITH',
-      expiryMonth: '05',
-      expiryYear: '25',
-      cardType: 'visa',
-      isActive: false
-    }
-  ]);
+  const [cards, setCards] = useState<Card[]>([]);
 
-  const setActiveCard = (cardId: string) => {
+  useEffect(() => {
+    const fetchCards = async () => {
+      const loadedCards = await loadCards();
+      setCards(loadedCards);
+    };
+    
+    fetchCards();
+  }, []);
+
+  const setActiveCard = async (cardId: string) => {
     const updatedCards = cards.map(card => ({
       ...card,
       isActive: card.id === cardId
     }));
     setCards(updatedCards);
+    await saveCards(updatedCards);
   };
 
-  const deleteCard = (cardId: string) => {
+  const deleteCard = async (cardId: string) => {
     Alert.alert(
       'Delete Card',
       'Are you sure you want to delete this card?',
@@ -53,12 +54,13 @@ const Cards = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             const updatedCards = cards.filter(card => card.id !== cardId);
             if (updatedCards.length > 0 && !updatedCards.some(card => card.isActive)) {
               updatedCards[0].isActive = true;
             }
             setCards(updatedCards);
+            await saveCards(updatedCards);
           }
         }
       ]
