@@ -38,6 +38,25 @@ public class JoinGroupCommand {
         // Generate unique request ID
         String requestId = UUID.randomUUID().toString().substring(0, 12);
 
+        // Create the join request object
+        Group.JoinRequest joinRequest = new Group.JoinRequest();
+        joinRequest.setRequestId(requestId);
+        joinRequest.setUserId(userId);
+        joinRequest.setState("waiting");
+        joinRequest.setTimestamp(new java.util.Date());
+
+        // Append the join request to the group's requests array
+        if (group.getRequests() == null) {
+            group.setRequests(new java.util.ArrayList<>());
+        }
+        group.getRequests().add(joinRequest);
+
+        // Save the updated group to the database
+        // If you have a GroupRepository bean, inject and use it here:
+        // groupRepository.save(group);
+        // Otherwise, use MongoTemplate:
+        // mongoTemplate.save(group);
+
         // Create the event data
         Map<String, Object> data = new HashMap<>();
         data.put("groupId", groupId);
@@ -48,10 +67,10 @@ public class JoinGroupCommand {
 
         // Append the event
         Event event = eventStoreService.appendEvent("JoinRequestCreated", data);
-        
+
         // Rebuild the read model
         readModelService.rebuildState(groupId);
-        
+
         logger.info("User {} created join request {} for group {}", userId, requestId, groupId);
         return event.getId();
     }
