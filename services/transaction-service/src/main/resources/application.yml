@@ -55,7 +55,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,mappings
   endpoint:
     health:
       show-details: always
