@@ -35,9 +35,18 @@ scheduler:
   payout-cron: "0 0 2 * * ?" # Run at 2 AM on the 2nd of every month
 
 server:
-  port: 4080
+  port: 4080 # was 4042
 
 logging:
   level:
     com.stockfellow: DEBUG
 
+# Add this section for actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,mappings
+  endpoint:
+    health:
+      show-details: always
