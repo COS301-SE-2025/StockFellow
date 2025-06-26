@@ -107,6 +107,13 @@ export default function RootLayout() {
               animation: "fade" 
             }} 
           />
+          <Stack.Screen 
+            name="notifications" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
         </Stack>
         <TutorialOverlay />
       </TutorialProvider>

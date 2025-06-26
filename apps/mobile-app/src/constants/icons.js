@@ -54,6 +54,11 @@ import absa from '../../assets/icons/absa.png';
 import mastercard from '../../assets/icons/mastercard.png';
 import visa from '../../assets/icons/visa.png';
 
+// notifications page
+import debitcard from '../../assets/icons/debitcard.png';
+import remainder from '../../assets/icons/remainder.png';
+import alert from '../../assets/icons/alert.png';
+
 export default {
   eyehide,
   eye,
@@ -98,10 +103,15 @@ export default {
   absa,
   standardbank,
   mastercard,
+  visa,
 
   tutorial,
   support,
   close,
   faq,
-  visa,
+  
+  debitcard,
+  alert,
+  remainder,
+
 };
