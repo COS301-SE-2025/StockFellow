@@ -14,6 +14,7 @@ public class MandateResponse {
     private String status;
     private LocalDateTime signedDate;
     private String documentReference;
+    private String ipAddress;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -21,8 +22,8 @@ public class MandateResponse {
     public MandateResponse() {}
 
     public MandateResponse(UUID mandateId, UUID payerUserId, UUID groupId, UUID paymentMethodId, 
-                          String status, LocalDateTime signedDate, String documentReference, 
-                          LocalDateTime createdAt, LocalDateTime updatedAt) {
+                          String status, LocalDateTime signedDate, String documentReference,  
+                          String ipAddress, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.mandateId = mandateId;
         this.payerUserId = payerUserId;
         this.groupId = groupId;
@@ -30,6 +31,7 @@ public class MandateResponse {
         this.status = status;
         this.signedDate = signedDate;
         this.documentReference = documentReference;
+        this.ipAddress = ipAddress;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -42,6 +44,7 @@ public class MandateResponse {
     public String getStatus() { return status; }
     public LocalDateTime getSignedDate() { return signedDate; }
     public String getDocumentReference() { return documentReference; }
+    public String getIpAddress() { return ipAddress; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -53,6 +56,7 @@ public class MandateResponse {
     public void setStatus(String status) { this.status = status; }
     public void setSignedDate(LocalDateTime signedDate) { this.signedDate = signedDate; }
     public void setDocumentReference(String documentReference) { this.documentReference = documentReference; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
@@ -65,6 +69,7 @@ public class MandateResponse {
                 mandate.getStatus(),
                 mandate.getSignedDate(),
                 mandate.getDocumentReference(),
+                mandate.getIpAddress(),
                 mandate.getCreatedAt(),
                 mandate.getUpdatedAt()
         );

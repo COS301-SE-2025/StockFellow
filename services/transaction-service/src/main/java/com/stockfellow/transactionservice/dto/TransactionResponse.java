@@ -121,6 +121,9 @@ public class TransactionResponse {
     }
 
     private static String getStatusDescription(String status) {
+        if (status == null) {
+            return "Unknown status";
+        }
         return switch (status) {
             case "PENDING" -> "Transaction is pending";
             case "PROCESSING" -> "Transaction is being processed";

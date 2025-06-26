@@ -1,7 +1,10 @@
 package com.stockfellow.transactionservice.controller;
 
+import com.stockfellow.transactionservice.dto.CreateMandateRequest;
+import com.stockfellow.transactionservice.dto.MandateResponse;
 import com.stockfellow.transactionservice.model.Mandate;
-import com.stockfellow.transactionservice.repository.MandateRepository;
+import com.stockfellow.transactionservice.service.MandateService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,11 +16,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MandateController.class)
@@ -26,10 +32,15 @@ class MandateControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
-    private MandateRepository mandateRepository;
+    private MandateService mandateService;
 
     private Mandate testMandate;
+    private MandateResponse testMandateResponse;
+    private CreateMandateRequest createMandateRequest;
     private UUID testMandateId;
     private UUID testGroupId;
     private UUID testPayerUserId;
@@ -37,12 +48,13 @@ class MandateControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize test data
+        // Initialize test UUIDs
         testMandateId = UUID.fromString("123e4567-e89b-12d3-a456-426614174001");
         testGroupId = UUID.fromString("123e4567-e89b-12d3-a456-426614174002");
         testPayerUserId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
         testPaymentMethodId = UUID.fromString("456e7890-a12b-34c5-d678-901234567def");
 
+        // Create test mandate entity
         testMandate = new Mandate();
         testMandate.setMandateId(testMandateId);
         testMandate.setPayerUserId(testPayerUserId);
@@ -54,13 +66,59 @@ class MandateControllerTest {
         testMandate.setIpAddress("192.168.1.100");
         testMandate.setCreatedAt(LocalDateTime.now());
         testMandate.setUpdatedAt(LocalDateTime.now());
+
+        // Create test mandate response DTO
+        testMandateResponse = MandateResponse.from(testMandate);
+
+        // Create test request DTO
+        createMandateRequest = new CreateMandateRequest();
+        createMandateRequest.setPayerUserId(testPayerUserId);
+        createMandateRequest.setGroupId(testGroupId);
+        createMandateRequest.setPaymentMethodId(testPaymentMethodId);
+        createMandateRequest.setDocumentReference("DOC-REF-2025-001");
+        createMandateRequest.setIpAddress("192.168.1.100");
     }
 
     @Test
-    void getAllMandates_ShouldReturnListOfMandates() throws Exception {
+    void createMandate_ShouldReturnCreatedMandate_WhenValidRequest() throws Exception {
+        when(mandateService.createMandate(any(CreateMandateRequest.class))).thenReturn(testMandate);
 
-        List<Mandate> mandates = Arrays.asList(testMandate);
-        when(mandateRepository.findAll()).thenReturn(mandates);
+        mockMvc.perform(post("/api/mandates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMandateRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.mandateId").value(testMandateId.toString()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.ipAddress").value("192.168.1.100"));
+    }
+
+    @Test
+    void createMandate_ShouldReturnBadRequest_WhenInvalidRequest() throws Exception {
+        when(mandateService.createMandate(any(CreateMandateRequest.class)))
+                .thenThrow(new IllegalArgumentException("Invalid request"));
+
+        mockMvc.perform(post("/api/mandates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMandateRequest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createMandate_ShouldReturnConflict_WhenBusinessLogicError() throws Exception {
+        when(mandateService.createMandate(any(CreateMandateRequest.class)))
+                .thenThrow(new IllegalStateException("Mandate already exists"));
+
+        mockMvc.perform(post("/api/mandates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMandateRequest)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void getAllMandates_ShouldReturnListOfMandateResponses() throws Exception {
+        List<MandateResponse> mandates = Arrays.asList(testMandateResponse);
+        when(mandateService.getAllMandates()).thenReturn(mandates);
 
         mockMvc.perform(get("/api/mandates"))
                 .andExpect(status().isOk())
@@ -74,8 +132,7 @@ class MandateControllerTest {
 
     @Test
     void getAllMandates_ShouldReturnEmptyList_WhenNoMandates() throws Exception {
-
-        when(mandateRepository.findAll()).thenReturn(Arrays.asList());
+        when(mandateService.getAllMandates()).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/mandates"))
                 .andExpect(status().isOk())
@@ -85,9 +142,8 @@ class MandateControllerTest {
     }
 
     @Test
-    void getMandate_ShouldReturnMandate_WhenExists() throws Exception {
-
-        when(mandateRepository.findById(testMandateId)).thenReturn(Optional.of(testMandate));
+    void getMandateById_ShouldReturnMandate_WhenExists() throws Exception {
+        when(mandateService.getMandateById(testMandateId)).thenReturn(testMandate);
 
         mockMvc.perform(get("/api/mandates/{mandateId}", testMandateId))
                 .andExpect(status().isOk())
@@ -98,20 +154,37 @@ class MandateControllerTest {
     }
 
     @Test
-    void getMandate_ShouldReturn404_WhenNotExists() throws Exception {
-
+    void getMandateById_ShouldReturn404_WhenNotExists() throws Exception {
         UUID nonExistentId = UUID.randomUUID();
-        when(mandateRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+        when(mandateService.getMandateById(nonExistentId))
+                .thenThrow(new IllegalArgumentException("Mandate not found"));
 
         mockMvc.perform(get("/api/mandates/{mandateId}", nonExistentId))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void getMandatesByGroup_ShouldReturnMandates_WhenGroupExists() throws Exception {
+    void deactivateMandate_ShouldReturnOk_WhenExists() throws Exception {
+        doNothing().when(mandateService).deactivateMandate(testMandateId);
 
-        List<Mandate> mandates = Arrays.asList(testMandate);
-        when(mandateRepository.findByGroupId(testGroupId)).thenReturn(mandates);
+        mockMvc.perform(put("/api/mandates/{mandateId}/deactivate", testMandateId))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deactivateMandate_ShouldReturn404_WhenNotExists() throws Exception {
+        UUID nonExistentId = UUID.randomUUID();
+        doThrow(new IllegalArgumentException("Mandate not found"))
+                .when(mandateService).deactivateMandate(nonExistentId);
+
+        mockMvc.perform(put("/api/mandates/{mandateId}/deactivate", nonExistentId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getMandatesByGroup_ShouldReturnMandates_WhenGroupExists() throws Exception {
+        List<MandateResponse> mandates = Arrays.asList(testMandateResponse);
+        when(mandateService.getMandatesByGroup(testGroupId)).thenReturn(mandates);
 
         mockMvc.perform(get("/api/mandates/group/{groupId}", testGroupId))
                 .andExpect(status().isOk())
@@ -123,9 +196,8 @@ class MandateControllerTest {
 
     @Test
     void getMandatesByGroup_ShouldReturnEmptyList_WhenGroupHasNoMandates() throws Exception {
-
         UUID emptyGroupId = UUID.randomUUID();
-        when(mandateRepository.findByGroupId(emptyGroupId)).thenReturn(Arrays.asList());
+        when(mandateService.getMandatesByGroup(emptyGroupId)).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/mandates/group/{groupId}", emptyGroupId))
                 .andExpect(status().isOk())
@@ -136,9 +208,8 @@ class MandateControllerTest {
 
     @Test
     void getMandatesByStatus_ShouldReturnMandates_WhenStatusExists() throws Exception {
-
-        List<Mandate> activeMandates = Arrays.asList(testMandate);
-        when(mandateRepository.findByStatus("ACTIVE")).thenReturn(activeMandates);
+        List<MandateResponse> activeMandates = Arrays.asList(testMandateResponse);
+        when(mandateService.getMandatesByStatus("ACTIVE")).thenReturn(activeMandates);
 
         mockMvc.perform(get("/api/mandates/status/{status}", "ACTIVE"))
                 .andExpect(status().isOk())
@@ -150,8 +221,7 @@ class MandateControllerTest {
 
     @Test
     void getMandatesByStatus_ShouldReturnEmptyList_WhenStatusHasNoMandates() throws Exception {
-
-        when(mandateRepository.findByStatus("INACTIVE")).thenReturn(Arrays.asList());
+        when(mandateService.getMandatesByStatus("INACTIVE")).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/mandates/status/{status}", "INACTIVE"))
                 .andExpect(status().isOk())
@@ -162,9 +232,8 @@ class MandateControllerTest {
 
     @Test
     void getActiveMandatesForGroup_ShouldReturnActiveMandates() throws Exception {
-
-        List<Mandate> activeMandates = Arrays.asList(testMandate);
-        when(mandateRepository.findByGroupIdAndStatus(testGroupId, "ACTIVE")).thenReturn(activeMandates);
+        List<MandateResponse> activeMandates = Arrays.asList(testMandateResponse);
+        when(mandateService.getActiveMandatesByGroup(testGroupId)).thenReturn(activeMandates);
 
         mockMvc.perform(get("/api/mandates/group/{groupId}/active", testGroupId))
                 .andExpect(status().isOk())
@@ -177,9 +246,8 @@ class MandateControllerTest {
 
     @Test
     void getActiveMandatesForGroup_ShouldReturnEmptyList_WhenNoActiveMandates() throws Exception {
-
         UUID groupWithNoActiveMandates = UUID.randomUUID();
-        when(mandateRepository.findByGroupIdAndStatus(groupWithNoActiveMandates, "ACTIVE"))
+        when(mandateService.getActiveMandatesByGroup(groupWithNoActiveMandates))
                 .thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/mandates/group/{groupId}/active", groupWithNoActiveMandates))
@@ -190,15 +258,13 @@ class MandateControllerTest {
     }
 
     @Test
-    void getMandate_ShouldReturn400_WhenInvalidUUID() throws Exception {
-
+    void getMandateById_ShouldReturn400_WhenInvalidUUID() throws Exception {
         mockMvc.perform(get("/api/mandates/{mandateId}", "invalid-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getMandatesByGroup_ShouldReturn400_WhenInvalidGroupUUID() throws Exception {
-
         mockMvc.perform(get("/api/mandates/group/{groupId}", "invalid-uuid"))
                 .andExpect(status().isBadRequest());
     }

@@ -1,7 +1,10 @@
 package com.stockfellow.transactionservice.controller;
 
+import com.stockfellow.transactionservice.dto.CreateCycleRequest;
+import com.stockfellow.transactionservice.dto.CycleResponse;
 import com.stockfellow.transactionservice.model.GroupCycle;
-import com.stockfellow.transactionservice.repository.GroupCycleRepository;
+import com.stockfellow.transactionservice.service.CycleService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,13 +18,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(GroupCycleController.class)
@@ -30,10 +32,15 @@ class GroupCycleControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
-    private GroupCycleRepository groupCycleRepository;
+    private CycleService cycleService;
 
     private GroupCycle testGroupCycle;
+    private CycleResponse testCycleResponse;
+    private CreateCycleRequest createCycleRequest;
     private UUID testCycleId;
     private UUID testGroupId;
     private UUID testRecipientUserId;
@@ -41,12 +48,13 @@ class GroupCycleControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize test data
+        // Initialize test UUIDs
         testCycleId = UUID.fromString("11111111-2222-3333-4444-555555555555");
         testGroupId = UUID.fromString("66666666-7777-8888-9999-000000000000");
         testRecipientUserId = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         testRecipientPaymentMethodId = UUID.fromString("ffffffff-0000-1111-2222-333333333333");
 
+        // Create test entity
         testGroupCycle = new GroupCycle();
         testGroupCycle.setCycleId(testCycleId);
         testGroupCycle.setGroupId(testGroupId);
@@ -57,15 +65,66 @@ class GroupCycleControllerTest {
         testGroupCycle.setCollectionDate(LocalDate.of(2025, 7, 15));
         testGroupCycle.setStatus("PENDING");
         testGroupCycle.setTotalExpectedAmount(new BigDecimal("5000.00"));
+        testGroupCycle.setSuccessfulPayments(0);
+        testGroupCycle.setFailedPayments(0);
         testGroupCycle.setCreatedAt(LocalDateTime.of(2025, 6, 1, 10, 0, 0));
         testGroupCycle.setUpdatedAt(LocalDateTime.of(2025, 6, 1, 10, 0, 0));
+
+        // Create test response DTO
+        testCycleResponse = CycleResponse.from(testGroupCycle);
+
+        // Create test request DTO
+        createCycleRequest = new CreateCycleRequest();
+        createCycleRequest.setGroupId(testGroupId);
+        createCycleRequest.setCycleMonth("2025-07");
+        createCycleRequest.setRecipientUserId(testRecipientUserId);
+        createCycleRequest.setRecipientPaymentMethodId(testRecipientPaymentMethodId);
+        createCycleRequest.setContributionAmount(new BigDecimal("1000.00"));
+        createCycleRequest.setCollectionDate(LocalDate.of(2025, 7, 15));
+        createCycleRequest.setTotalExpectedAmount(new BigDecimal("5000.00"));
     }
 
     @Test
-    void getAllCycles_ShouldReturnListOfCycles() throws Exception {
+    void createGroupCycle_ShouldReturnCreatedCycle_WhenValidRequest() throws Exception {
+        when(cycleService.createGroupCycle(any(CreateCycleRequest.class))).thenReturn(testGroupCycle);
 
-        List<GroupCycle> cycles = Arrays.asList(testGroupCycle);
-        when(groupCycleRepository.findAll()).thenReturn(cycles);
+        mockMvc.perform(post("/api/cycles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createCycleRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.cycleId").value(testCycleId.toString()))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.cycleMonth").value("2025-07"))
+                .andExpect(jsonPath("$.contributionAmount").value(1000.00));
+    }
+
+    @Test
+    void createGroupCycle_ShouldReturnBadRequest_WhenInvalidRequest() throws Exception {
+        when(cycleService.createGroupCycle(any(CreateCycleRequest.class)))
+                .thenThrow(new IllegalArgumentException("Invalid request"));
+
+        mockMvc.perform(post("/api/cycles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createCycleRequest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createGroupCycle_ShouldReturnConflict_WhenBusinessLogicError() throws Exception {
+        when(cycleService.createGroupCycle(any(CreateCycleRequest.class)))
+                .thenThrow(new IllegalStateException("Cycle already exists"));
+
+        mockMvc.perform(post("/api/cycles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createCycleRequest)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void getAllCycles_ShouldReturnListOfCycleResponses() throws Exception {
+        List<CycleResponse> cycles = Arrays.asList(testCycleResponse);
+        when(cycleService.getAllCycles()).thenReturn(cycles);
 
         mockMvc.perform(get("/api/cycles"))
                 .andExpect(status().isOk())
@@ -80,8 +139,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getAllCycles_ShouldReturnEmptyList_WhenNoCycles() throws Exception {
-
-        when(groupCycleRepository.findAll()).thenReturn(Arrays.asList());
+        when(cycleService.getAllCycles()).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/cycles"))
                 .andExpect(status().isOk())
@@ -92,8 +150,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getCycle_ShouldReturnCycle_WhenExists() throws Exception {
-
-        when(groupCycleRepository.findById(testCycleId)).thenReturn(Optional.of(testGroupCycle));
+        when(cycleService.getCycleById(testCycleId)).thenReturn(testGroupCycle);
 
         mockMvc.perform(get("/api/cycles/{cycleId}", testCycleId))
                 .andExpect(status().isOk())
@@ -106,9 +163,9 @@ class GroupCycleControllerTest {
 
     @Test
     void getCycle_ShouldReturn404_WhenNotExists() throws Exception {
-
         UUID nonExistentId = UUID.randomUUID();
-        when(groupCycleRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+        when(cycleService.getCycleById(nonExistentId))
+                .thenThrow(new IllegalArgumentException("Cycle not found"));
 
         mockMvc.perform(get("/api/cycles/{cycleId}", nonExistentId))
                 .andExpect(status().isNotFound());
@@ -116,9 +173,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getCyclesByGroup_ShouldReturnCycles_WhenGroupExists() throws Exception {
-
-        List<GroupCycle> cycles = Arrays.asList(testGroupCycle);
-        when(groupCycleRepository.findByGroupIdOrderByCollectionDateDesc(testGroupId)).thenReturn(cycles);
+        List<CycleResponse> cycles = Arrays.asList(testCycleResponse);
+        when(cycleService.getCyclesByGroup(testGroupId)).thenReturn(cycles);
 
         mockMvc.perform(get("/api/cycles/group/{groupId}", testGroupId))
                 .andExpect(status().isOk())
@@ -130,9 +186,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getCyclesByGroup_ShouldReturnEmptyList_WhenGroupHasNoCycles() throws Exception {
-
         UUID emptyGroupId = UUID.randomUUID();
-        when(groupCycleRepository.findByGroupIdOrderByCollectionDateDesc(emptyGroupId)).thenReturn(Arrays.asList());
+        when(cycleService.getCyclesByGroup(emptyGroupId)).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/cycles/group/{groupId}", emptyGroupId))
                 .andExpect(status().isOk())
@@ -143,9 +198,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getCyclesByStatus_ShouldReturnCycles_WhenStatusExists() throws Exception {
-
-        List<GroupCycle> pendingCycles = Arrays.asList(testGroupCycle);
-        when(groupCycleRepository.findByStatus("PENDING")).thenReturn(pendingCycles);
+        List<CycleResponse> pendingCycles = Arrays.asList(testCycleResponse);
+        when(cycleService.getCyclesByStatus("PENDING")).thenReturn(pendingCycles);
 
         mockMvc.perform(get("/api/cycles/status/{status}", "PENDING"))
                 .andExpect(status().isOk())
@@ -157,8 +211,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getCyclesByStatus_ShouldReturnEmptyList_WhenStatusHasNoCycles() throws Exception {
-
-        when(groupCycleRepository.findByStatus("COMPLETED")).thenReturn(Arrays.asList());
+        when(cycleService.getCyclesByStatus("COMPLETED")).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/cycles/status/{status}", "COMPLETED"))
                 .andExpect(status().isOk())
@@ -169,9 +222,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextCycleForGroup_ShouldReturnCycle_WithDefaultStatus() throws Exception {
-
-        when(groupCycleRepository.findFirstByGroupIdAndStatusOrderByCollectionDateAsc(testGroupId, "PENDING"))
-                .thenReturn(Optional.of(testGroupCycle));
+        when(cycleService.getNextCycleForGroup(testGroupId, "PENDING")).thenReturn(testGroupCycle);
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/next", testGroupId))
                 .andExpect(status().isOk())
@@ -182,13 +233,22 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextCycleForGroup_ShouldReturnCycle_WithCustomStatus() throws Exception {
-
         GroupCycle activeCycle = new GroupCycle();
         activeCycle.setCycleId(testCycleId);
         activeCycle.setStatus("ACTIVE");
+        activeCycle.setGroupId(testGroupId);
+        activeCycle.setCycleMonth("2025-07");
+        activeCycle.setRecipientUserId(testRecipientUserId);
+        activeCycle.setRecipientPaymentMethodId(testRecipientPaymentMethodId);
+        activeCycle.setContributionAmount(new BigDecimal("1000.00"));
+        activeCycle.setCollectionDate(LocalDate.of(2025, 7, 15));
+        activeCycle.setTotalExpectedAmount(new BigDecimal("5000.00"));
+        activeCycle.setSuccessfulPayments(0);
+        activeCycle.setFailedPayments(0);
+        activeCycle.setCreatedAt(LocalDateTime.now());
+        activeCycle.setUpdatedAt(LocalDateTime.now());
 
-        when(groupCycleRepository.findFirstByGroupIdAndStatusOrderByCollectionDateAsc(testGroupId, "ACTIVE"))
-                .thenReturn(Optional.of(activeCycle));
+        when(cycleService.getNextCycleForGroup(testGroupId, "ACTIVE")).thenReturn(activeCycle);
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/next", testGroupId)
                 .param("status", "ACTIVE"))
@@ -199,9 +259,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextCycleForGroup_ShouldReturn404_WhenNoNextCycle() throws Exception {
-
-        when(groupCycleRepository.findFirstByGroupIdAndStatusOrderByCollectionDateAsc(testGroupId, "PENDING"))
-                .thenReturn(Optional.empty());
+        when(cycleService.getNextCycleForGroup(testGroupId, "PENDING"))
+                .thenThrow(new IllegalArgumentException("No upcoming cycle found"));
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/next", testGroupId))
                 .andExpect(status().isNotFound());
@@ -209,10 +268,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextUpcomingCycle_ShouldReturnCycle_WithDefaultStatus() throws Exception {
-
-        when(groupCycleRepository.findFirstByStatusAndCollectionDateGreaterThanEqualOrderByCollectionDateAsc(
-                eq("PENDING"), any(LocalDate.class)))
-                .thenReturn(Optional.of(testGroupCycle));
+        when(cycleService.getNextUpcomingCycle("PENDING")).thenReturn(testGroupCycle);
 
         mockMvc.perform(get("/api/cycles/upcoming"))
                 .andExpect(status().isOk())
@@ -223,10 +279,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextUpcomingCycle_ShouldReturnCycle_WithCustomStatus() throws Exception {
-
-        when(groupCycleRepository.findFirstByStatusAndCollectionDateGreaterThanEqualOrderByCollectionDateAsc(
-                eq("ACTIVE"), any(LocalDate.class)))
-                .thenReturn(Optional.of(testGroupCycle));
+        when(cycleService.getNextUpcomingCycle("ACTIVE")).thenReturn(testGroupCycle);
 
         mockMvc.perform(get("/api/cycles/upcoming")
                 .param("status", "ACTIVE"))
@@ -237,10 +290,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getNextUpcomingCycle_ShouldReturn404_WhenNoUpcomingCycle() throws Exception {
-
-        when(groupCycleRepository.findFirstByStatusAndCollectionDateGreaterThanEqualOrderByCollectionDateAsc(
-                eq("PENDING"), any(LocalDate.class)))
-                .thenReturn(Optional.empty());
+        when(cycleService.getNextUpcomingCycle("PENDING"))
+                .thenThrow(new IllegalArgumentException("No upcoming cycle found"));
 
         mockMvc.perform(get("/api/cycles/upcoming"))
                 .andExpect(status().isNotFound());
@@ -248,9 +299,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getCycleByGroupAndMonth_ShouldReturnCycle_WhenExists() throws Exception {
-
-        when(groupCycleRepository.findByGroupIdAndCycleMonth(testGroupId, "2025-07"))
-                .thenReturn(Optional.of(testGroupCycle));
+        when(cycleService.getCycleByGroupAndMonth(testGroupId, "2025-07")).thenReturn(testGroupCycle);
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/month/{cycleMonth}", testGroupId, "2025-07"))
                 .andExpect(status().isOk())
@@ -261,9 +310,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getCycleByGroupAndMonth_ShouldReturn404_WhenNotExists() throws Exception {
-
-        when(groupCycleRepository.findByGroupIdAndCycleMonth(testGroupId, "2025-08"))
-                .thenReturn(Optional.empty());
+        when(cycleService.getCycleByGroupAndMonth(testGroupId, "2025-08"))
+                .thenThrow(new IllegalArgumentException("No cycle found"));
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/month/{cycleMonth}", testGroupId, "2025-08"))
                 .andExpect(status().isNotFound());
@@ -271,10 +319,8 @@ class GroupCycleControllerTest {
 
     @Test
     void getEarliestCyclesForGroup_ShouldReturnCycles() throws Exception {
-
-        List<GroupCycle> earliestCycles = Arrays.asList(testGroupCycle);
-        when(groupCycleRepository.findFirstByGroupIdOrderByCollectionDateAsc(testGroupId))
-                .thenReturn(earliestCycles);
+        List<CycleResponse> earliestCycles = Arrays.asList(testCycleResponse);
+        when(cycleService.getEarliestCyclesForGroup(testGroupId)).thenReturn(earliestCycles);
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/earliest", testGroupId))
                 .andExpect(status().isOk())
@@ -286,9 +332,7 @@ class GroupCycleControllerTest {
 
     @Test
     void getEarliestCyclesForGroup_ShouldReturnEmptyList_WhenNoCycles() throws Exception {
-
-        when(groupCycleRepository.findFirstByGroupIdOrderByCollectionDateAsc(testGroupId))
-                .thenReturn(Arrays.asList());
+        when(cycleService.getEarliestCyclesForGroup(testGroupId)).thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/cycles/group/{groupId}/earliest", testGroupId))
                 .andExpect(status().isOk())
@@ -299,28 +343,24 @@ class GroupCycleControllerTest {
 
     @Test
     void getCycle_ShouldReturn400_WhenInvalidUUID() throws Exception {
-
         mockMvc.perform(get("/api/cycles/{cycleId}", "invalid-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getCyclesByGroup_ShouldReturn400_WhenInvalidGroupUUID() throws Exception {
-
         mockMvc.perform(get("/api/cycles/group/{groupId}", "invalid-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getNextCycleForGroup_ShouldReturn400_WhenInvalidGroupUUID() throws Exception {
-
         mockMvc.perform(get("/api/cycles/group/{groupId}/next", "invalid-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getCycleByGroupAndMonth_ShouldReturn400_WhenInvalidGroupUUID() throws Exception {
-
         mockMvc.perform(get("/api/cycles/group/{groupId}/month/{cycleMonth}", "invalid-uuid", "2025-07"))
                 .andExpect(status().isBadRequest());
     }
