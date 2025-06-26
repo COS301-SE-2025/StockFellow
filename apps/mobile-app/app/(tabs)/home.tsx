@@ -41,6 +41,16 @@ const Home = () => {
               View More...
             </Text>
           </View>
+
+          {recentActivity.map((activity, index) => (
+            <ActivityItem
+              key={index}
+              title={activity.title}
+              amount={activity.amount}
+              type={activity.type}
+              onPress={() => {}}
+            />
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
