@@ -29,6 +29,8 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     // Find cycles by status
     List<GroupCycle> findByStatus(String status);
 
+    List<GroupCycle> findByStatusAndCollectionDateLessThanEqual(String status, LocalDate collectionDate);
+
     // Finds the next upcoming cycle for a group by status, sorted by earliest
     // collection date
     Optional<GroupCycle> findFirstByGroupIdAndStatusOrderByCollectionDateAsc(UUID groupId, String status);

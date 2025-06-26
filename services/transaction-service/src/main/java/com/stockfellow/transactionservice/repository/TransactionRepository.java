@@ -12,11 +12,17 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
+    // Find transactions by cycle id
+    List<Transaction> findByCycleId(UUID cycleId);
+
     // Find transactions by cycle
     List<Transaction> findByCycleIdOrderByCreatedAtDesc(UUID cycleId);
 
     // Find transactions by status
     List<Transaction> findByStatus(String status);
+
+    // Find by cycle Id and status
+    List<Transaction> findByCycleIdAndStatus(UUID cycleId, String status);
 
     // Find transactions by payer
     List<Transaction> findByPayerUserIdOrderByCreatedAtDesc(UUID payerUserId);

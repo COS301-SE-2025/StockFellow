@@ -1,43 +1,9 @@
-// package com.stockfellow.transactionservice.model;
-
-// import lombok.Data;
-// import javax.persistence.*;
-// import java.time.LocalDateTime;
-
-// @Data
-// @Entity
-// @Table(name = "mandates")
-// public class Mandate {
-//     @Id
-//     @Column(name = "mandate_id")
-//     private String mandateId;
-//     @Column(name = "payer_user_id")
-//     private String payerId;
-//     @Column(name = "group_id")
-//     private String groupId;
-//     @Column(name = "payment_method_id")
-//     private String payMethodId;
-//     private String status;
-//     @Column(name = "signed_date")
-//     private LocalDateTime signed;
-//     @Column(name = "document_reference")
-//     private String docRef;
-//     @Column(name = "ip_address")
-//     private String ipAddr;
-//     @Column(name = "created_at")
-//     private LocalDateTime createdAt;
-//     @Column(name = "updated_at")
-//     private LocalDateTime updatedAt;
-// }
-
 package com.stockfellow.transactionservice.model;
 
-import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
 @Entity
 @Table(name = "mandates")
 public class Mandate {
@@ -71,6 +37,30 @@ public class Mandate {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // Getters
+    public UUID getMandateId() { return mandateId; }
+    public UUID getPayerUserId() { return payerUserId; }
+    public UUID getGroupId() { return groupId; }
+    public UUID getPaymentMethodId() { return paymentMethodId; }
+    public String getStatus() { return status; }
+    public LocalDateTime getSignedDate() { return signedDate; }
+    public String getDocumentReference() { return documentReference; }
+    public String getIpAddress() { return ipAddress; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    // Setters
+    public void setMandateId(UUID mandateId) { this.mandateId = mandateId; }
+    public void setPayerUserId(UUID payerUserId) { this.payerUserId = payerUserId; }
+    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public void setPaymentMethodId(UUID paymentMethodId) { this.paymentMethodId = paymentMethodId; }
+    public void setStatus(String status) { this.status = status; }
+    public void setSignedDate(LocalDateTime signedDate) { this.signedDate = signedDate; }
+    public void setDocumentReference(String documentReference) { this.documentReference = documentReference; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     @PrePersist
     protected void onCreate() {

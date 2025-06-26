@@ -6,160 +6,202 @@ import com.stockfellow.transactionservice.model.Transaction;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.repository.MandateRepository;
 import com.stockfellow.transactionservice.repository.TransactionRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
-@Slf4j
 @Component
-@RequiredArgsConstructor
 public class PaymentScheduler {
 
+    private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
     private final GroupCycleRepository groupCycleRepository;
     private final MandateRepository mandateRepository;
     private final TransactionRepository transactionRepository;
 
-    /**
-     * Process payments due today - runs at 1 AM daily
-     */
-    @Scheduled(cron = "0 0 1 * * ?")
-    public void processPaymentsDueToday() {
-        LocalDate today = LocalDate.now();
-        log.info("Processing payments due on {}", today);
+    public PaymentScheduler(GroupCycleRepository groupCycleRepository,
+                           MandateRepository mandateRepository,
+                           TransactionRepository transactionRepository) {
+        this.groupCycleRepository = groupCycleRepository;
+        this.mandateRepository = mandateRepository;
+        this.transactionRepository = transactionRepository;
+    }
 
-        List<GroupCycle> cyclesDue = groupCycleRepository.findAll().stream()
-                .filter(cycle -> "PENDING".equals(cycle.getStatus()))
-                .filter(cycle -> today.equals(cycle.getCollectionDate()))
-                .collect(Collectors.toList());
-
-        for (GroupCycle cycle : cyclesDue) {
-            try {
-                log.info("Processing cycle: {} - Recipient: {}", cycle.getCycleId(), cycle.getRecipientUserId());
-
+    @Scheduled(cron = "0 * * * * ?") // Run every minute for testing (Run daily at 9 AM)
+    @Transactional
+    public void processScheduledPayments() {
+        logger.info("Starting scheduled payment processing");
+        
+        List<GroupCycle> dueCycles = groupCycleRepository
+            .findByStatusAndCollectionDateLessThanEqual("PENDING", LocalDate.now());
+        
+        logger.info("{} Pending cycles found", dueCycles.size());
+        for (GroupCycle cycle : dueCycles) {
+            if ("PENDING".equals(cycle.getStatus()) && 
+                cycle.getCollectionDate().isBefore(LocalDate.now().plusDays(1))) {
+                
+                logger.info("Processing payments for cycle {} with recipient {}", 
+                    cycle.getCycleId(), cycle.getRecipientUserId());
+                
                 cycle.setStatus("PROCESSING");
                 groupCycleRepository.save(cycle);
-
-                List<Mandate> mandates = getMandatesForGroup(cycle);
-                List<Transaction> transactions = createTransactions(cycle, mandates);
-                int successful = processTransactions(transactions);
-
-                updateCycleStatus(cycle, successful, transactions.size());
-
-            } catch (Exception e) {
-                log.error("Failed to process cycle {}: {}", cycle.getCycleId(), e.getMessage());
-                cycle.setStatus("FAILED");
-                groupCycleRepository.save(cycle);
+                
+                processPaymentsForCycle(cycle);
             }
         }
     }
 
-    /**
-     * Retry failed payments - runs at 4 AM daily
-     */
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "*/30 * * * * ?") // Every 30 seconds for testing(Every 30 minutes)
+    @Transactional
     public void retryFailedPayments() {
-        log.info("Retrying failed payments");
-
-        List<Transaction> failedTx = transactionRepository.findAll().stream()
-                .filter(tx -> "FAILED".equals(tx.getStatus()))
-                .filter(tx -> tx.getRetryCount() < 3)
-                .collect(Collectors.toList());
-
-        for (Transaction tx : failedTx) {
-            if (retryTransaction(tx)) {
-                log.info("Retry successful for transaction {}", tx.getTransactionId());
-            }
+        logger.info("Starting retry of failed payments");
+        
+        List<GroupCycle> processingCycles = groupCycleRepository.findByStatus("PARTIALLY_COMPLETED");
+        
+        for (GroupCycle cycle : processingCycles) {
+            logger.info("Retrying failed payments for cycle {}", cycle.getCycleId());
+            cycle.setStatus("RETRYING");
+            groupCycleRepository.save(cycle);
+            
+            retryFailedTransactionsForCycle(cycle);
         }
     }
 
-    // Helper methods
-    private List<Mandate> getMandatesForGroup(GroupCycle cycle) {
-        return mandateRepository.findAll().stream()
-                .filter(m -> m.getGroupId().equals(cycle.getGroupId()))
-                .filter(m -> "ACTIVE".equals(m.getStatus()))
-                .filter(m -> !m.getPayerUserId().equals(cycle.getRecipientUserId()))
-                .collect(Collectors.toList());
+    @Transactional
+    public void retryFailedTransactionsForCycle(GroupCycle cycle) {
+        logger.info("Retrying failed transactions for cycle");
+        
+        List<Transaction> failedTransactions = transactionRepository
+            .findByCycleIdAndStatus(cycle.getCycleId(), "FAILED");
+        
+        for (Transaction tx : failedTransactions) {
+            if ("FAILED".equals(tx.getStatus()) && tx.getRetryCount() < 3) {
+                
+                logger.info("Retrying transaction {}", tx.getTransactionId());
+                
+                // Mock payment processing - replace with actual payment gateway integration
+                boolean paymentSuccessful = processPayment(tx);
+                
+                if (paymentSuccessful) {
+                    tx.setStatus("COMPLETED");
+                    tx.setCompletedAt(LocalDateTime.now());
+                } else {
+                    tx.setStatus("FAILED");
+                    tx.setRetryCount(tx.getRetryCount() + 1);
+                    tx.setFailMessage("Payment failed after retry");
+                }
+                
+                transactionRepository.save(tx);
+                
+                // If max retries reached, mark as permanently failed
+                if (tx.getRetryCount() >= 3) {
+                    tx.setStatus("PERMANENTLY_FAILED");
+                    tx.setCompletedAt(LocalDateTime.now());
+                    transactionRepository.save(tx);
+                }
+                
+                // Small delay between retries
+                try {
+                    Thread.sleep(tx.getRetryCount() * 1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+        
+        // Update cycle status based on final results
+        updateCycleStatus(cycle);
     }
 
-    private List<Transaction> createTransactions(GroupCycle cycle, List<Mandate> mandates) {
-        return mandates.stream()
-                .map(mandate -> {
-                    Transaction tx = new Transaction();
-                    tx.setTransactionId(UUID.randomUUID());
-                    tx.setCycleId(cycle.getCycleId());
-                    tx.setMandateId(mandate.getMandateId());
-                    tx.setPayerUserId(mandate.getPayerUserId());
-                    tx.setRecipientUserId(cycle.getRecipientUserId());
-                    tx.setGroupId(cycle.getGroupId());
-                    tx.setPayerPaymentMethodId(mandate.getPaymentMethodId());
-                    tx.setRecipientPaymentMethodId(cycle.getRecipientPaymentMethodId());
-                    tx.setAmount(cycle.getContributionAmount());
-                    tx.setStatus("PENDING");
-                    tx.setRetryCount(0);
-                    tx.setCreatedAt(LocalDateTime.now());
-                    return transactionRepository.save(tx);
-                })
-                .collect(Collectors.toList());
-    }
+    private void processPaymentsForCycle(GroupCycle cycle) {
+        logger.info("Porcessing payments for cycle: {}", cycle.getCycleId());
+        List<Mandate> activeMandates = mandateRepository.findActiveMandatesByGroupId(cycle.getGroupId())
+            .stream()
+            .filter(m -> "ACTIVE".equals(m.getStatus()))
+            .filter(m -> !m.getPayerUserId().equals(cycle.getRecipientUserId()))
+            .toList();
 
-    private int processTransactions(List<Transaction> transactions) {
-        int successful = 0;
-        for (Transaction tx : transactions) {
-            if (simulatePayment()) {
+        for (Mandate mandate : activeMandates) {
+            // Create transaction record
+            logger.info("Creating transaction");
+            Transaction tx = new Transaction();
+            tx.setTransactionId(UUID.randomUUID());
+            tx.setCycleId(cycle.getCycleId());
+            tx.setMandateId(mandate.getMandateId());
+            tx.setPayerUserId(mandate.getPayerUserId());
+            tx.setRecipientUserId(cycle.getRecipientUserId());
+            tx.setGroupId(cycle.getGroupId());
+            tx.setPayerPaymentMethodId(mandate.getPaymentMethodId());
+            tx.setRecipientPaymentMethodId(cycle.getRecipientPaymentMethodId());
+            tx.setAmount(cycle.getContributionAmount());
+            tx.setStatus("PENDING");
+            tx.setRetryCount(0);
+            tx.setCreatedAt(LocalDateTime.now());
+            
+            logger.info("Saving transaction");
+            transactionRepository.save(tx);
+            
+            // Process payment
+            boolean paymentSuccessful = processPayment(tx);
+            
+            if (paymentSuccessful) {
+                logger.info("Payment Successful");
                 tx.setStatus("COMPLETED");
                 tx.setCompletedAt(LocalDateTime.now());
-                successful++;
             } else {
+                logger.info("Payment Unsuccessful");
                 tx.setStatus("FAILED");
-                tx.setRetryCount(1);
-                tx.setFailMessage("Payment failed");
+                tx.setRetryCount(tx.getRetryCount() + 1);
+                tx.setFailMessage("Initial payment failed");
             }
+            
             transactionRepository.save(tx);
         }
-        return successful;
+        
+        updateCycleStatus(cycle);
     }
 
-    private boolean retryTransaction(Transaction tx) {
-        tx.setRetryCount(tx.getRetryCount() + 1);
-
-        if (simulatePayment()) {
-            tx.setStatus("COMPLETED");
-            tx.setCompletedAt(LocalDateTime.now());
-            transactionRepository.save(tx);
-            return true;
-        } else {
-            tx.setFailMessage("Retry " + tx.getRetryCount() + " failed");
-            transactionRepository.save(tx);
-            return false;
-        }
-    }
-
-    private void updateCycleStatus(GroupCycle cycle, int successful, int total) {
-        cycle.setSuccessfulPayments(successful);
-        cycle.setFailedPayments(total - successful);
-
-        cycle.setTotalCollectedAmount(
-                cycle.getContributionAmount().multiply(java.math.BigDecimal.valueOf(successful)));
-
-        if (successful == total) {
-            cycle.setStatus("COMPLETED");
-        } else if (successful > 0) {
-            cycle.setStatus("PARTIAL");
-        } else {
-            cycle.setStatus("FAILED");
-        }
-
-        groupCycleRepository.save(cycle);
-    }
-
-    private boolean simulatePayment() {
+    private boolean processPayment(Transaction transaction) {
+        // Mock payment processing - replace with actual payment gateway integration
+        // For demo purposes, randomly succeed/fail
         return Math.random() > 0.1; // 90% success rate
+    }
+
+    private void updateCycleStatus(GroupCycle cycle) {
+        List<Transaction> cycleTransactions = transactionRepository.findByCycleId(cycle.getCycleId());
+        
+        int successful = 0;
+        int failed = 0;
+        
+        for (Transaction tx : cycleTransactions) {
+            if ("COMPLETED".equals(tx.getStatus())) {
+                successful++;
+            } else if ("FAILED".equals(tx.getStatus()) || "PERMANENTLY_FAILED".equals(tx.getStatus())) {
+                failed++;
+            }
+        }
+        
+        cycle.setSuccessfulPayments(successful);
+        cycle.setFailedPayments(failed);
+        
+        BigDecimal expectedTotal = cycle.getContributionAmount()
+            .multiply(BigDecimal.valueOf(successful + failed));
+        
+        if (successful == cycleTransactions.size()) {
+            cycle.setStatus("COMPLETED");
+        } else if (failed > 0 && successful + failed == cycleTransactions.size()) {
+            cycle.setStatus("PARTIALLY_COMPLETED");
+        } else {
+            cycle.setStatus("PROCESSING");
+        }
+        
+        groupCycleRepository.save(cycle);
     }
 }
