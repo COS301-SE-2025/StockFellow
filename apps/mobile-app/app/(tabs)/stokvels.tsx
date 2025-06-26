@@ -141,9 +141,10 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-
+      
       <View className="px-6 pt-4">
         <SearchBar
+          nativeID="search-bar"
           value={searchQuery}
           onChangeText={handleSearch}
           placeholder="Search for a Stokvel"
@@ -251,6 +252,7 @@ const Stokvels = () => {
 
       {/* Fixed Create Button */}
       <View
+        nativeID="create-stokvel-button"
         style={{
           position: 'absolute',
           bottom: 140,
