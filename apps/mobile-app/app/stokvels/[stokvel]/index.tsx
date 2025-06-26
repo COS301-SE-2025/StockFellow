@@ -170,7 +170,7 @@ const Stokvel = () => {
       } else {
         // Not a member - send join request
         const response = await authService.apiRequest(`/groups/${id}/join`, {
-          method: 'POST'
+          method: 'GET'
         });
 
         if (response.ok) {

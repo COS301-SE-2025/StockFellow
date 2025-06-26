@@ -41,7 +41,7 @@ const StokvelRequests = () => {
 
             console.log("Group ID recieved to check requests: " + id);
 
-            const response = await authService.apiRequest(`/groups/${id}/view`, {
+            const response = await authService.apiRequest(`/groups/${id}/requests`, {
                 method: 'GET'
             });
 
@@ -51,23 +51,23 @@ const StokvelRequests = () => {
 
             const data = await response.json();
 
-            console.log("Group Data: " + data);
+            console.log("Group Data: ", data);
 
             // Filter only waiting requests and transform to frontend format
-            const pendingRequests = data.group.requests
-                ?.filter((req: any) => req.state === "waiting")
-                ?.map((req: any) => ({
-                    requestId: req.requestId,
-                    userId: req.userId,
-                    state: req.state,
-                    timestamp: new Date(req.timestamp),
-                    profileName: req.userId, // You should fetch actual user names here
-                    profileImage: null
-                })) || [];
+            // const pendingRequests = data.group.requests
+            //     ?.filter((req: any) => req.state === "waiting")
+            //     ?.map((req: any) => ({
+            //         requestId: req.requestId,
+            //         userId: req.userId,
+            //         state: req.state,
+            //         timestamp: new Date(req.timestamp),
+            //         profileName: req.userId, // You should fetch actual user names here
+            //         profileImage: null
+            //     })) || [];
             
-            console.log("Groups Requests: " + pendingRequests);
+            // console.log("Groups Requests: " + pendingRequests);
 
-            setRequests(pendingRequests);
+            // setRequests(pendingRequests);
         } catch (error) {
             console.error('Error fetching requests:', error);
             Alert.alert('Error', 'Failed to load join requests');
