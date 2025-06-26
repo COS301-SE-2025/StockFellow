@@ -40,62 +40,74 @@ const TutorialOverlay: React.FC = () => {
 
     const renderOverlay = () => {
     if (!step.highlightStyle) {
-        return (
+      return (
         <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70" />
-        );
+      );
     }
 
-    const { width: hWidth, height: hHeight, top = 0, right, alignSelf } = step.highlightStyle;
+    const { width: hWidth, height: hHeight, top, bottom = 0, right, alignSelf } = step.highlightStyle;
     const leftWidth = alignSelf === 'center' 
-        ? (width - hWidth) / 2 
-        : right 
+      ? (width - hWidth) / 2 
+      : right 
         ? width - right - hWidth 
         : 0;
 
+    // Calculate top position based on whether we're using top or bottom
+    const topPosition = top ?? (height - bottom - hHeight);
+
     return (
-        <>
+      <>
         {/* Top overlay */}
         <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: top,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: topPosition,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
         }} />
 
         {/* Bottom overlay */}
         <View style={{
-            position: 'absolute',
-            top: top + hHeight,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          position: 'absolute',
+          top: topPosition + hHeight,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
         }} />
 
         {/* Left overlay */}
         <View style={{
-            position: 'absolute',
-            top: top,
-            left: 0,
-            width: leftWidth,
-            height: hHeight,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          position: 'absolute',
+          top: topPosition,
+          left: 0,
+          width: leftWidth,
+          height: hHeight,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
         }} />
 
         {/* Right overlay */}
         <View style={{
-            position: 'absolute',
-            top: top,
-            left: leftWidth + hWidth,
-            right: 0,
-            height: hHeight,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          position: 'absolute',
+          top: topPosition,
+          left: leftWidth + hWidth,
+          right: 0,
+          height: hHeight,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
         }} />
-        </>
+      </>
     );
-    };
+  };
+
+  // Adjust info panel position based on current step
+  const getInfoPanelPosition = () => {
+    const step = getCurrentStep();
+    if (step.id === 'create_stokvel') {
+      return 'top-32'; // Move panel to top for create button step
+    }
+    return 'bottom-32'; // Default bottom position for other steps
+  };
 
   return (
     <Animated.View 
@@ -115,13 +127,15 @@ const TutorialOverlay: React.FC = () => {
             step.highlightStyle,
             { 
               borderColor: '#1DA1FA',
+              borderRadius: 25
             }
           ]} 
           pointerEvents="none"
         />
       )}
       
-      <View className="absolute bottom-32 left-6 right-6">
+      {/* Info Panel with dynamic positioning */}
+      <View className={`absolute left-6 right-6 ${getInfoPanelPosition()}`}>
         <View className="bg-white rounded-2xl p-6 shadow-lg">
           <Text className="text-[#1DA1FA] text-2xl font-['PlusJakartaSans-Bold'] mb-3">
             {step.title}

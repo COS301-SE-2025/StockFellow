@@ -21,7 +21,7 @@ public class RateLimitConfig {
         
         registrationBean.setFilter(new RateLimitFilter(routes));
         registrationBean.addUrlPatterns("/api/*"); // Apply to all API routes
-        registrationBean.setOrder(1); // Execute before other filters
+        registrationBean.setOrder(2); // Execute after auth filter
         registrationBean.setName("rateLimitFilter");
         
         return registrationBean;

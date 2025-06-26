@@ -9,11 +9,12 @@ export interface TutorialStep {
   targetElement?: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   highlightStyle?: {
-    width: number,
-    height: number,
-    top?: number,
-    right?: number,
-    alignSelf?: 'center'
+    width: number;
+    height: number;
+    top?: number;
+    bottom?: number;  
+    right?: number;
+    alignSelf?: 'center';
   };
 }
 
@@ -31,12 +32,12 @@ const tutorialSteps: TutorialStep[] = [
     description: 'Start your own stokvel group by tapping the "+ Create" button.',
     screen: '/(tabs)/stokvels',
     targetElement: 'create-stokvel-button',
-    position: 'top',
+    position: 'bottom',
     highlightStyle: {
-      width: 110,
-      height: 50,
-      top: 262,
-      right: 141
+      width: 120,
+      height: 45,
+      bottom: 140,
+      alignSelf: 'center'
     }
   },
   {

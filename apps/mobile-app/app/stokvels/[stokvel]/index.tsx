@@ -8,7 +8,7 @@ import CustomButton from "../../../src/components/CustomButton";
 import MemberCard from "../../../src/components/MemberCard";
 import StokvelActivity from "../../../src/components/StokvelActivity";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as SecureStore from 'expo-secure-store';
+import authService from '../../../src/services/authService';
 
 interface Member {
   id: string;
@@ -38,37 +38,116 @@ interface StokvelDetails {
   balance: string;
   members: Member[];
   activities: ActivityItem[];
+  userPermissions?: {
+    canViewRequests: boolean;
+    isAdmin: boolean;
+    isMember: boolean;
+  };
 }
 
 const Stokvel = () => {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
   const [stokvel, setStokvel] = useState<StokvelDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const params = useLocalSearchParams();
+  const id = params.id || params.stokvel;
+
+  console.log('All received params:', params);
+  console.log('Extracted ID:', id);
+
+  if (!id) {
+    console.error('No ID found in params');
+    Alert.alert('Error', 'Stokvel ID missing');
+    router.back();
+    return null;
+  }
+
   useEffect(() => {
+    console.log('Received ID:', id);
+    if (!id) {
+      console.error('No ID in route params');
+      Alert.alert('Error', 'Missing stokvel ID');
+      router.back();
+      return;
+    }
+
     const fetchStokvelDetails = async () => {
       try {
-        const token = await SecureStore.getItemAsync('access_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`http://10.0.2.2:4040/api/groups/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await authService.apiRequest(`/groups/${id}/view`, {
+          method: 'GET'
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch stokvel details');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        setStokvel(data);
+        console.log('API Response:', data);
+
+        // Transform to match your frontend interface
+        const transformedData: StokvelDetails = {
+          id: data.group.id || data.group._id,
+          name: data.group.name,
+          balance: data.group.balance ? `R ${data.group.balance.toFixed(2)}` : "R 0.00",
+          members: data.group.members?.map((member: any) => ({
+            id: member.userId,
+            name: member.userId,
+            role: member.role,
+            contribution: member.contribution ? `R ${member.contribution.toFixed(2)}` : "R 0.00",
+            tier: member.role === 'admin' ? 3 : 1,
+            profileImage: null
+          })) || [],
+          activities: [
+            {
+              id: '1',
+              type: 'joined' as const,
+              memberName: 'John Doe',
+              stokvelName: data.group.name,
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+              profileImage: null
+            },
+            {
+              id: '2',
+              type: 'contribution' as const,
+              memberName: 'Jane Smith',
+              amount: 500,
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
+              profileImage: null
+            },
+            {
+              id: '3',
+              type: 'contribution_change' as const,
+              memberName: 'Mike Johnson',
+              previousAmount: 300,
+              newAmount: 500,
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+              profileImage: null
+            },
+            {
+              id: '4',
+              type: 'payout' as const,
+              memberName: 'Mike Johnson',
+              amount: 2000,
+              recipientName: 'Sarah Williams',
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
+              profileImage: null
+            },
+            {
+              id: '5',
+              type: 'missed_contribution' as const,
+              memberName: 'Robert Brown',
+              amount: 500,
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+              profileImage: null
+            }
+          ],
+          userPermissions: data.userPermissions
+        };
+
+        setStokvel(transformedData);
       } catch (error) {
-        console.error('Error fetching stokvel details:', error);
+        console.error('Fetch error:', error);
         Alert.alert('Error', 'Failed to load stokvel details');
       } finally {
         setLoading(false);
@@ -77,6 +156,35 @@ const Stokvel = () => {
 
     fetchStokvelDetails();
   }, [id]);
+
+  const handleManageButtonPress = async () => {
+    if (!stokvel?.userPermissions) return;
+
+    try {
+      if (stokvel.userPermissions.isAdmin) {
+        // Admin/Founder - navigate to edit page
+        router.push(`/stokvels/${id}/editStokvel`);
+      } else if (stokvel.userPermissions.isMember) {
+        // Member - leave group (disabled for now)
+        Alert.alert('Info', 'Leave functionality coming soon');
+      } else {
+        // Not a member - send join request
+        const response = await authService.apiRequest(`/groups/${id}/join`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          Alert.alert('Success', 'Join request sent successfully');
+        } else {
+          const errorData = await response.json();
+          Alert.alert('Error', errorData.error || 'Failed to send join request');
+        }
+      }
+    } catch (error) {
+      console.error('Manage button error:', error);
+      Alert.alert('Error', 'An error occurred');
+    }
+  };
 
   if (loading) {
     return (
@@ -110,7 +218,7 @@ const Stokvel = () => {
         <TopBar title="Stokvels" />
 
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
+          contentContainerStyle={{ paddingTop: 15 }}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
         >
@@ -120,19 +228,21 @@ const Stokvel = () => {
               <Text className="text-2xl font-['PlusJakartaSans-Bold']">
                 {stokvel.name}
               </Text>
-              <TouchableOpacity
-                className="flex-col items-center"
-                onPress={() => router.push(`/stokvels/${id}/requests`)}
-              >
-                <Image
-                  source={icons.request} 
-                  className="w-10 h-10 mr-1"
-                  resizeMode="contain"
-                />
-                <Text className="text-xs font-['PlusJakartaSans-Regular'] text-[#1DA1FA]">
-                  Requests
-                </Text>
-              </TouchableOpacity>
+              {stokvel.userPermissions?.canViewRequests && (
+                <TouchableOpacity
+                  className="flex-col items-center"
+                  onPress={() => router.push(`/stokvels/${id}/requests`)}
+                >
+                  <Image
+                    source={icons.request}
+                    className="w-10 h-10 mr-1"
+                    resizeMode="contain"
+                  />
+                  <Text className="text-xs font-['PlusJakartaSans-Regular'] text-[#1DA1FA]">
+                    Requests
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Profile Image */}
@@ -145,12 +255,22 @@ const Stokvel = () => {
             <Text className="text-3xl font-['PlusJakartaSans-Bold'] text-[#03DE58]">
               {stokvel.balance}
             </Text>
-            
+
             <CustomButton
-              title="Manage"
-              containerStyles="bg-[#0C0C0F] rounded-full py-4 px-12 my-6 self-center"
+              title={
+                stokvel.userPermissions?.isAdmin
+                  ? "Manage"
+                  : stokvel.userPermissions?.isMember
+                    ? "Leave"
+                    : "Send Join Request"
+              }
+              containerStyles={`rounded-full py-4 px-12 my-6 self-center ${stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin
+                  ? "bg-gray-400"
+                  : "bg-[#0C0C0F]"
+                }`}
               textStyles="text-white text-base font-['PlusJakartaSans-SemiBold']"
-              handlePress={() => {}}
+              handlePress={handleManageButtonPress}
+              //isDisabled={stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin}
             />
 
             <View className="w-full py-3 pl-5">
