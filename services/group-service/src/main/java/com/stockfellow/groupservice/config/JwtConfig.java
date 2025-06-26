@@ -19,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -26,6 +27,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -78,8 +80,23 @@ public class JwtConfig {
 
                 DecodedJWT verifiedJWT = verifier.verify(token);
 
-                Authentication auth = new UsernamePasswordAuthenticationToken(
-                        verifiedJWT.getSubject(), null, Collections.emptyList());
+                // Extract the subject (user ID) from the JWT
+                String userId = verifiedJWT.getSubject();
+                
+                // Create authentication with the user ID as principal
+                List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                    new SimpleGrantedAuthority("ROLE_USER")
+                );
+                
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        userId, // Use the subject as principal
+                        null, 
+                        authorities
+                );
+                
+                // Store the decoded JWT in the authentication for later access if needed
+                auth.setDetails(verifiedJWT);
+                
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 filterChain.doFilter(request, response);
             } catch (JWTVerificationException | JwkException e) {

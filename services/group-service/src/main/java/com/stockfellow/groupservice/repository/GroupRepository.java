@@ -28,6 +28,16 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     @Query("{ 'name': { $regex: ?0, $options: 'i' } }")
     List<Group> findByNameContainingIgnoreCase(String name);
     
+    // Find public groups by name containing search term (case-insensitive)
+    @Query("{ 'visibility': 'Public', 'name': { $regex: ?0, $options: 'i' } }")
+    List<Group> findPublicGroupsByNameContaining(String name);
+    
+    // Advanced search for public groups (name or description)
+    @Query("{ 'visibility': 'Public', $or: [ " +
+           "{ 'name': { $regex: ?0, $options: 'i' } }, " +
+           "{ 'description': { $regex: ?0, $options: 'i' } } ] }")
+    List<Group> findPublicGroupsByNameOrDescriptionContaining(String searchTerm);
+    
     // Check if a user is already a member of a group
     @Query("{ '_id': ?0, 'members': ?1 }")
     Optional<Group> findByGroupIdAndMembersContaining(String groupId, String userId);

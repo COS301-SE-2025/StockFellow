@@ -6,14 +6,21 @@ import { useTheme } from '../../app/_layout';
 interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
-  placeholder?: string;
+  placeholder: string;
+  nativeID?: string; 
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, placeholder }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ 
+  value, 
+  onChangeText, 
+  placeholder,
+  nativeID 
+}) => {
   const { isDarkMode, colors } = useTheme();
   
   return (
     <View 
+      nativeID={nativeID}
       style={{ 
         backgroundColor: isDarkMode ? '#2C2C2C' : 'white',
         borderColor: isDarkMode ? '#444444' : '#F0F0F0'
@@ -30,7 +37,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, placeholder 
       />
       <View style={[
         styles.iconWrapper,
-        { backgroundColor: '#1DA1FA' } // Darker blue in dark mode
+        { backgroundColor: '#1DA1FA' }
       ]}>
         <Image 
           source={icons.search}

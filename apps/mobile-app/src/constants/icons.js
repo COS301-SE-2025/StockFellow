@@ -26,11 +26,38 @@ import trash from "../../assets/icons/trash.png";
 import calendar from "../../assets/icons/calendar.png";
 import clock from "../../assets/icons/clock.png";
 
+//onboarding
+import savings from "../../assets/icons/savings.png";
+import growth from "../../assets/icons/growth.png";
+import contribute from "../../assets/icons/contribute.png";
+import notifications from "../../assets/icons/notifications.png";
+
 import request from '../../assets/icons/request.png';
 import bell from '../../assets/icons/bell.png';
 import bell_filled from '../../assets/icons/bell_filled.png';
 import settings from '../../assets/icons/settings.png';
 import avatar from '../../assets/icons/avatar.png';
+
+// help page
+import help from '../../assets/icons/help.png';
+import tutorial from '../../assets/icons/tutorial.png';
+import support from '../../assets/icons/support.png';
+import close from '../../assets/icons/close.png';
+import faq from '../../assets/icons/faq.png';
+
+// transaction page
+import fnb from '../../assets/icons/fnb.png';
+import nedbank from '../../assets/icons/nedbank.png';
+import capitec from '../../assets/icons/capitec.png';
+import standardbank from '../../assets/icons/standardbank.png';
+import absa from '../../assets/icons/absa.png';
+import mastercard from '../../assets/icons/mastercard.png';
+import visa from '../../assets/icons/visa.png';
+
+// notifications page
+import debitcard from '../../assets/icons/debitcard.png';
+import remainder from '../../assets/icons/remainder.png';
+import alert from '../../assets/icons/alert.png';
 
 export default {
   eyehide,
@@ -58,9 +85,33 @@ export default {
   trash,
   calendar,
   clock,
+  savings,
+  growth,
+  contribute,
+  notifications,
+
   request,
   bell,
   bell_filled,
   settings,
   avatar,
+  help,
+
+  fnb,
+  nedbank,
+  capitec,
+  absa,
+  standardbank,
+  mastercard,
+  visa,
+
+  tutorial,
+  support,
+  close,
+  faq,
+  
+  debitcard,
+  alert,
+  remainder,
+
 };
