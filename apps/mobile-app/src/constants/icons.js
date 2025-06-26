@@ -54,6 +54,9 @@ import absa from '../../assets/icons/absa.png';
 import mastercard from '../../assets/icons/mastercard.png';
 import visa from '../../assets/icons/visa.png';
 
+//home page
+import money from '../../assets/icons/money.png';
+
 export default {
   eyehide,
   eye,
@@ -104,4 +107,6 @@ export default {
   close,
   faq,
   visa,
+
+  money,
 };
