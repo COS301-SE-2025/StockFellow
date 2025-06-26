@@ -1,4 +1,4 @@
-package main.java.com.stockfellow.transactionservice.controller;
+package com.stockfellow.transactionservice.controller;
 
 import com.stockfellow.transactionservice.model.GroupCycle;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;

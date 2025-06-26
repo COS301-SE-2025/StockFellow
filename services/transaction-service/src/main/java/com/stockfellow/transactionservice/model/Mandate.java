@@ -63,7 +63,7 @@ public class Mandate {
     @Column(name = "document_reference")
     private String documentReference;
 
-    @Column(name = "ip_address", nullable = false)
+    @Column(name = "ip_address", nullable = false, columnDefinition = "inet")
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false)
