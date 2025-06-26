@@ -155,11 +155,79 @@ services:
       retries: 3
       start_period: 40s
 
+# PostgreSQL for Notification Service
+  postgres-notification:
+    image: postgres:15
+    container_name: notification-postgres
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5433:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ActiveMQ
+  activemq:
+    image: rmohr/activemq:5.15.9
+    container_name: activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    environment:
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8161/admin"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      activemq:
+        condition: service_healthy
+    ports:
+      - "4050:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=admin123
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/notification-service/src:/app/src  # For development
+
+# Existing networks remain unchanged
 networks:
   stockfellow-net:
     driver: bridge
 
+# Updated volumes section
 volumes:
   postgres_data:
   mongodb_data:
   redis_data:
+  postgres_notification_data:
