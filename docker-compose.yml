@@ -1,14 +1,19 @@
+version: '3.8'
+
 services:
-  #Redis for caching
+  # Redis for caching
   redis:
     image: redis:7-alpine
     container_name: redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     networks:
       - stockfellow-net
     volumes:
       - redis_data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -22,15 +27,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -43,15 +48,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://user-service:4000
+      KC_DB: ${KC_DB}
+      KC_DB_URL: ${KC_DB_URL}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: ${USER_SERVICE_URL}
+      KC_LOG_LEVEL: ${KEYCLOAK_LOG_LEVEL:-INFO}
     ports:
-      - "8080:8080"
+      - "${KEYCLOAK_PORT}:8080"
     networks:
       - stockfellow-net
     volumes:
@@ -59,7 +65,7 @@ services:
       - ./keycloak-extensions/:/opt/keycloak/providers/
     command: start-dev --import-realm
 
-  # api-gateway (Java Spring Boot)
+  # API Gateway (Java Spring Boot)
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -69,62 +75,70 @@ services:
       - keycloak
       - redis
     ports:
-      - "3000:3000"      # Application port
-      - "5007:5007"      # Java debugging port (changed from 9229)
+      - "${API_GATEWAY_PORT}:3000"
+      - "${API_GATEWAY_DEBUG_PORT}:5007"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/
-      - KEYCLOAK_REALM=stockfellow
-
-      # Gateway Client (Confidential) - for token validation & admin operations
-      - KEYCLOAK_GATEWAY_CLIENT_ID=api-gateway-client
-      - KEYCLOAK_GATEWAY_CLIENT_SECRET=CCoz2FCbBYKshvsxHQrTsIbyUlr4Vqad
-
-      # Frontend Client (Public) - for user authentication flows
-      - KEYCLOAK_FRONTEND_CLIENT_ID=public-client
-      - KEYCLOAK_FRONTEND_REDIRECT_URI=http://localhost:3000/auth/callback
-
-
-      # Admin Client - for user management
-      - KEYCLOAK_ADMIN_USERNAME=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KEYCLOAK_ADMIN_REALM=master
-      - KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
-
-      # Redis Config
-      - REDIS_HOST=redis  
-      - REDIS_PORT=6379    
-
-      # - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
-      - JVM_OPTS=-Xmx512m -Xms256m
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - KEYCLOAK_AUTH_SERVER_URL=${KEYCLOAK_AUTH_SERVER_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_GATEWAY_CLIENT_ID=${KEYCLOAK_GATEWAY_CLIENT_ID}
+      - KEYCLOAK_GATEWAY_CLIENT_SECRET=${KEYCLOAK_GATEWAY_CLIENT_SECRET}
+      - KEYCLOAK_FRONTEND_CLIENT_ID=${KEYCLOAK_FRONTEND_CLIENT_ID}
+      - KEYCLOAK_FRONTEND_REDIRECT_URI=${KEYCLOAK_FRONTEND_REDIRECT_URI}
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JVM_OPTS=${JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
     networks:
       - stockfellow-net
     volumes:
       - ./services/api-gateway/src:/app/src
       - ./services/api-gateway/src/main/resources/keycloak.json:/app/src/main/resources/keycloak.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/actuator/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
-  # user-service (Spring Boot)
+  # User Service (Spring Boot)
   user-service:
     build:
       context: ./services/user-service
-      dockerfile: Dockerfile.dev  # Use development Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: user-service
     depends_on:
       - keycloak
     ports:
-      - "4000:4000"
-      - "5005:5005"  # Debug port for Java
+      - "${USER_SERVICE_PORT}:4000"
+      - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
-      - SPRING_PROFILES_ACTIVE=development
-      - SPRING_DATA_MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/stokvel_db?retryWrites=true&w=majority&appName=Cluster0
-      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+      - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE}
+      - SPRING_DATA_MONGODB_URI=${USER_SERVICE_MONGODB_URI}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - JVM_OPTS=${USER_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
     networks:
       - stockfellow-net
     volumes:
-      - ./services/user-service/src:/app/src  # For development hot reload
+      - ./services/user-service/src:/app/src
       - ./services/user-service/pom.xml:/app/pom.xml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/actuator/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
   
-  # group-service (Spring Boot)
+  # Group Service (Spring Boot)
   group-service:
     build:
       context: ./services/group-service
@@ -134,26 +148,28 @@ services:
       - keycloak
       - user-service
     ports:
-      - "4040:4040"
-      - "5006:5006"  # Debug port for Java
+      - "${GROUP_SERVICE_PORT}:4040"
+      - "${GROUP_SERVICE_DEBUG_PORT}:5006"
     environment:
-      - SERVER_PORT=4040
-      - SPRING_PROFILES_ACTIVE=docker
-      - MONGODB_URI=mongodb+srv://devoppscapstone:TPXLQ2laAnNrqQA3@cluster0.mhunonh.mongodb.net/groups_stokvel_db?retryWrites=true&w=majority&appName=Cluster0
-      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
-      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
-      - USER_SERVICE_URL=http://user-service:4000
-      # - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+      - SERVER_PORT=${GROUP_SERVICE_PORT}
+      - SPRING_PROFILES_ACTIVE=${GROUP_SERVICE_SPRING_PROFILE}
+      - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - JVM_OPTS=${GROUP_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
     networks:
       - stockfellow-net
     volumes:
-      - ./services/group-service/src:/app/src  # For development hot reload
+      - ./services/group-service/src:/app/src
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
   # Transaction Service
   transaction-service:
@@ -163,29 +179,36 @@ services:
     container_name: transaction-service
     depends_on:
       - group-service
+      - user-service
     ports:
-      - "4080:4080"
+      - "${TRANSACTION_SERVICE_PORT}:4080"
     environment:
-      - SERVER_PORT=4080
-      - TRANSACTIONDB_URI=postgresql://postgres.lcrdisuesrfbohqvudus:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+      - SERVER_PORT=${TRANSACTION_SERVICE_PORT}
+      - SPRING_PROFILES_ACTIVE=${TRANSACTION_SERVICE_SPRING_PROFILE}
+      - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - GROUP_SERVICE_URL=${GROUP_SERVICE_URL}
+      - JVM_OPTS=${TRANSACTION_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
     networks:
       - stockfellow-net
     volumes:
       - ./services/transaction-service/src:/app/src
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
 networks:
   stockfellow-net:
     driver: bridge
 
-# Updated volumes section
 volumes:
   postgres_data:
   mongodb_data:
   redis_data:
-  # postgres_notification_data:
