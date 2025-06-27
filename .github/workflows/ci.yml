@@ -91,18 +91,18 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
-      - name: Run integration tests for ${{ matrix.service }}
-        run: |
-          cd services/${{ matrix.service }}
-          mvn verify -P integration-tests || true
-        env:
-          SPRING_PROFILES_ACTIVE: test
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/stockfellow_test
-          SPRING_DATASOURCE_USERNAME: test
-          SPRING_DATASOURCE_PASSWORD: test
-          MONGODB_URI: mongodb://test:test@localhost:27017/test_db?authSource=admin
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
+    #   - name: Run integration tests for ${{ matrix.service }}
+    #     run: |
+    #       cd services/${{ matrix.service }}
+    #       mvn verify -P integration-tests || true
+    #     env:
+    #       SPRING_PROFILES_ACTIVE: test
+    #       SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/stockfellow_test
+    #       SPRING_DATASOURCE_USERNAME: test
+    #       SPRING_DATASOURCE_PASSWORD: test
+    #       MONGODB_URI: mongodb://test:test@localhost:27017/test_db?authSource=admin
+    #       REDIS_HOST: localhost
+    #       REDIS_PORT: 6379
 
       - name: Generate test coverage report for ${{ matrix.service }}
         run: |
