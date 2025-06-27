@@ -95,9 +95,9 @@ public class JoinGroupCommand {
         }
 
         // Check if user already has a pending request
-        boolean hasPendingRequest = group.getRequests().stream()
-                .anyMatch(request -> request.getUserId().equals(userId) && "waiting".equals(request.getState()));
-        
+        boolean hasPendingRequest = group.getRequests() != null && group.getRequests().stream()
+        .anyMatch(request -> request.getUserId().equals(userId) && "waiting".equals(request.getState()));
+
         if (hasPendingRequest) {
             throw new IllegalStateException("User already has a pending request for this group");
         }
