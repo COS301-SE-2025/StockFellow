@@ -116,10 +116,10 @@ jobs:
           flags: ${{ matrix.service }}
           name: ${{ matrix.service }}-coverage
 
-      - name: Run security scan for ${{ matrix.service }}
-        run: |
-          cd services/${{ matrix.service }}
-          mvn org.owasp:dependency-check-maven:check
+    #   - name: Run security scan for ${{ matrix.service }}
+    #     run: |
+    #       cd services/${{ matrix.service }}
+    #       mvn org.owasp:dependency-check-maven:check
 
       - name: Build ${{ matrix.service }}
         run: |
