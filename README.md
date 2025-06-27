@@ -108,7 +108,7 @@
 | Demo   | Video                                                                                          | Presentation                                                                                                                                                                  |
 | ------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Demo 1 | [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) |
-| Demo 2 |                                                                                                |                                                                                                                                                                               |
+| Demo 2 |   [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link)   | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)                                                 |
 
 <!-- Documentation -->
 ## Documentation
