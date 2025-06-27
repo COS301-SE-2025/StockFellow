@@ -12,8 +12,24 @@ const Home = () => {
   const { colors } = useTheme();
 
   const recentActivity = [
-    { title: 'Stokvel Group 1', amount: '5000.00', type: 'debit' as const },
-    { title: 'Stokvel Group 2', amount: '570.00', type: 'credit' as const },
+    { 
+      title: 'Breaking Bank',
+      subtitle: 'Walter White',
+      amount: '2000,00',
+      type: 'debit' as const 
+    },
+    { 
+      title: 'Game of Loans',
+      subtitle: 'Jon Snow',
+      amount: '5570,00',
+      type: 'credit' as const 
+    },
+    { 
+      title: 'Rick & Mortgage',
+      subtitle: 'Morty Smith',
+      amount: '1500,00',
+      type: 'debit' as const 
+    },
   ];
 
   return (
@@ -46,8 +62,8 @@ const Home = () => {
             <ActivityItem
               key={index}
               title={activity.title}
+              subtitle={activity.subtitle}
               amount={activity.amount}
-              type={activity.type}
               onPress={() => {}}
             />
           ))}

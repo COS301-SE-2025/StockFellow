@@ -56,6 +56,9 @@ import visa from '../../assets/icons/visa.png';
 
 //home page
 import money from '../../assets/icons/money.png';
+import up from "../../assets/icons/up.png";
+import right from "../../assets/icons/right.png";
+import line from "../../assets/icons/line.png";
 
 export default {
   eyehide,
@@ -109,4 +112,7 @@ export default {
   visa,
 
   money,
+  up,
+  right,
+  line,
 };
