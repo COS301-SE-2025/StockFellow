@@ -29,16 +29,10 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 'create_stokvel',
     title: 'Create a Stokvel',
-    description: 'Start your own stokvel group by tapping the "+ Create" button.',
+    description: 'Start your own stokvel group by tapping the \t"+ Create" button.',
     screen: '/(tabs)/stokvels',
     targetElement: 'create-stokvel-button',
     position: 'bottom',
-    highlightStyle: {
-      width: 120,
-      height: 45,
-      bottom: 140,
-      alignSelf: 'center'
-    }
   },
   {
     id: 'search_stokvels',
@@ -47,12 +41,6 @@ const tutorialSteps: TutorialStep[] = [
     screen: '/(tabs)/stokvels',
     targetElement: 'search-bar',
     position: 'top',
-    highlightStyle: {
-      width: 350,
-      height: 60,
-      top: 77,
-      alignSelf: 'center'
-    }
   },
   {
     id: 'transactions',
