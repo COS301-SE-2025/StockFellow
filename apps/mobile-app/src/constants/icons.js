@@ -54,6 +54,11 @@ import absa from '../../assets/icons/absa.png';
 import mastercard from '../../assets/icons/mastercard.png';
 import visa from '../../assets/icons/visa.png';
 
+//home page
+import money from '../../assets/icons/money.png';
+import up from "../../assets/icons/up.png";
+import right from "../../assets/icons/right.png";
+import line from "../../assets/icons/line.png";
 // notifications page
 import debitcard from '../../assets/icons/debitcard.png';
 import remainder from '../../assets/icons/remainder.png';
@@ -109,6 +114,12 @@ export default {
   support,
   close,
   faq,
+  visa,
+
+  money,
+  up,
+  right,
+  line,
   
   debitcard,
   alert,
