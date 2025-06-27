@@ -72,7 +72,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=react" />
+    <img src="https://skillicons.dev/icons?i=react,typescript" />
   </a>
 </p>
 
@@ -80,7 +80,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,java" />
+    <img src="https://skillicons.dev/icons?i=spring,java" />
   </a>
 </p>
 
@@ -88,7 +88,7 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=git,mongo,docker" />
+    <img src="https://skillicons.dev/icons?i=git,mongo,docker,supabase" />
   </a>
 </p>
 
@@ -103,21 +103,12 @@
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- ROADMAP -->
-## Roadmap
+## Demos
 
-- [ ] Demo 1
-  - [ ] Register and Login
-  - [ ] Create Stokvel
-  - [ ] View Stokvel Groups
-- [ ] Demo 2
-- [ ] Demo 3
-- [ ] Demo 4
-    
-
-See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+| Demo   | Video                                                                                          | Presentation                                                                                                                                                                  |
+| ------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Demo 1 | [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) |
+| Demo 2 |                                                                                                |                                                                                                                                                                               |
 
 <!-- Documentation -->
 ## Documentation
@@ -125,6 +116,28 @@ See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for 
 | Link                   | Description                   |
 |------------------------|-------------------------------|
 | [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Software%20Requirement%20Specification.md) | Project Requirements            |
+| [Architectural Specification](https://docs.google.com/document/d/1XvB7P_vGG0pFHn_IjOlX8Cg9RFqJQHc_K1H3oE6slBU/edit?usp=drive_link) | Architectural Patterns, Strategies and Functional Requirements   |
+| [Coding Standard](https://docs.google.com/document/d/1JtcF5wKQR_0zuQ-hYQdeu_yoRJDwTwQZCLHr7yqKuU8/edit?usp=drive_link) | Coding best practices to follow and programming guidelines   |
+
+
+
+<!-- ROADMAP -->
+## Roadmap
+
+- [x] Demo 1
+  - [x] Register and Login
+  - [x] Create Stokvel
+  - [x] View Stokvel Groups
+- [ ] Demo 2
+  - [x] Transaction Service
+  - [x] Group Service
+  - [x] Notification Service
+  - [ ] Mock Payment Service
+- [ ] Demo 3
+- [ ] Demo 4
+    
+
+See the [open issues](https://github.com/COS301-SE-2025/StockFellow/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
