@@ -1,37 +1,52 @@
 spring:
+  application:
+    name: transaction-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/stokvel_db
-    username: postgres
-    password: your_password
+    url: jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0&preparedStatementCacheQueries=0&preparedStatementCacheSizeMiB=0
+    username: postgres.lcrdisuesrfbohqvudus
+    password: DevOpps123@
     driver-class-name: org.postgresql.Driver
+
+    # Connection pool settings
+    hikari:
+        maximum-pool-size: 3
+        minimum-idle: 1
+        connection-timeout: 30000
+        idle-timeout: 300000
+        max-lifetime: 600000
+        auto-commit: true
+        
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: true
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: your_email@gmail.com
-    password: your_app_password
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-directdebit:
-  api:
-    base-url: https://api.directdebit.co.za
-    client-id: your_client_id
-    client-secret: your_client_secret
-    mandate-endpoint: /v1/mandates
-    debit-order-endpoint: /v1/debit-orders
-    payout-endpoint: /v1/payouts
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: Africa/Johannesburg
+          batch_size: 0
+        connection:
+          provider_disables_autocommit: false
+
 scheduler:
   debit-order-cron: "0 0 1 * * ?" # Run at 1 AM on the 1st of every month
-  payout-cron: "0 0 2 * * ?"    # Run at 2 AM on the 2nd of every month
+  payout-cron: "0 0 2 * * ?" # Run at 2 AM on the 2nd of every month
+
 server:
-  port: 4042
+  port: 4080 # was 4042
+
 logging:
   level:
     com.stockfellow: DEBUG
+
+# Add this section for actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,mappings
+  endpoint:
+    health:
+      show-details: always

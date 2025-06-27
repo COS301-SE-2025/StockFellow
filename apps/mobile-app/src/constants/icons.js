@@ -59,6 +59,10 @@ import money from '../../assets/icons/money.png';
 import up from "../../assets/icons/up.png";
 import right from "../../assets/icons/right.png";
 import line from "../../assets/icons/line.png";
+// notifications page
+import debitcard from '../../assets/icons/debitcard.png';
+import remainder from '../../assets/icons/remainder.png';
+import alert from '../../assets/icons/alert.png';
 
 export default {
   eyehide,
@@ -104,6 +108,7 @@ export default {
   absa,
   standardbank,
   mastercard,
+  visa,
 
   tutorial,
   support,
@@ -115,4 +120,9 @@ export default {
   up,
   right,
   line,
+  
+  debitcard,
+  alert,
+  remainder,
+
 };
