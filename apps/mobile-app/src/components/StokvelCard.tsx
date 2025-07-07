@@ -56,7 +56,7 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
 
       {/* Right section: Balance */}
       <Text className="text-base font-['PlusJakartaSans-SemiBold'] text-[#5BDA8C]">
-        R{balance}
+        {balance}
       </Text>
     </TouchableOpacity>
   );

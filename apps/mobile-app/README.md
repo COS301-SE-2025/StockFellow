@@ -10,6 +10,92 @@
 - **Editor**: VS Code with ESLint, Prettier, and TypeScript extensions.
 - **Terminal**: PowerShell (Windows), Terminal (macOS), or equivalent (Linux).
 
+### Stokfellow's MVVM Client Architecture
+
+```mermaid
+flowchart TB
+  %% VIEW LAYER
+  subgraph VIEW
+    Splash[SplashPage]
+    AuthScreens[Login / Signup / Verification Pages]
+    Onboard[Onboarding Screen]
+    Tabs[Home / Profile / Stokvels / Transactions Pages]
+    StockvelList[Stokvels List & Details Pages]
+    TransactionsList[Transactions / Cards Pages]
+  end
+
+  %% VIEWMODEL LAYER
+  subgraph VIEWMODEL
+    VM_Splash[SplashViewModel]
+    VM_Auth[AuthViewModel]
+    VM_Onboard[OnboardingViewModel]
+    VM_Tabs[TabsViewModel]
+    VM_Stokvel[StokvelViewModel]
+    VM_Trans[TransactionViewModel]
+  end
+
+  %% MODEL & SERVICES
+  subgraph MODEL & SERVICES
+    AuthSvc[AuthService]
+    UserSvc[UserService]
+    StokvelSvc[StokvelService]
+    TransSvc[TransactionService]
+    NotifSvc[NotificationService]
+  end
+
+  %% LOCAL STORAGE
+  subgraph LOCAL DATA
+    Storage[(AsyncStorage)]
+  end
+
+  %% NETWORKING
+  subgraph NETWORK
+    APIGW[API Gateway]
+    MS1[Microservice 1]
+    MS2[Microservice 2]
+    MS3[Microservice 3]
+    MS4[Microservice 4]
+    MS5[Microservice 5]
+    MS6[Microservice 6]
+    MS7[Microservice 7]
+  end
+
+  %% FLOW CONNECTIONS
+  Splash --> VM_Splash
+  AuthScreens --> VM_Auth
+  Onboard --> VM_Onboard
+  Tabs --> VM_Tabs
+  StockvelList --> VM_Stokvel
+  TransactionsList --> VM_Trans
+
+  VM_Splash --> AuthSvc
+  VM_Auth --> AuthSvc
+  VM_Onboard --> UserSvc
+  VM_Tabs --> UserSvc
+  VM_Stokvel --> StokvelSvc
+  VM_Trans --> TransSvc
+
+  AuthSvc --> Storage
+  UserSvc --> Storage
+  StokvelSvc --> Storage
+  TransSvc --> Storage
+  NotifSvc --> Storage
+
+  AuthSvc --> APIGW
+  UserSvc --> APIGW
+  StokvelSvc --> APIGW
+  TransSvc --> APIGW
+  NotifSvc --> APIGW
+
+  APIGW --> MS1
+  APIGW --> MS2
+  APIGW --> MS3
+  APIGW --> MS4
+  APIGW --> MS5
+  APIGW --> MS6
+  APIGW --> MS7
+```
+
 ### Setup Instructions
 
 Follow these steps to set up the StockFellow mobile app on your machine. Commands are provided for PowerShell, but they work in other terminals with slight syntax adjustments (e.g., use `rm -rf` instead of `Remove-Item`).

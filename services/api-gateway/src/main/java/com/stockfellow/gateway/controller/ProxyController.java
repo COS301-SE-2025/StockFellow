@@ -4,7 +4,7 @@ import com.stockfellow.gateway.config.RouteConfig;
 import com.stockfellow.gateway.model.Route;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Base64;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api")
@@ -35,7 +35,6 @@ public class ProxyController {
         this.routes = routeConfig.routes();
     }
     
-    // Handle all GET requests
     @GetMapping("/**")
     public ResponseEntity<?> handleGetRequest(HttpServletRequest request) {
         return proxyRequest(request, HttpMethod.GET, null);

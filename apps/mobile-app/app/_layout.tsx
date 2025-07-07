@@ -3,6 +3,8 @@ import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
+import { TutorialProvider } from "../src/components/help/TutorialContext";
+import TutorialOverlay from "../src/components/help/TutorialOverlay";
 
 // Create a simple ThemeContext
 export const ThemeContext = createContext({
@@ -60,44 +62,61 @@ export default function RootLayout() {
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme, colors }}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <Stack>
-        <Stack.Screen 
-          name="splashpage" 
-          options={{ 
-            headerShown: false,
-            animation: "fade" 
-          }} 
-        />
-        <Stack.Screen 
-          name="(onboarding)" 
-          options={{ 
-            headerShown: false,
-            animation: "fade" 
-          }}
-        />
-        <Stack.Screen 
-          name="(auth)" 
-          options={{ 
-            headerShown: false,
-            animation: "slide_from_right" 
-          }} 
-        />
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ 
-            headerShown: false,
-            animation: "fade" 
-          }} 
-        />
-        <Stack.Screen 
-          name="stokvels" 
-          options={{ 
-            headerShown: false,
-            animation: "fade" 
-          }} 
-        />
-      </Stack>
+      <TutorialProvider>
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <Stack>
+          <Stack.Screen 
+            name="splashpage" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
+          <Stack.Screen 
+            name="(onboarding)" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }}
+          />
+          <Stack.Screen 
+            name="(auth)" 
+            options={{ 
+              headerShown: false,
+              animation: "slide_from_right" 
+            }} 
+          />
+          <Stack.Screen 
+            name="(tabs)" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
+          <Stack.Screen 
+            name="stokvels" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
+          <Stack.Screen 
+            name="transactions" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
+          <Stack.Screen 
+            name="notifications" 
+            options={{ 
+              headerShown: false,
+              animation: "fade" 
+            }} 
+          />
+        </Stack>
+        <TutorialOverlay />
+      </TutorialProvider>
     </ThemeContext.Provider>
   );
 }

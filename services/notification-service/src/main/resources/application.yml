@@ -1,0 +1,85 @@
+server:
+  port: 4050
+
+spring:
+  application:
+    name: notification-service
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_db
+    username: admin
+    password: admin123
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    
+  jms:
+    cache:
+      enabled: true
+    listener:
+      acknowledge-mode: auto
+      concurrency: 1
+      max-concurrency: 5
+
+# ActiveMQ Configuration
+activemq:
+  broker-url: tcp://localhost:61616
+  user: admin
+  password: admin
+
+# External Services
+services:
+  group-service:
+    url: http://localhost:4040
+  user-service:
+    url: http://localhost:4000
+  transaction-service:
+    url: http://localhost:4080
+
+# Notification Configuration
+notification:
+  retry:
+    max-attempts: 3
+    delay: 300000 # 5 minutes in milliseconds
+  
+  channels:
+    email:
+      enabled: true
+      provider: sendgrid # or aws-ses, mailgun, etc.
+    sms:
+      enabled: true
+      provider: twilio # or aws-sns, etc.
+    push:
+      enabled: true
+      provider: fcm # or apns, etc.
+    in-app:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.stockfellow.notificationservice: INFO
+    org.springframework.jms: DEBUG
+    org.apache.activemq: INFO
+  file:
+    name: logs/notification-service.log
+  pattern:
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+    console: '%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

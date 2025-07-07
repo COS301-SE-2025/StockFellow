@@ -1,29 +1,578 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-
+    branches: [ main, develop ]
   workflow_dispatch:
 
+env:
+  JAVA_VERSION: '17'
+  NODE_VERSION: '18'
+  MAVEN_OPTS: '-Xmx1024m'
+
 jobs:
-  build:
+  # Backend Services CI/CD Job
+  backend:
+    name: Backend Services CI/CD
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: stockfellow_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      mongodb:
+        image: mongo:6
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: test
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        service: [api-gateway, user-service, group-service, transaction-service]
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
         with:
-          node-version: '18'
-          
-      - name: Install dependencies
-        run: npm ci
-          
-      - name: Build
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('services/${{ matrix.service }}/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Run tests for ${{ matrix.service }}
         run: |
-          echo "Build commands will go here"
-          # npm run build
+          cd services/${{ matrix.service }}
+          mvn clean test
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/stockfellow_test
+          SPRING_DATASOURCE_USERNAME: test
+          SPRING_DATASOURCE_PASSWORD: test
+          MONGODB_URI: mongodb://test:test@localhost:27017/test_db?authSource=admin
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+    #   - name: Run integration tests for ${{ matrix.service }}
+    #     run: |
+    #       cd services/${{ matrix.service }}
+    #       mvn verify -P integration-tests || true
+    #     env:
+    #       SPRING_PROFILES_ACTIVE: test
+    #       SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/stockfellow_test
+    #       SPRING_DATASOURCE_USERNAME: test
+    #       SPRING_DATASOURCE_PASSWORD: test
+    #       MONGODB_URI: mongodb://test:test@localhost:27017/test_db?authSource=admin
+    #       REDIS_HOST: localhost
+    #       REDIS_PORT: 6379
+
+      - name: Generate test coverage report for ${{ matrix.service }}
+        run: |
+          cd services/${{ matrix.service }}
+          mvn jacoco:report
+
+      - name: Upload test coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: services/${{ matrix.service }}/target/site/jacoco/jacoco.xml
+          flags: ${{ matrix.service }}
+          name: ${{ matrix.service }}-coverage
+
+    #   - name: Run security scan for ${{ matrix.service }}
+    #     run: |
+    #       cd services/${{ matrix.service }}
+    #       mvn org.owasp:dependency-check-maven:check
+
+      - name: Build ${{ matrix.service }}
+        run: |
+          cd services/${{ matrix.service }}
+          mvn clean compile package -DskipTests
+
+      - name: Build Docker image for ${{ matrix.service }}
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd services/${{ matrix.service }}
+          docker build -t stockfellow-${{ matrix.service }}:${{ github.sha }} .
+          docker tag stockfellow-${{ matrix.service }}:${{ github.sha }} stockfellow-${{ matrix.service }}:latest
+
+      - name: Save Docker image as artifact
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker save stockfellow-${{ matrix.service }}:${{ github.sha }} | gzip > ${{ matrix.service }}-image.tar.gz
+
+      - name: Upload ${{ matrix.service }} artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-artifact
+          path: |
+            services/${{ matrix.service }}/target/*.jar
+            ${{ matrix.service }}-image.tar.gz
+
+#   # Security scanning job
+#   security:
+#     name: Security Scan
+#     runs-on: ubuntu-latest
+#     needs: [backend]
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Run Trivy vulnerability scanner
+#         uses: aquasecurity/trivy-action@master
+#         with:
+#           scan-type: 'fs'
+#           scan-ref: '.'
+#           format: 'sarif'
+#           output: 'trivy-results.sarif'
+
+#       - name: Upload Trivy scan results to GitHub Security tab
+#         uses: github/codeql-action/upload-sarif@v2
+#         with:
+#           sarif_file: 'trivy-results.sarif'
+
+  # Package and Store Artifacts (only runs on main branch)
+  package:
+    name: Package & Store Artifacts
+    runs-on: ubuntu-latest
+    needs: [backend]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all service artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create deployment package
+        run: |
+          mkdir -p release-package
+          
+          # Copy all service artifacts
+          for service in api-gateway user-service group-service transaction-service; do
+            if [ -d "./artifacts/${service}-artifact" ]; then
+              mkdir -p "release-package/${service}"
+              cp -r ./artifacts/${service}-artifact/* "release-package/${service}/"
+            fi
+          done
+          
+          # Copy frontend artifacts if they exist
+          if [ -d "./artifacts/frontend-artifact" ]; then
+            mkdir -p release-package/frontend
+            cp -r ./artifacts/frontend-artifact/* release-package/frontend/
+          fi
+          
+          # Create a deployment info file
+          cat > release-package/deployment-info.json << EOF
+          {
+            "version": "${{ github.run_number }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "services": {
+              "api-gateway": "stockfellow-api-gateway:${{ github.sha }}",
+              "user-service": "stockfellow-user-service:${{ github.sha }}",
+              "group-service": "stockfellow-group-service:${{ github.sha }}",
+              "transaction-service": "stockfellow-transaction-service:${{ github.sha }}",
+              "frontend": "stockfellow-frontend:${{ github.sha }}"
+            }
+          }
+          EOF
+          
+          # Create docker-compose file for easy deployment
+          cat > release-package/docker-compose.yml << 'EOF'
+          version: '3.8'
+          services:
+            postgres:
+              image: postgres:15
+              environment:
+                POSTGRES_DB: ${POSTGRES_DB:-keycloak}
+                POSTGRES_USER: ${POSTGRES_USER:-keycloak}
+                POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+              ports:
+                - "${POSTGRES_PORT:-5432}:5432"
+              networks:
+                - stockfellow-net
+              healthcheck:
+                test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-keycloak}"]
+                interval: 5s
+                timeout: 5s
+                retries: 5
+
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "${REDIS_PORT:-6379}:6379"
+              networks:
+                - stockfellow-net
+              volumes:
+                - redis_data:/data
+              healthcheck:
+                test: ["CMD", "redis-cli", "ping"]
+                interval: 5s
+                timeout: 3s
+                retries: 5
+
+            keycloak:
+              image: quay.io/keycloak/keycloak:latest
+              depends_on:
+                postgres:
+                  condition: service_healthy
+              environment:
+                KC_DB: postgres
+                KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-keycloak}
+                KC_DB_USERNAME: ${POSTGRES_USER:-keycloak}
+                KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
+                KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+                KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+              ports:
+                - "${KEYCLOAK_PORT:-8080}:8080"
+              networks:
+                - stockfellow-net
+              command: start-dev
+
+            api-gateway:
+              image: stockfellow-api-gateway:${{ github.sha }}
+              depends_on:
+                - keycloak
+                - redis
+              ports:
+                - "${API_GATEWAY_PORT:-3000}:3000"
+              environment:
+                - SPRING_PROFILES_ACTIVE=docker
+                - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/
+                - REDIS_HOST=redis
+                - REDIS_PORT=6379
+              networks:
+                - stockfellow-net
+
+            user-service:
+              image: stockfellow-user-service:${{ github.sha }}
+              depends_on:
+                - keycloak
+              ports:
+                - "${USER_SERVICE_PORT:-4000}:4000"
+              environment:
+                - SPRING_PROFILES_ACTIVE=docker
+                - SPRING_DATA_MONGODB_URI=${MONGODB_URI}
+                - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+              networks:
+                - stockfellow-net
+
+            group-service:
+              image: stockfellow-group-service:${{ github.sha }}
+              depends_on:
+                - keycloak
+                - user-service
+              ports:
+                - "${GROUP_SERVICE_PORT:-4040}:4040"
+              environment:
+                - SPRING_PROFILES_ACTIVE=docker
+                - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
+                - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+                - USER_SERVICE_URL=http://user-service:4000
+              networks:
+                - stockfellow-net
+
+            transaction-service:
+              image: stockfellow-transaction-service:${{ github.sha }}
+              depends_on:
+                - group-service
+                - user-service
+              ports:
+                - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
+              environment:
+                - SPRING_PROFILES_ACTIVE=docker
+                - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
+                - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+                - USER_SERVICE_URL=http://user-service:4000
+                - GROUP_SERVICE_URL=http://group-service:4040
+              networks:
+                - stockfellow-net
+
+            frontend:
+              image: stockfellow-frontend:${{ github.sha }}
+              ports:
+                - "${FRONTEND_PORT:-80}:80"
+              environment:
+                - REACT_APP_API_BASE_URL=http://localhost:3000/api
+              networks:
+                - stockfellow-net
+
+          networks:
+            stockfellow-net:
+              driver: bridge
+
+          volumes:
+            postgres_data:
+            redis_data:
+          EOF
+
+          # Create environment template
+          cat > release-package/.env.template << 'EOF'
+          # Stockfellow Environment Configuration
+          # Copy this file to .env and update the values
+          
+          # Database Configuration
+          POSTGRES_DB=keycloak
+          POSTGRES_USER=keycloak
+          POSTGRES_PASSWORD=your_secure_password_here
+          POSTGRES_PORT=5432
+          
+          # MongoDB URIs
+          MONGODB_URI=your_mongodb_connection_string
+          GROUP_SERVICE_MONGODB_URI=your_group_service_mongodb_uri
+          
+          # Transaction Database
+          TRANSACTIONDB_URI=your_transaction_db_uri
+          
+          # Keycloak Configuration
+          KEYCLOAK_ADMIN=admin
+          KEYCLOAK_ADMIN_PASSWORD=your_admin_password
+          KEYCLOAK_PORT=8080
+          
+          # Service Ports
+          API_GATEWAY_PORT=3000
+          USER_SERVICE_PORT=4000
+          GROUP_SERVICE_PORT=4040
+          TRANSACTION_SERVICE_PORT=4080
+          FRONTEND_PORT=80
+          REDIS_PORT=6379
+          EOF
+
+          # Create startup script
+          cat > release-package/start.sh << 'EOF'
+          #!/bin/bash
+          
+          echo "🚀 Starting Stockfellow Application..."
+          
+          # Check if .env file exists
+          if [ ! -f .env ]; then
+            echo "❌ .env file not found. Please copy .env.template to .env and configure it."
+            exit 1
+          fi
+          
+          # Load Docker images
+          echo "📦 Loading Docker images..."
+          for service in api-gateway user-service group-service transaction-service frontend; do
+            if [ -f "${service}/${service}-image.tar.gz" ]; then
+              echo "Loading ${service} image..."
+              docker load < "${service}/${service}-image.tar.gz"
+            fi
+          done
+          
+          # Start services
+          echo "🐳 Starting services with Docker Compose..."
+          docker-compose up -d
+          
+          echo "✅ Stockfellow is starting up!"
+          echo "🌐 Frontend will be available at: http://localhost:${FRONTEND_PORT:-80}"
+          echo "🔑 Keycloak admin console: http://localhost:${KEYCLOAK_PORT:-8080}"
+          echo "📊 API Gateway: http://localhost:${API_GATEWAY_PORT:-3000}"
+          
+          echo "📋 To check status: docker-compose ps"
+          echo "📋 To view logs: docker-compose logs -f [service-name]"
+          echo "📋 To stop: docker-compose down"
+          EOF
+          
+          chmod +x release-package/start.sh
+          
+          # Create stop script
+          cat > release-package/stop.sh << 'EOF'
+          #!/bin/bash
+          echo "🛑 Stopping Stockfellow Application..."
+          docker-compose down
+          echo "✅ Stockfellow stopped."
+          EOF
+          
+          chmod +x release-package/stop.sh
+
+      - name: Create release archive
+        run: |
+          cd release-package
+          tar -czf ../stockfellow-release-v${{ github.run_number }}.tar.gz .
+          cd ..
+          
+          # Create checksum
+          sha256sum stockfellow-release-v${{ github.run_number }}.tar.gz > stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockfellow-release-v${{ github.run_number }}
+          path: |
+            stockfellow-release-v${{ github.run_number }}.tar.gz
+            stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
+          retention-days: 90
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Stockfellow Release v${{ github.run_number }}
+          body: |
+            ## 🚀 Stockfellow Release v${{ github.run_number }}
+            
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+            **Build Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+            
+            ### 📦 What's Included
+            - **API Gateway Service** (Spring Boot + Docker image)
+            - **User Service** (Spring Boot + Docker image) 
+            - **Group Service** (Spring Boot + Docker image)
+            - **Transaction Service** (Spring Boot + Docker image)
+            - **Frontend Application** (React + Docker image)
+            - **Infrastructure Services** (PostgreSQL, Redis, Keycloak)
+            - **Docker Compose** configuration for complete stack deployment
+            - **Environment template** and deployment scripts
+            
+            ### 🐳 Docker Images
+            - `stockfellow-api-gateway:${{ github.sha }}`
+            - `stockfellow-user-service:${{ github.sha }}`
+            - `stockfellow-group-service:${{ github.sha }}`
+            - `stockfellow-transaction-service:${{ github.sha }}`
+            - `stockfellow-frontend:${{ github.sha }}`
+            
+            ### 🏃‍♂️ Quick Start
+            1. **Download and extract** the release package
+            2. **Configure environment**: 
+               ```bash
+               cp .env.template .env
+               # Edit .env with your configuration
+               ```
+            3. **Start the application**:
+               ```bash
+               ./start.sh
+               ```
+            4. **Access the application**:
+               - Frontend: http://localhost
+               - API Gateway: http://localhost:3000
+               - Keycloak Admin: http://localhost:8080
+            
+            ### 🛠️ Manual Deployment
+            If you prefer manual deployment:
+            ```bash
+            # Load all Docker images
+            for service in api-gateway user-service group-service transaction-service frontend; do
+              docker load < ${service}/${service}-image.tar.gz
+            done
+            
+            # Start with Docker Compose
+            docker-compose up -d
+            ```
+            
+            ### 📋 Service Architecture
+            - **API Gateway** (Port 3000): Routes requests and handles authentication
+            - **User Service** (Port 4000): User management and profiles
+            - **Group Service** (Port 4040): Group/Stokvel management
+            - **Transaction Service** (Port 4080): Financial transaction processing
+            - **Keycloak** (Port 8080): Identity and access management
+            - **PostgreSQL** (Port 5432): Keycloak database
+            - **Redis** (Port 6379): Caching layer
+            
+            ### 🔍 Verification
+            - Verify package integrity with the provided SHA256 checksum
+            - Check `deployment-info.json` for build metadata
+            - Use `docker-compose ps` to verify all services are running
+            - Check service health with `docker-compose logs [service-name]`
+            
+            ### 🛑 Stopping the Application
+            ```bash
+            ./stop.sh
+            # or
+            docker-compose down
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./stockfellow-release-v${{ github.run_number }}.tar.gz
+          asset_name: stockfellow-release-v${{ github.run_number }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
+          asset_name: stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
+          asset_content_type: text/plain
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Build & Package Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Package:** stockfellow-release-v${{ github.run_number }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Docker Images Built" >> $GITHUB_STEP_SUMMARY
+          echo "- stockfellow-api-gateway:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- stockfellow-user-service:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- stockfellow-group-service:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- stockfellow-transaction-service:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- stockfellow-frontend:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Artifacts Available" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release created with complete deployment package" >> $GITHUB_STEP_SUMMARY
+          echo "- All microservice Docker images stored as artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Compose file with full stack configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Automated deployment scripts included" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment template for easy configuration" >> $GITHUB_STEP_SUMMARY

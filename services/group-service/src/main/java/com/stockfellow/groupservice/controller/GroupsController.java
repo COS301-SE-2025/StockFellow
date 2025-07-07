@@ -7,6 +7,7 @@ import com.stockfellow.groupservice.command.ProcessJoinRequestCommand;
 import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.service.ReadModelService;
 import com.stockfellow.groupservice.service.EventStoreService;
+import com.stockfellow.groupservice.repository.GroupRepository;
 import com.stockfellow.groupservice.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,18 +31,21 @@ public class GroupsController {
     private final ProcessJoinRequestCommand processJoinRequestCommand;
     private final ReadModelService readModelService;
     private final EventStoreService eventStoreService;
+    private final GroupRepository groupRepository;
     private final SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     public GroupsController(CreateGroupCommand createGroupCommand,
                             JoinGroupCommand joinGroupCommand,
                             ProcessJoinRequestCommand processJoinRequestCommand,
                             ReadModelService readModelService,
-                            EventStoreService eventStoreService) {
+                            EventStoreService eventStoreService,
+                            GroupRepository groupRepository) {
         this.createGroupCommand = createGroupCommand;
         this.joinGroupCommand = joinGroupCommand;
         this.processJoinRequestCommand = processJoinRequestCommand;
         this.readModelService = readModelService;
         this.eventStoreService = eventStoreService;
+        this.groupRepository = groupRepository;
         isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
@@ -54,10 +58,65 @@ public class GroupsController {
                 "POST /api/groups/create - Create a new group",
                 "GET /api/groups/user - Get groups for authenticated user",
                 "GET /api/groups/{groupId}/view - View group details and events",
-                "POST /api/groups/{groupId}/join - Request to join a group",
-                "POST /api/groups/{groupId}/request - Process join request (accept/reject)"
+                "GET /api/groups/{groupId}/join - Request to join a group (public groups only)",
+                "GET /api/groups/{groupId}/requests - Get all join requests for a group (admin only)",
+                "POST /api/groups/{groupId}/request - Process join request (accept/reject)",
+                "GET /api/groups/search?query=<search_term> - Search public groups"
         ));
         return response;
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchPublicGroups(@RequestParam(required = false) String query) {
+        try {
+            List<Group> groups;
+            
+            if (query == null || query.trim().isEmpty()) {
+                // If no query provided, return all public groups
+                groups = groupRepository.findPublicGroups();
+            } else {
+                // Search public groups by name containing the query (case-insensitive)
+                groups = groupRepository.findPublicGroupsByNameContaining(query.trim());
+            }
+            
+            // Create response with basic group information for search results
+            List<Map<String, Object>> searchResults = new ArrayList<>();
+            for (Group group : groups) {
+                Map<String, Object> groupInfo = new HashMap<>();
+                groupInfo.put("id", group.getId());
+                groupInfo.put("groupId", group.getGroupId());
+                groupInfo.put("name", group.getName());
+                groupInfo.put("description", group.getDescription());
+                groupInfo.put("profileImage", group.getProfileImage());
+                groupInfo.put("visibility", group.getVisibility());
+                groupInfo.put("minContribution", group.getMinContribution());
+                groupInfo.put("maxMembers", group.getMaxMembers());
+                groupInfo.put("contributionFrequency", group.getContributionFrequency());
+                groupInfo.put("payoutFrequency", group.getPayoutFrequency());
+                groupInfo.put("currentMembers", group.getMembers() != null ? group.getMembers().size() : 0);
+                groupInfo.put("balance", group.getBalance());
+                groupInfo.put("createdAt", group.getCreatedAt());
+                
+                // Add member status flags
+                groupInfo.put("isFull", group.getMembers() != null && group.getMembers().size() >= group.getMaxMembers());
+                groupInfo.put("availableSlots", group.getMaxMembers() - (group.getMembers() != null ? group.getMembers().size() : 0));
+                
+                searchResults.add(groupInfo);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("groups", searchResults);
+            response.put("totalCount", searchResults.size());
+            response.put("query", query);
+            
+            logger.info("Search performed for query: '{}', found {} public groups", query, searchResults.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error searching groups with query '{}': {}", query, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error during search"));
+        }
     }
 
     @GetMapping("/{groupId}/view")
@@ -307,25 +366,37 @@ public class GroupsController {
         }
     }
 
-    @PostMapping("/{groupId}/join")
-    public ResponseEntity<?> requestToJoinGroup(@PathVariable String groupId) {
+    /**
+     * Request to join a public group (GET request)
+     * This adds the user to the group's request array
+     */
+    @GetMapping("/{groupId}/join")
+    public ResponseEntity<?> requestToJoinGroup(@PathVariable String groupId, HttpServletRequest httpRequest) {
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            String userId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (userId == null || userId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
             }
-            String userId = auth.getPrincipal().toString();
 
             // Check if group exists
             Group group = readModelService.getGroup(groupId)
                     .orElseThrow(() -> new IllegalStateException("Group not found"));
+            
+            // Only allow requests for public groups
+            if (!"Public".equals(group.getVisibility())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Cannot request to join private groups. You need an invite link."));
+            }
             
             // Check if user is already a member
             boolean alreadyMember = group.getMembers().stream()
                     .anyMatch(member -> member.getUserId().equals(userId));
             
             if (alreadyMember) {
-                return ResponseEntity.badRequest().body(Map.of("error", "User is already a member of this group"));
+                return ResponseEntity.badRequest().body(Map.of("error", "You are already a member of this group"));
             }
             
             // Check if user already has a pending request
@@ -341,23 +412,17 @@ public class GroupsController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Group is full"));
             }
 
-            // For public groups, add user directly; for private groups, create a request
-            String eventId;
-            if ("Public".equals(group.getVisibility())) {
-                eventId = joinGroupCommand.execute(groupId, userId);
-                Map<String, Object> response = new HashMap<>();
-                response.put("message", "Successfully joined group");
-                response.put("groupId", groupId);
-                response.put("eventId", eventId);
-                return ResponseEntity.ok(response);
-            } else {
-                eventId = joinGroupCommand.createJoinRequest(groupId, userId);
-                Map<String, Object> response = new HashMap<>();
-                response.put("message", "Join request sent to group admins");
-                response.put("groupId", groupId);
-                response.put("eventId", eventId);
-                return ResponseEntity.ok(response);
-            }
+            // Create join request for public group
+            String eventId = joinGroupCommand.createJoinRequest(groupId, userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Join request sent successfully. Waiting for admin approval.");
+            response.put("groupId", groupId);
+            response.put("eventId", eventId);
+            response.put("status", "pending");
+            
+            logger.info("User {} requested to join public group {}", userId, groupId);
+            return ResponseEntity.ok(response);
             
         } catch (IllegalStateException e) {
             logger.error("Error requesting to join group: {}", e.getMessage());
@@ -368,14 +433,72 @@ public class GroupsController {
         }
     }
 
-    @PostMapping("/{groupId}/request")
-    public ResponseEntity<?> processJoinRequest(@PathVariable String groupId, @RequestBody Map<String, Object> request) {
+    /**
+     * Get all join requests for a group (admin only)
+     */
+    @GetMapping("/{groupId}/requests")
+    public ResponseEntity<?> getGroupJoinRequests(@PathVariable String groupId, HttpServletRequest httpRequest) {
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || auth.getPrincipal() == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+            String userId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (userId == null || userId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
             }
-            String adminId = auth.getPrincipal().toString();
+
+            // Check if group exists
+            Optional<Group> groupOpt = readModelService.getGroup(groupId);
+            if (!groupOpt.isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Group not found"));
+            }
+
+            Group group = groupOpt.get();
+            
+            // Check if user is admin or has permission to view requests
+            boolean isAdmin = group.getAdminId().equals(userId);
+            boolean canViewRequests = isAdmin || group.getMembers().stream()
+                    .anyMatch(member -> member.getUserId().equals(userId) && 
+                             ("admin".equals(member.getRole()) || "founder".equals(member.getRole())));
+            
+            if (!canViewRequests) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. Only group admins can view join requests."));
+            }
+
+            // Filter only pending requests
+            List<Group.JoinRequest> pendingRequests = group.getRequests().stream()
+                    .filter(request -> "waiting".equals(request.getState()))
+                    .collect(java.util.stream.Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("groupId", groupId);
+            response.put("groupName", group.getName());
+            response.put("requests", pendingRequests);
+            response.put("totalPendingRequests", pendingRequests.size());
+            
+            logger.info("Admin {} retrieved {} join requests for group {}", userId, pendingRequests.size(), groupId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error fetching join requests for group {}: {}", groupId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    /**
+     * Process join request (accept/reject) - POST request
+     */
+    @PostMapping("/{groupId}/request")
+    public ResponseEntity<?> processJoinRequest(@PathVariable String groupId, @RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+        try {
+            String adminId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-User-Name");
+            
+            if (adminId == null || adminId.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User ID not found in request"));
+            }
 
             String requestId = (String) request.get("requestId");
             String action = (String) request.get("action"); // "accept" or "reject"
@@ -410,6 +533,13 @@ public class GroupsController {
             response.put("action", action);
             response.put("eventId", eventId);
             
+            if ("accept".equals(action)) {
+                response.put("result", "User has been added to the group and granted access");
+            } else {
+                response.put("result", "Request has been rejected and removed");
+            }
+            
+            logger.info("Admin {} {} join request {} for group {}", adminId, action, requestId, groupId);
             return ResponseEntity.ok(response);
             
         } catch (IllegalStateException e) {

@@ -27,7 +27,7 @@ interface JoinRequest {
 }
 
 const StokvelRequests = () => {
-    const { stokvel: groupId } = useLocalSearchParams<{ stokvel: string }>();
+    const { stokvel: id } = useLocalSearchParams<{ stokvel: string }>();
     const router = useRouter();
     const [requests, setRequests] = useState<JoinRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,11 +35,13 @@ const StokvelRequests = () => {
 
     const fetchRequests = useCallback(async () => {
         try {
-            if (!groupId) {
+            if (!id) {
                 throw new Error('No group ID provided');
             }
 
-            const response = await authService.apiRequest(`/groups/${groupId}/view`, {
+            console.log("Group ID recieved to check requests: " + id);
+
+            const response = await authService.apiRequest(`/groups/${id}/requests`, {
                 method: 'GET'
             });
 
@@ -49,19 +51,23 @@ const StokvelRequests = () => {
 
             const data = await response.json();
 
-            // Filter only waiting requests and transform to frontend format
-            const pendingRequests = data.group.requests
-                ?.filter((req: any) => req.state === "waiting")
-                ?.map((req: any) => ({
-                    requestId: req.requestId,
-                    userId: req.userId,
-                    state: req.state,
-                    timestamp: new Date(req.timestamp),
-                    profileName: req.userId, // You should fetch actual user names here
-                    profileImage: null
-                })) || [];
+            console.log("Group Data: ", data);
 
-            setRequests(pendingRequests);
+            // Filter only waiting requests and transform to frontend format
+            // const pendingRequests = data.group.requests
+            //     ?.filter((req: any) => req.state === "waiting")
+            //     ?.map((req: any) => ({
+            //         requestId: req.requestId,
+            //         userId: req.userId,
+            //         state: req.state,
+            //         timestamp: new Date(req.timestamp),
+            //         profileName: req.userId, // You should fetch actual user names here
+            //         profileImage: null
+            //     })) || [];
+            
+            // console.log("Groups Requests: " + pendingRequests);
+
+            // setRequests(pendingRequests);
         } catch (error) {
             console.error('Error fetching requests:', error);
             Alert.alert('Error', 'Failed to load join requests');
@@ -69,7 +75,7 @@ const StokvelRequests = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [groupId]);
+    }, [id]);
 
     useEffect(() => {
         fetchRequests();
@@ -84,7 +90,7 @@ const StokvelRequests = () => {
         try {
             setLoading(true);
 
-            const response = await authService.apiRequest(`/groups/${groupId}/request`, {
+            const response = await authService.apiRequest(`/groups/${id}/request`, {
                 method: 'POST',
                 body: JSON.stringify({
                     requestId,
