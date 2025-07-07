@@ -41,7 +41,6 @@ logging:
   level:
     com.stockfellow: DEBUG
 
-# Add this section for actuator
 management:
   endpoints:
     web:
@@ -50,3 +49,17 @@ management:
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    filter: true
+  show-actuator: true
+  group-configs:
+    - group: 'transaction-service'
+      paths-to-match: '/api/**'

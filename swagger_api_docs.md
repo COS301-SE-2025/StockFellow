@@ -1380,73 +1380,28 @@ info:
   version: 1.0.0
   contact:
     name: StockFellow Team
+
 servers:
-  - url: http://localhost:8082
+  - url: http://localhost:8080
     description: Development server
 
+tags:
+  - name: Mandates
+    description: Operations related to user mandates for group participation
+  - name: Transactions
+    description: Operations related to financial transactions
+  - name: Group Cycles
+    description: Operations related to group investment cycles
+
 paths:
-  /api/transactions:
-    get:
-      summary: Get service information
-      description: Returns basic information about the Transaction Service
-      tags:
-        - Service Info
-      responses:
-        '200':
-          description: Service information
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  service:
-                    type: string
-                    example: "Transaction Service"
-                  version:
-                    type: string
-                    example: "1.0.0"
-                  endpoints:
-                    type: array
-                    items:
-                      type: string
-
-  /api/transactions/users:
+  # Mandate Endpoints
+  /api/mandates:
     post:
-      summary: Create user for transactions
-      description: Create a user in the transaction system
-      tags:
-        - Users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTransactionUserRequest'
-      responses:
-        '200':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  userId:
-                    type: string
-                  financialTier:
-                    type: string
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/transactions/mandates:
-    post:
-      summary: Create debit order mandate
-      description: Create a mandate for debit order transactions
       tags:
         - Mandates
+      summary: Create a new mandate
+      description: Creates a mandate between a user and a group, allowing the user to participate in group investment cycles
+      operationId: createMandate
       requestBody:
         required: true
         content:
@@ -1454,224 +1409,736 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateMandateRequest'
       responses:
-        '200':
+        '201':
           description: Mandate created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  mandateId:
-                    type: string
+                $ref: '#/components/schemas/MandateResponse'
         '400':
-          description: Bad request
+          description: Invalid request parameters
+        '409':
+          description: Business logic conflict (e.g., mandate already exists)
+        '500':
+          description: Internal server error
+
+    get:
+      tags:
+        - Mandates
+      summary: Get all mandates
+      description: Retrieves a list of all mandates in the system
+      operationId: getAllMandates
+      responses:
+        '200':
+          description: List of mandates retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/MandateResponse'
 
-  /api/transactions/debit-orders:
-    post:
-      summary: Process debit order
-      description: Process a debit order transaction
+  /api/mandates/{mandateId}:
+    get:
+      tags:
+        - Mandates
+      summary: Get mandate by ID
+      description: Retrieves a specific mandate by its unique identifier
+      operationId: getMandateById
+      parameters:
+        - name: mandateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the mandate
+      responses:
+        '200':
+          description: Mandate retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MandateResponse'
+        '404':
+          description: Mandate not found
+
+  /api/mandates/{mandateId}/deactivate:
+    put:
+      tags:
+        - Mandates
+      summary: Deactivate a mandate
+      description: Deactivates an existing mandate, preventing future transactions
+      operationId: deactivateMandate
+      parameters:
+        - name: mandateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the mandate to deactivate
+      responses:
+        '200':
+          description: Mandate deactivated successfully
+        '404':
+          description: Mandate not found
+
+  /api/mandates/group/{groupId}:
+    get:
+      tags:
+        - Mandates
+      summary: Get mandates by group
+      description: Retrieves all mandates associated with a specific group
+      operationId: getMandatesByGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+      responses:
+        '200':
+          description: Group mandates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MandateResponse'
+
+  /api/mandates/status/{status}:
+    get:
+      tags:
+        - Mandates
+      summary: Get mandates by status
+      description: Retrieves all mandates with a specific status
+      operationId: getMandatesByStatus
+      parameters:
+        - name: status
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, PENDING, EXPIRED]
+          description: The status of the mandates to retrieve
+      responses:
+        '200':
+          description: Mandates with specified status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MandateResponse'
+
+  /api/mandates/group/{groupId}/active:
+    get:
+      tags:
+        - Mandates
+      summary: Get active mandates for a group
+      description: Retrieves all active mandates for a specific group
+      operationId: getActiveMandatesForGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+      responses:
+        '200':
+          description: Active mandates for the group retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MandateResponse'
+
+  # Transaction Endpoints
+  /api/transactions:
+    get:
       tags:
         - Transactions
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DebitOrderRequest'
+      summary: Get all transactions
+      description: Retrieves a list of all transactions in the system
+      operationId: getAllTransactions
       responses:
         '200':
-          description: Debit order processed successfully
+          description: List of transactions retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  transactionId:
-                    type: string
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
 
-  /api/transactions/payouts:
-    post:
-      summary: Process payout
-      description: Process a payout transaction
+  /api/transactions/{transactionId}:
+    get:
       tags:
         - Transactions
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PayoutRequest'
+      summary: Get transaction by ID
+      description: Retrieves a specific transaction by its unique identifier
+      operationId: getTransaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the transaction
       responses:
         '200':
-          description: Payout processed successfully
+          description: Transaction retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  transactionId:
-                    type: string
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
 
-  /api/transactions/schedules:
-    post:
-      summary: Schedule transaction
-      description: Schedule a recurring transaction
+  /api/transactions/cycle/{cycleId}:
+    get:
       tags:
-        - Scheduling
+        - Transactions
+      summary: Get transactions by cycle
+      description: Retrieves all transactions associated with a specific group cycle
+      operationId: getTransactionsByCycle
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the cycle
+      responses:
+        '200':
+          description: Cycle transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+  /api/transactions/payer/{payerUserId}:
+    get:
+      tags:
+        - Transactions
+      summary: Get transactions by payer
+      description: Retrieves all transactions made by a specific payer
+      operationId: getTransactionsByPayer
+      parameters:
+        - name: payerUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the payer user
+      responses:
+        '200':
+          description: Payer transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+  /api/transactions/status/{status}:
+    get:
+      tags:
+        - Transactions
+      summary: Get transactions by status
+      description: Retrieves all transactions with a specific status
+      operationId: getTransactionsByStatus
+      parameters:
+        - name: status
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [PENDING, COMPLETED, FAILED, CANCELLED]
+          description: The status of the transactions to retrieve
+      responses:
+        '200':
+          description: Transactions with specified status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+  # Group Cycle Endpoints
+  /api/cycles:
+    post:
+      tags:
+        - Group Cycles
+      summary: Create a new group cycle
+      description: Creates a new investment cycle for a group
+      operationId: createGroupCycle
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScheduleTransactionRequest'
+              $ref: '#/components/schemas/CreateCycleRequest'
+      responses:
+        '201':
+          description: Group cycle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleResponse'
+        '400':
+          description: Invalid request parameters
+        '409':
+          description: Business logic conflict (e.g., cycle already exists for the period)
+        '500':
+          description: Internal server error
+
+    get:
+      tags:
+        - Group Cycles
+      summary: Get all cycles
+      description: Retrieves a list of all group cycles in the system
+      operationId: getAllCycles
       responses:
         '200':
-          description: Transaction scheduled successfully
+          description: List of cycles retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  scheduleId:
-                    type: string
-        '400':
-          description: Bad request
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleResponse'
+
+  /api/cycles/{cycleId}:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get cycle by ID
+      description: Retrieves a specific group cycle by its unique identifier
+      operationId: getCycle
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the cycle
+      responses:
+        '200':
+          description: Cycle retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/CycleResponse'
+        '404':
+          description: Cycle not found
+
+  /api/cycles/group/{groupId}:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get cycles by group
+      description: Retrieves all cycles associated with a specific group
+      operationId: getCyclesByGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+      responses:
+        '200':
+          description: Group cycles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleResponse'
+
+  /api/cycles/status/{status}:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get cycles by status
+      description: Retrieves all cycles with a specific status
+      operationId: getCyclesByStatus
+      parameters:
+        - name: status
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [PENDING, ACTIVE, COMPLETED, CANCELLED]
+          description: The status of the cycles to retrieve
+      responses:
+        '200':
+          description: Cycles with specified status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleResponse'
+
+  /api/cycles/group/{groupId}/next:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get next upcoming cycle for a group
+      description: Retrieves the next upcoming cycle for a specific group
+      operationId: getNextCycleForGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: PENDING
+            enum: [PENDING, ACTIVE, COMPLETED, CANCELLED]
+          description: The status of the cycle to retrieve
+      responses:
+        '200':
+          description: Next cycle for the group retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleResponse'
+        '404':
+          description: No upcoming cycle found for the group
+
+  /api/cycles/upcoming:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get next upcoming cycle
+      description: Retrieves the next upcoming cycle regardless of group
+      operationId: getNextUpcomingCycle
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: PENDING
+            enum: [PENDING, ACTIVE, COMPLETED, CANCELLED]
+          description: The status of the cycle to retrieve
+      responses:
+        '200':
+          description: Next upcoming cycle retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleResponse'
+        '404':
+          description: No upcoming cycle found
+
+  /api/cycles/group/{groupId}/month/{cycleMonth}:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get cycle by group and month
+      description: Retrieves a cycle for a specific group in a specific month
+      operationId: getCycleByGroupAndMonth
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+        - name: cycleMonth
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+            example: '2024-01'
+          description: The cycle month in YYYY-MM format
+      responses:
+        '200':
+          description: Cycle for the specified group and month retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleResponse'
+        '404':
+          description: No cycle found for the specified group and month
+
+  /api/cycles/group/{groupId}/earliest:
+    get:
+      tags:
+        - Group Cycles
+      summary: Get earliest cycles for a group
+      description: Retrieves the earliest cycles for a specific group
+      operationId: getEarliestCyclesForGroup
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the group
+      responses:
+        '200':
+          description: Earliest cycles for the group retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleResponse'
 
 components:
   schemas:
-    CreateTransactionUserRequest:
-      type: object
-      required:
-        - userId
-        - email
-        - phone
-        - idNumber
-      properties:
-        userId:
-          type: string
-          description: User ID
-        email:
-          type: string
-          format: email
-          description: User email
-        phone:
-          type: string
-          description: User phone number
-        idNumber:
-          type: string
-          description: User ID number
-
     CreateMandateRequest:
       type: object
       required:
-        - userId
-        - bankAccount
-      properties:
-        userId:
-          type: string
-          description: User ID
-        bankAccount:
-          type: string
-          description: Bank account details
-
-    DebitOrderRequest:
-      type: object
-      required:
-        - userId
+        - payerUserId
         - groupId
-        - amount
       properties:
-        userId:
+        payerUserId:
           type: string
-          description: User ID
+          format: uuid
+          description: The unique identifier of the payer user
+          example: 550e8400-e29b-41d4-a716-446655440000
         groupId:
           type: string
-          description: Group ID
+          format: uuid
+          description: The unique identifier of the group
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
         amount:
           type: number
           format: double
-          minimum: 0.01
-          description: Transaction amount
-
-    PayoutRequest:
-      type: object
-      required:
-        - userId
-        - groupId
-        - amount
-      properties:
-        userId:
-          type: string
-          description: User ID
-        groupId:
-          type: string
-          description: Group ID
-        amount:
-          type: number
-          format: double
-          minimum: 0.01
-          description: Payout amount
-
-    ScheduleTransactionRequest:
-      type: object
-      required:
-        - userId
-        - groupId
-        - type
-        - amount
-        - frequency
-        - nextRun
-      properties:
-        userId:
-          type: string
-          description: User ID
-        groupId:
-          type: string
-          description: Group ID
-        type:
-          type: string
-          enum: [debit, payout]
-          description: Transaction type
-        amount:
-          type: number
-          format: double
-          minimum: 0.01
-          description: Transaction amount
+          description: The mandate amount
+          example: 1000.00
         frequency:
           type: string
-          enum: [daily, weekly, monthly]
-          description: Schedule frequency
-        nextRun:
-          type: string
-          format: date
-          description: Next execution date (YYYY-MM-DD)
+          enum: [MONTHLY, QUARTERLY, ANNUALLY]
+          description: The payment frequency
+          example: MONTHLY
 
-    ErrorResponse:
+    MandateResponse:
       type: object
       properties:
-        error:
+        id:
           type: string
-          description: Error message
+          format: uuid
+          description: The unique identifier of the mandate
+          example: 550e8400-e29b-41d4-a716-446655440000
+        payerUserId:
+          type: string
+          format: uuid
+          description: The unique identifier of the payer user
+          example: 550e8400-e29b-41d4-a716-446655440000
+        groupId:
+          type: string
+          format: uuid
+          description: The unique identifier of the group
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        amount:
+          type: number
+          format: double
+          description: The mandate amount
+          example: 1000.00
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, PENDING, EXPIRED]
+          description: The current status of the mandate
+          example: ACTIVE
+        frequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, ANNUALLY]
+          description: The payment frequency
+          example: MONTHLY
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the mandate was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the mandate was last updated
+          example: '2024-01-15T10:30:00Z'
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the transaction
+          example: 550e8400-e29b-41d4-a716-446655440000
+        cycleId:
+          type: string
+          format: uuid
+          description: The unique identifier of the associated cycle
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        payerUserId:
+          type: string
+          format: uuid
+          description: The unique identifier of the payer user
+          example: 550e8400-e29b-41d4-a716-446655440000
+        amount:
+          type: number
+          format: double
+          description: The transaction amount
+          example: 1000.00
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, CANCELLED]
+          description: The current status of the transaction
+          example: COMPLETED
+        transactionType:
+          type: string
+          enum: [DEBIT, CREDIT]
+          description: The type of transaction
+          example: DEBIT
+        description:
+          type: string
+          description: Description of the transaction
+          example: Monthly investment contribution
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the transaction was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the transaction was last updated
+          example: '2024-01-15T10:30:00Z'
+
+    CreateCycleRequest:
+      type: object
+      required:
+        - groupId
+        - cycleMonth
+        - startDate
+        - endDate
+      properties:
+        groupId:
+          type: string
+          format: uuid
+          description: The unique identifier of the group
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        cycleMonth:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: The cycle month in YYYY-MM format
+          example: '2024-01'
+        startDate:
+          type: string
+          format: date
+          description: The start date of the cycle
+          example: '2024-01-01'
+        endDate:
+          type: string
+          format: date
+          description: The end date of the cycle
+          example: '2024-01-31'
+        targetAmount:
+          type: number
+          format: double
+          description: The target amount for the cycle
+          example: 50000.00
+        description:
+          type: string
+          description: Description of the cycle
+          example: January investment cycle for Group Alpha
+
+    CycleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the cycle
+          example: 550e8400-e29b-41d4-a716-446655440000
+        groupId:
+          type: string
+          format: uuid
+          description: The unique identifier of the group
+          example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        cycleMonth:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: The cycle month in YYYY-MM format
+          example: '2024-01'
+        startDate:
+          type: string
+          format: date
+          description: The start date of the cycle
+          example: '2024-01-01'
+        endDate:
+          type: string
+          format: date
+          description: The end date of the cycle
+          example: '2024-01-31'
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, COMPLETED, CANCELLED]
+          description: The current status of the cycle
+          example: ACTIVE
+        targetAmount:
+          type: number
+          format: double
+          description: The target amount for the cycle
+          example: 50000.00
+        currentAmount:
+          type: number
+          format: double
+          description: The current amount collected in the cycle
+          example: 25000.00
+        description:
+          type: string
+          description: Description of the cycle
+          example: January investment cycle for Group Alpha
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the cycle was created
+          example: '2024-01-15T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the cycle was last updated
+          example: '2024-01-15T10:30:00Z'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+security:
+  - BearerAuth: []
 ```
 
 ---
