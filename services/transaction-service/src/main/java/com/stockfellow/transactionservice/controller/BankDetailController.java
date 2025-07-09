@@ -236,53 +236,109 @@ public class BankDetailController {
         @ApiResponse(responseCode = "404", description = "Bank details not found"),
         @ApiResponse(responseCode = "403", description = "Access denied - bank details belong to different user")
     })
-    public ResponseEntity<BankDetailResponse> activateBankDetails(
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+               in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+
+    public ResponseEntity<?> activateBankDetails(
             @Parameter(description = "The unique identifier of the bank details to activate", required = true)
-            @PathVariable UUID bankDetailsId,
-            @Parameter(description = "The user ID for security validation", required = true)
-            @RequestParam UUID userId) {
-        logger.info("Activating bank details: {} for user: {}", bankDetailsId, userId);
+            @PathVariable UUID bankDetailsId, HttpServletRequest request) {
         
         try {
+            String userIdHeader = request.getHeader("X-User-Id");
+
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+
             BankDetailResponse activatedBankDetails = bankDetailService.activateBankDetails(bankDetailsId, userId);
             return ResponseEntity.ok(activatedBankDetails);
+
         } catch (IllegalArgumentException e) {
             logger.warn("Bank details not found: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Bank details not found"));
         } catch (SecurityException e) {
             logger.warn("Access denied for bank details activation: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Access denied - bank details belong to different user")); //TODO: Change error message?
+        } catch (Exception e) {
+            logger.error("Unexpected error activating bank details: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
     @PutMapping("/{bankDetailsId}/deactivate")
-    @Operation(summary = "Deactivate bank details", 
-               description = "Deactivates the specified bank details. Note: Users should have at least one active bank detail.")
+    @Operation(summary = "Deactivate bank details for authenticated user", 
+            description = "Deactivates the specified bank details for the authenticated user. Note: Users should have at least one active bank detail.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Bank details deactivated successfully"),
-        @ApiResponse(responseCode = "404", description = "Bank details not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
         @ApiResponse(responseCode = "403", description = "Access denied - bank details belong to different user"),
+        @ApiResponse(responseCode = "404", description = "Bank details not found"),
         @ApiResponse(responseCode = "409", description = "Cannot deactivate - this is the user's only active bank detail")
     })
-    public ResponseEntity<Void> deactivateBankDetails(
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+            in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    @Parameter(name = "X-User-Name", description = "Username from gateway authentication", 
+            in = ParameterIn.HEADER, required = false, example = "john.doe@example.com")
+    public ResponseEntity<?> deactivateBankDetails(
             @Parameter(description = "The unique identifier of the bank details to deactivate", required = true)
             @PathVariable UUID bankDetailsId,
-            @Parameter(description = "The user ID for security validation", required = true)
-            @RequestParam UUID userId) {
-        logger.info("Deactivating bank details: {} for user: {}", bankDetailsId, userId);
+            HttpServletRequest request) {
         
         try {
+            String userIdHeader = request.getHeader("X-User-Id");
+            
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+            
+            logger.info("Deactivating bank details: {} for user: {} (username: {})", bankDetailsId, userId, username);
+            
             bankDetailService.deactivateBankDetails(bankDetailsId, userId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok()
+                .body(Map.of("message", "Bank details deactivated successfully"));
+            
         } catch (IllegalArgumentException e) {
             logger.warn("Bank details not found: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Bank details not found"));
         } catch (SecurityException e) {
             logger.warn("Access denied for bank details deactivation: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Access denied - bank details belong to different user"));
         } catch (IllegalStateException e) {
             logger.warn("Cannot deactivate bank details: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected error deactivating bank details: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
