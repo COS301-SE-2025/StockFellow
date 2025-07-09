@@ -7,12 +7,6 @@ import java.util.UUID;
 @Schema(description = "Request object for creating new bank details")
 public class CreateBankDetailRequest {
 
-    @NotNull(message = "User ID is required")
-    @Schema(description = "User's unique identifier", 
-            example = "123e4567-e89b-12d3-a456-426614174000",
-            required = true)
-    private UUID userId;
-
     @NotBlank(message = "Bank name is required")
     @Size(max = 100, message = "Bank name must not exceed 100 characters")
     @Schema(description = "Name of the bank", 
@@ -73,9 +67,8 @@ public class CreateBankDetailRequest {
     public CreateBankDetailRequest() {}
 
     // Constructor with all fields
-    public CreateBankDetailRequest(UUID userId, String bank, String cardNumber, String cardHolder,
+    public CreateBankDetailRequest(String bank, String cardNumber, String cardHolder,
                                    Integer expiryMonth, Integer expiryYear, String cardType, Boolean setAsActive) {
-        this.userId = userId;
         this.bank = bank;
         this.cardNumber = cardNumber;
         this.cardHolder = cardHolder;
@@ -86,9 +79,6 @@ public class CreateBankDetailRequest {
     }
 
     // Getters and Setters
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-
     public String getBank() { return bank; }
     public void setBank(String bank) { this.bank = bank; }
 
@@ -113,8 +103,7 @@ public class CreateBankDetailRequest {
     @Override
     public String toString() {
         return "CreateBankDetailRequest{" +
-                "userId=" + userId +
-                ", bank='" + bank + '\'' +
+                "bank='" + bank + '\'' +
                 ", cardNumber='***'" + // Mask card number in logs
                 ", cardHolder='" + cardHolder + '\'' +
                 ", expiryMonth=" + expiryMonth +

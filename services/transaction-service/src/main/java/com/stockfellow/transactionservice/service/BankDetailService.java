@@ -34,14 +34,14 @@ public class BankDetailService {
     /**
      * Add new bank details for a user
      */
-    public BankDetails addBankDetails(CreateBankDetailRequest request) {
-        logger.info("Adding bank details for user: {}", request.getUserId());
+    public BankDetails addBankDetails(UUID userId, CreateBankDetailRequest request) {
+        logger.info("Adding bank details for user: {}", userId);
 
         // Validate request
         validateCreateRequest(request);
 
         // Check if user has reached the maximum limit
-        long existingCount = bankDetailRepository.countByUserIdAndIsActiveTrue(request.getUserId());
+        long existingCount = bankDetailRepository.countByUserIdAndIsActiveTrue(userId);
         if (existingCount >= MAX_BANK_DETAILS_PER_USER) {
             throw new IllegalStateException("User has reached maximum limit of " + MAX_BANK_DETAILS_PER_USER + " bank details");
         }
@@ -49,19 +49,18 @@ public class BankDetailService {
         // Check for duplicate card number (last 4 digits)
         String last4Digits = extractLast4Digits(request.getCardNumber());
         List<BankDetails> existingWithSameLast4 = bankDetailRepository
-                .findByUserIdAndLastFourDigits(request.getUserId(), last4Digits);
+                .findByUserIdAndLastFourDigits(userId, last4Digits);
         
         if (!existingWithSameLast4.isEmpty()) {
-            logger.warn("User {} already has a card ending in {}", request.getUserId(), last4Digits);
+            logger.warn("User {} already has a card ending in {}", userId, last4Digits);
             // You might want to allow this or throw an exception based on business rules
         }
 
-        // Create new bank details entity
         BankDetails bankDetails = new BankDetails();
         bankDetails.setId(UUID.randomUUID());
-        bankDetails.setUserId(request.getUserId());
+        bankDetails.setUserId(userId);
         bankDetails.setBank(request.getBank());
-        bankDetails.setCardNumber(encryptCardNumber(request.getCardNumber())); // Should be encrypted
+        bankDetails.setCardNumber(encryptCardNumber(request.getCardNumber())); // TODO: Should be encrypted
         bankDetails.setCardHolder(request.getCardHolder());
         bankDetails.setExpiryMonth(request.getExpiryMonth());
         bankDetails.setExpiryYear(request.getExpiryYear());
@@ -70,20 +69,19 @@ public class BankDetailService {
         bankDetails.setUpdatedAt(LocalDateTime.now());
 
         // Determine if this should be active
-        boolean hasExistingActive = bankDetailRepository.existsByUserIdAndIsActiveTrue(request.getUserId());
+        boolean hasExistingActive = bankDetailRepository.existsByUserIdAndIsActiveTrue(userId);
         boolean shouldBeActive = request.getSetAsActive() || !hasExistingActive;
 
         if (shouldBeActive && hasExistingActive) {
             // Deactivate all other bank details for this user
-            deactivateAllBankDetailsForUser(request.getUserId());
+            deactivateAllBankDetailsForUser(userId);
         }
 
         bankDetails.setIsActive(shouldBeActive);
 
-        // Save the bank details
         BankDetails savedBankDetails = bankDetailRepository.save(bankDetails);
         logger.info("Successfully added bank details with ID: {} for user: {}", 
-                   savedBankDetails.getId(), request.getUserId());
+                   savedBankDetails.getId(), userId);
 
         return savedBankDetails;
     }
@@ -251,9 +249,6 @@ public class BankDetailService {
     // Private helper methods
 
     private void validateCreateRequest(CreateBankDetailRequest request) {
-        if (request.getUserId() == null) {
-            throw new IllegalArgumentException("User ID is required");
-        }
         if (request.getCardNumber() == null || request.getCardNumber().trim().isEmpty()) {
             throw new IllegalArgumentException("Card number is required");
         }

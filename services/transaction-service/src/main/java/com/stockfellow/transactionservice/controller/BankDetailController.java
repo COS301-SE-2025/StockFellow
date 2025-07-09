@@ -28,7 +28,7 @@ import java.util.UUID;
 
 @RestController
 @Tag(name = "Bank Details", description = "Operations related to user banking details and payment methods")
-@RequestMapping("/api/bank-details")
+@RequestMapping("/api/transaction/bank-details")
 public class BankDetailController {
 
     private static final Logger logger = LoggerFactory.getLogger(BankDetailController.class);
@@ -40,39 +40,66 @@ public class BankDetailController {
 
     @PostMapping
     @Operation(summary = "Add new bank details", 
-               description = "Adds new banking details for a user. If this is the user's first bank detail, it will automatically be set as active.")
+               description = "Adds new banking details for an authenticated user from gateway headers. If this is the user's first bank detail, it will automatically be set as active.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Bank details created successfully",
                     content = @Content(mediaType = "application/json", 
                                      schema = @Schema(implementation = BankDetailResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
         @ApiResponse(responseCode = "409", description = "Business logic conflict (e.g., duplicate bank details)"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<BankDetailResponse> addBankDetails(
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+                in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    
+    public ResponseEntity<?> addBankDetails(
             @Valid @RequestBody 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "Bank details creation request", 
                 required = true,
                 content = @Content(schema = @Schema(implementation = CreateBankDetailRequest.class))
-            ) CreateBankDetailRequest request) {
-        
-        logger.info("Received request to add bank details for user: {}", request.getUserId());
+            ) CreateBankDetailRequest request, HttpServletRequest httpRequest) {
         
         try {
-            BankDetails bankDetails = bankDetailService.addBankDetails(request);
+            // Extract from headers added by gateway
+            String userIdHeader = httpRequest.getHeader("X-User-Id");
+
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+            
+            logger.info("Received request to add bank details for user: {}", userId);
+        
+            // Pass userId and request separately to service
+            BankDetails bankDetails = bankDetailService.addBankDetails(userId, request);
             BankDetailResponse response = BankDetailResponse.from(bankDetails);
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
         } catch (IllegalArgumentException e) {
             logger.warn("Invalid request: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Invalid request parameters: " + e.getMessage()));
         } catch (IllegalStateException e) {
             logger.warn("Business logic error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             logger.error("Unexpected error adding bank details: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
@@ -111,8 +138,8 @@ public class BankDetailController {
             
             logger.info("Getting all bank details for user: {}", userId);
             
-            long count = bankDetailService.getBankDetailsCount(userId);
-            return ResponseEntity.ok(count);
+            List<BankDetailResponse> bankDetails = bankDetailService.getUserBankDetails(userId);
+            return ResponseEntity.ok(bankDetails);
 
         } catch (Exception e) {
             logger.error("Unexpected error getting bank details: {}", e.getMessage(), e);
@@ -134,7 +161,7 @@ public class BankDetailController {
     @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
                in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
 
-    public ResponseEntity<BankDetailResponse> getActiveBankDetails(HttpServletRequest request) {
+    public ResponseEntity<?> getActiveBankDetails(HttpServletRequest request) {
         try {
            // Extract user ID from gateway headers
             String userIdHeader = request.getHeader("X-User-Id");
@@ -291,19 +318,20 @@ public class BankDetailController {
     }
 
     @GetMapping("/user/count")
-    @Operation(summary = "Get bank details count for user", 
-               description = "Returns the total count of active bank details for a user")
+    @Operation(summary = "Get bank details count for authenticated user", 
+            description = "Returns the total count of active bank details for the authenticated user. Returns 0 if user has no bank details.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Bank details count retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header")
+        @ApiResponse(responseCode = "200", description = "Bank details count retrieved successfully (always returns a number, 0 if none found)"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
+        @ApiResponse(responseCode = "400", description = "Invalid user ID format")
     })
     @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
-               in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
-    public ResponseEntity<Long> getBankDetailsCount(HttpServletRequest request) {
+            in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    public ResponseEntity<?> getBankDetailsCount(HttpServletRequest request) {
         try {
-            Srting userIdHeader = request.getHeader("X-User-Id");
+            String userIdHeader = request.getHeader("X-User-Id");
 
-            if (iserIdHeader == null || userIdHeader.isEmpty()){
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
                 logger.warn("Missing X-User-Id header in request");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User not authenticated"));
@@ -318,17 +346,14 @@ public class BankDetailController {
                     .body(Map.of("error", "Invalid user ID format"));
             }
             
-            logger.info("Getting all number of details for user: {}", userId);
+            logger.info("Getting bank details count for user: {}", userId);
             
-            List<BankDetailResponse> bankDetails = bankDetailService.countByUserIdAndIsActiveTrue(userId);
-            return ResponseEntity.ok(bankDetails);
+            // This will return 0 if user has no bank details
+            long count = bankDetailService.getBankDetailsCount(userId);
+            return ResponseEntity.ok(count);
             
-        } catch (IllegalArgumentException e) {
-            logger.warn("User not found: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", "User not found or no bank details exist"));
         } catch (Exception e) {
-            logger.error("Unexpected error getting bank details: {}", e.getMessage(), e);
+            logger.error("Unexpected error getting bank details count: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Internal server error"));
         }
