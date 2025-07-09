@@ -7,6 +7,7 @@ import com.stockfellow.transactionservice.service.BankDetailService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,8 +20,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -73,49 +76,97 @@ public class BankDetailController {
         }
     }
 
-    @GetMapping("/user/{userId}")
-    @Operation(summary = "Get all bank details for a user", 
-               description = "Retrieves all banking details (active and inactive) for a specific user")
+    @GetMapping("/user")
+    @Operation(summary = "Get all bank details for authenticated user", 
+               description = "Retrieves all banking details (active and inactive) for the authenticated user from gateway headers")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User bank details retrieved successfully",
                     content = @Content(mediaType = "application/json", 
                                      schema = @Schema(implementation = BankDetailResponse.class))),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
         @ApiResponse(responseCode = "404", description = "User not found or no bank details exist")
     })
-    public ResponseEntity<List<BankDetailResponse>> getUserBankDetails(
-            @Parameter(description = "The unique identifier of the user", required = true)
-            @PathVariable UUID userId) {
-        logger.info("Getting all bank details for user: {}", userId);
-        
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+               in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+
+    public ResponseEntity<?> getUserBankDetails(HttpServletRequest request) {
         try {
-            List<BankDetailResponse> bankDetails = bankDetailService.getUserBankDetails(userId);
-            return ResponseEntity.ok(bankDetails);
-        } catch (IllegalArgumentException e) {
-            logger.warn("User not found: {}", userId);
-            return ResponseEntity.notFound().build();
+            // Extract user ID from gateway headers
+            String userIdHeader = request.getHeader("X-User-Id");
+            
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+            
+            logger.info("Getting all bank details for user: {}", userId);
+            
+            long count = bankDetailService.getBankDetailsCount(userId);
+            return ResponseEntity.ok(count);
+
+        } catch (Exception e) {
+            logger.error("Unexpected error getting bank details: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
-    @GetMapping("/user/{userId}/active")
+    @GetMapping("/user/active")
     @Operation(summary = "Get active bank details for a user", 
                description = "Retrieves the currently active (primary) banking details for a user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Active bank details retrieved successfully",
                     content = @Content(mediaType = "application/json", 
                                      schema = @Schema(implementation = BankDetailResponse.class))),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
         @ApiResponse(responseCode = "404", description = "No active bank details found for user")
     })
-    public ResponseEntity<BankDetailResponse> getActiveBankDetails(
-            @Parameter(description = "The unique identifier of the user", required = true)
-            @PathVariable UUID userId) {
-        logger.info("Getting active bank details for user: {}", userId);
-        
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+               in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+
+    public ResponseEntity<BankDetailResponse> getActiveBankDetails(HttpServletRequest request) {
         try {
-            BankDetailResponse activeBankDetails = bankDetailService.getActiveBankDetails(userId);
-            return ResponseEntity.ok(activeBankDetails);
+           // Extract user ID from gateway headers
+            String userIdHeader = request.getHeader("X-User-Id");
+            
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+            
+            logger.info("Getting active bank details for user: {}", userId);
+            
+            BankDetailResponse bankDetails = bankDetailService.getActiveBankDetails(userId);
+            return ResponseEntity.ok(bankDetails);
+
         } catch (IllegalArgumentException e) {
-            logger.warn("No active bank details found for user: {}", userId);
-            return ResponseEntity.notFound().build();
+            logger.warn("User not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "User not found or no active bank details exist"));
+        } catch (Exception e) {
+            logger.error("Unexpected error getting active bank details: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
@@ -239,33 +290,64 @@ public class BankDetailController {
         }
     }
 
-    @GetMapping("/user/{userId}/count")
+    @GetMapping("/user/count")
     @Operation(summary = "Get bank details count for user", 
                description = "Returns the total count of active bank details for a user")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Bank details count retrieved successfully")
+        @ApiResponse(responseCode = "200", description = "Bank details count retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header")
     })
-    public ResponseEntity<Long> getBankDetailsCount(
-            @Parameter(description = "The unique identifier of the user", required = true)
-            @PathVariable UUID userId) {
-        logger.info("Getting bank details count for user: {}", userId);
-        
-        long count = bankDetailService.getBankDetailsCount(userId);
-        return ResponseEntity.ok(count);
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+               in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    public ResponseEntity<Long> getBankDetailsCount(HttpServletRequest request) {
+        try {
+            Srting userIdHeader = request.getHeader("X-User-Id");
+
+            if (iserIdHeader == null || userIdHeader.isEmpty()){
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+            
+            logger.info("Getting all number of details for user: {}", userId);
+            
+            List<BankDetailResponse> bankDetails = bankDetailService.countByUserIdAndIsActiveTrue(userId);
+            return ResponseEntity.ok(bankDetails);
+            
+        } catch (IllegalArgumentException e) {
+            logger.warn("User not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "User not found or no bank details exist"));
+        } catch (Exception e) {
+            logger.error("Unexpected error getting bank details: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+        }
     }
 
-    @GetMapping("/user/{userId}/has-active")
-    @Operation(summary = "Check if user has active bank details", 
-               description = "Returns true if the user has at least one active bank detail")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Check completed successfully")
-    })
-    public ResponseEntity<Boolean> hasActiveBankDetails(
-            @Parameter(description = "The unique identifier of the user", required = true)
-            @PathVariable UUID userId) {
-        logger.info("Checking if user has active bank details: {}", userId);
+    /* TODO: Not sure if this is needed given that we have an endpoint to fetch active
+
+    // @GetMapping("/user/{userId}/has-active")
+    // @Operation(summary = "Check if user has active bank details", 
+    //            description = "Returns true if the user has at least one active bank detail")
+    // @ApiResponses(value = {
+    //     @ApiResponse(responseCode = "200", description = "Check completed successfully")
+    // })
+    // public ResponseEntity<Boolean> hasActiveBankDetails(
+    //         @Parameter(description = "The unique identifier of the user", required = true)
+    //         @PathVariable UUID userId) {
+    //     logger.info("Checking if user has active bank details: {}", userId);
         
-        boolean hasActive = bankDetailService.hasActiveBankDetails(userId);
-        return ResponseEntity.ok(hasActive);
-    }
+    //     boolean hasActive = bankDetailService.hasActiveBankDetails(userId);
+    //     return ResponseEntity.ok(hasActive);
+    }  */
 }
