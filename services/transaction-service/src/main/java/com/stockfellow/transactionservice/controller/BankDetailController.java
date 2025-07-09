@@ -317,7 +317,7 @@ public class BankDetailController {
                     .body(Map.of("error", "Invalid user ID format"));
             }
             
-            logger.info("Deactivating bank details: {} for user: {} (username: {})", bankDetailsId, userId, username);
+            logger.info("Deactivating bank details: {} for user: {} (username: {})", bankDetailsId, userId);
             
             bankDetailService.deactivateBankDetails(bankDetailsId, userId);
             return ResponseEntity.ok()
