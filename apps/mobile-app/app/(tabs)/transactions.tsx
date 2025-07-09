@@ -8,20 +8,7 @@ import TopBar from '../../src/components/TopBar';
 import TransactionLog, { Transaction } from '../../src/components/TransactionLog';
 import { icons } from '../../src/constants';
 import { useRouter } from 'expo-router';
-
-
-const mockCards = require('../../src/services/mockData.json') as Card[];
-
-interface Card {
-  id: string;
-  bank: string;
-  cardNumber: string;
-  cardHolderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cardType: 'mastercard' | 'visa';
-  isActive?: boolean;
-}
+import cardService from '../../src/services/cardService';
 
 const Transactions = () => {
   const router = useRouter();
@@ -84,18 +71,39 @@ const Transactions = () => {
     },
   ]);
   const [loading, setLoading] = useState(true);
-  const [cards, setCards] = useState<Card[]>(mockCards);
-  const activeCard = cards.find(card => card.isActive) || null;
-
+  const [cards, setCards] = useState<any[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    const fetchCards = async () => {
+      try {
+        const userCards = await cardService.getUserBankDetails();
+        const formattedCards = userCards.map(card => ({
+          id: card.id,
+          bank: card.bank,
+          last4Digits: card.last4Digits,
+          cardHolder: card.cardHolder,
+          expiryMonth: card.expiryMonth.toString().padStart(2, '0'),
+          expiryYear: (card.expiryYear % 100).toString().padStart(2, '0'),
+          cardType: card.cardType.toLowerCase() as 'mastercard' | 'visa',
+          isActive: card.isActive
+        }));
+        setCards(formattedCards);
+        console.log(formattedCards);
+      } catch (error) {
+        console.error('Error fetching cards:', error);
+      } finally {
+        setCardsLoading(false);
+        setLoading(false);
+      }
+    };
+
+    fetchCards();
   }, []);
 
-  if (loading) {
+  const activeCard = cards.find(card => card.isActive) || null;
+
+  if (loading || cardsLoading) {
     return (
       <GestureHandlerRootView className="flex-1">
         <SafeAreaView className="flex-1 bg-white">
@@ -128,22 +136,16 @@ const Transactions = () => {
                 <TouchableOpacity onPress={() => router.push('/transactions/cards')}>
                   <DebitCard
                     bankName={activeCard.bank}
-                    cardNumber={`•••• •••• •••• ${activeCard.cardNumber.slice(-4)}`}
-                    cardHolderName={activeCard.cardHolderName}
+                    cardNumber={`•••• •••• •••• ${activeCard.last4Digits}`}
+                    cardHolder={activeCard.cardHolder}
                     expiryDate={`${activeCard.expiryMonth}/${activeCard.expiryYear}`}
                     cardType={activeCard.cardType}
                   />
                 </TouchableOpacity>
               ) : (
-                // Update the navigation to only pass serializable data
                 <TouchableOpacity
                   className="w-full h-[200px] border-2 border-dashed border-[#1DA1FA] rounded-2xl flex items-center justify-center"
-                  onPress={() => router.push({
-                    pathname: '/transactions/cardform',
-                    params: {
-                      cards: JSON.stringify(cards)
-                    }
-                  })}
+                  onPress={() => router.push('/transactions/cardform')}
                 >
                   <View className="items-center">
                     <Image source={icons.plus} className="w-12 h-12 mb-2" tintColor={"#1DA1FA"} />

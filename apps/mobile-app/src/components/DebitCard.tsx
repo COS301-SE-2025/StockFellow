@@ -4,7 +4,7 @@ import { icons, images } from '../../src/constants';
 const DebitCard = ({ 
   bankName = "First National Bank",
   cardNumber = "•••• •••• •••• 1234",
-  cardHolderName = "L SMITH",
+  cardHolder = "L SMITH",
   expiryDate = "10/26",
   cardType = "mastercard" // or "visa", "paypal", etc.
 }) => {
@@ -71,7 +71,7 @@ const DebitCard = ({
           {/* Cardholder Name */}
           <View>
             <Text className="text-white text-xs opacity-80">Cardholder Name</Text>
-            <Text className="text-white font-medium">{cardHolderName}</Text>
+            <Text className="text-white font-medium">{cardHolder}</Text>
           </View>
           
           {/* Expiry Date */}
