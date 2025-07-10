@@ -4,8 +4,10 @@ import com.stockfellow.groupservice.model.Event;
 import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.service.EventStoreService;
 import com.stockfellow.groupservice.service.ReadModelService;
+import com.stockfellow.groupservice.repository.GroupRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -17,10 +19,14 @@ public class JoinGroupCommand {
     private static final Logger logger = LoggerFactory.getLogger(JoinGroupCommand.class);
     private final EventStoreService eventStoreService;
     private final ReadModelService readModelService;
+    
+    @Autowired
+    private GroupRepository groupRepository;
 
     public JoinGroupCommand(EventStoreService eventStoreService, ReadModelService readModelService) {
         this.eventStoreService = eventStoreService;
         this.readModelService = readModelService;
+        
     }
 
     /**
@@ -53,7 +59,7 @@ public class JoinGroupCommand {
 
         // Save the updated group to the database
         // If you have a GroupRepository bean, inject and use it here:
-        // groupRepository.save(group);
+        groupRepository.save(group);
         // Otherwise, use MongoTemplate:
         // mongoTemplate.save(group);
 
