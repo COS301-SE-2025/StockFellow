@@ -42,8 +42,8 @@ const Stokvels = () => {
         const data = await response.json();
 
         const transformedStokvels = data.map((group: any) => ({
-          id: group.id, // Keep the id for your own stokvels
-          groupId: group.groupId || group.id || group._id, // Keep groupId for public stokvels
+          id: group._id || group.id,     // MongoDB _id for React keys
+          groupId: group.groupId,        // Custom groupId for API calls
           name: group.name,
           memberCount: group.members?.length || 0,
           balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
@@ -173,11 +173,10 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                        const routeId = stokvel.id || stokvel.groupId;
+                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: routeId }
+                          params: { id: stokvel.groupId }
                         });
                       }}
                     />
@@ -203,11 +202,10 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                        const routeId = stokvel.id || stokvel.groupId;
+                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: routeId }
+                          params: { id: stokvel.groupId }
                         });
                       }}
                     />
@@ -231,13 +229,12 @@ const Stokvels = () => {
                     balance={stokvel.balance || "R 0.00"}
                     profileImage={stokvel.profileImage}
                     onPress={() => {
-                      // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                      const routeId = stokvel.id || stokvel.groupId;
-                      router.push({
-                        pathname: '/stokvels/[id]',
-                        params: { id: routeId }
-                      });
-                    }}
+                        // Use groupId consistently for navigation
+                        router.push({
+                          pathname: '/stokvels/[id]',
+                          params: { id: stokvel.groupId }
+                        });
+                      }}
                   />
                 ))
               ) : (
