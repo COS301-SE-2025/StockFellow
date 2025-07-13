@@ -36,14 +36,14 @@ public class GroupMemberService {
     }
 
     // Creates Join request
-    public String requestToJoinGroup(String groupId, String userId){
-        logger.info("User {} requesting to join group {}", userId, groupId);
+    public String requestToJoinGroup(String groupId, String userId, String username){
+        logger.info("User {} with username {} requesting to join group {}", userId, username, groupId);
 
         Group group = groupRepository.findByGroupId(groupId).orElseThrow(() -> new IllegalArgumentException("Group not found"));
 
         validateJoinRequest(group, userId);
 
-        JoinRequest joinRequest = new JoinRequest(userId);
+        JoinRequest joinRequest = new JoinRequest(userId, username);
         
         // Add request to groups requests array
         Query query = new Query(Criteria.where("groupId").is(groupId));
@@ -81,6 +81,7 @@ public class GroupMemberService {
                 .orElseThrow(() -> new IllegalArgumentException("Join request not found or already processed"));
 
         String userId = joinRequest.getUserId();
+        String username = joinRequest.getUsername();
 
         if ("accept".equals(action)) {
             // Check if group is full
@@ -88,7 +89,7 @@ public class GroupMemberService {
                 throw new IllegalArgumentException("Group is full");
             }
 
-            addMemberToGroup(groupId, userId);
+            addMemberToGroup(groupId, userId, username);
         } else {
             rejectRequest(groupId, userId, adminId);
         }
@@ -172,8 +173,8 @@ public class GroupMemberService {
         }
     }
 
-    private void addMemberToGroup(String groupId, String userId) {
-        Member newMember = new Member(userId, "member");
+    private void addMemberToGroup(String groupId, String userId, String username) {
+        Member newMember = new Member(userId, username, "member");
         
         Query query = new Query(Criteria.where("groupId").is(groupId));
         Update update = new Update().push("members", newMember);
@@ -182,6 +183,7 @@ public class GroupMemberService {
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("groupId", groupId);
         eventData.put("userId", userId);
+        eventData.put("username", username);
         eventData.put("role", "member");
 
         Event event = new Event("MemberAdded", eventData);

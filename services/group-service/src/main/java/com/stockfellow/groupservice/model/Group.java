@@ -180,6 +180,7 @@ public class Group {
     // Inner Classes
     public static class Member {
         private String userId;
+        private String username;
         private String role;
         private Date joinedAt;
         private Double contribution;
@@ -191,8 +192,9 @@ public class Group {
             this.lastActive = new Date();
         }
 
-        public Member(String userId, String role) {
+        public Member(String userId, String userame, String role) {
             this.userId = userId;
+            this.username = userame;
             this.role = role;
             this.joinedAt = new Date();
             this.contribution = 0.0;
@@ -205,6 +207,14 @@ public class Group {
 
         public void setUserId(String userId) {
             this.userId = userId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
         }
 
         public String getRole() {
@@ -243,6 +253,7 @@ public class Group {
     public static class JoinRequest {
         private String requestId;
         private String userId;
+        private String username;
         private String state; // "waiting", "accepted", "rejected"
         private Date timestamp;
 
@@ -252,9 +263,10 @@ public class Group {
             this.state = "waiting";
         }
 
-        public JoinRequest(String userId) {
+        public JoinRequest(String userId, String username) {
             this.requestId = UUID.randomUUID().toString().substring(0, 12);
             this.userId = userId;
+            this.username = username;
             this.state = "waiting";
             this.timestamp = new Date();
         }
@@ -273,6 +285,14 @@ public class Group {
 
         public void setUserId(String userId) {
             this.userId = userId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
         }
 
         public String getState() {

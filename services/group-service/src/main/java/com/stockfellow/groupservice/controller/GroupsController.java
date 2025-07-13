@@ -228,11 +228,17 @@ public class GroupsController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
+
+            String adminName = httpRequest.getHeader("X-Username");
+            if (adminName == null || adminName.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Username not found in request"));
+            }
             
-            logger.info("Creating group for adminId: {}", adminId);
+            logger.info("Creating group for adminId: {} with username: {}", adminId, adminName);
 
             // Parse and validate the request body
-            CreateGroupRequest request = parseCreateGroupRequest(requestBody, adminId);
+            CreateGroupRequest request = parseCreateGroupRequest(requestBody, adminId, adminName);
 
             // Call the service to create the group
             CreateGroupResult result = groupService.createGroup(request);
@@ -299,14 +305,18 @@ public class GroupsController {
             HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
-            
             if (userId == null || userId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
+            String username = httpRequest.getHeader("X-Username");
+            if (username == null || username.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Username not found in request"));
+            }
 
             // Create join request using the member service
-            String eventId = memberService.requestToJoinGroup(groupId, userId);
+            String eventId = memberService.requestToJoinGroup(groupId, userId, username);
             
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Join request sent successfully. Waiting for admin approval.");
@@ -452,7 +462,7 @@ public class GroupsController {
     }
 
     // Helper method to parse create group request
-    private CreateGroupRequest parseCreateGroupRequest(Map<String, Object> requestBody, String adminId) {
+    private CreateGroupRequest parseCreateGroupRequest(Map<String, Object> requestBody, String adminId, String adminName) {
         // Extract and validate required fields
         String name = extractStringField(requestBody, "name", true);
         Double minContribution = extractDoubleField(requestBody, "minContribution", true);
@@ -471,7 +481,7 @@ public class GroupsController {
         List<String> members = (List<String>) requestBody.getOrDefault("members", new ArrayList<>());
 
         return new CreateGroupRequest(
-            adminId, name, minContribution, maxMembers, description, profileImage,
+            adminId, adminName, name, minContribution, maxMembers, description, profileImage,
             visibility, contributionFrequency, contributionDate, payoutFrequency, 
             payoutDate, members
         );

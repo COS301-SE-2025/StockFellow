@@ -120,14 +120,16 @@ public class ReadModelService {
                 if (memberObj instanceof String) {
                     // Handle string list (initial member IDs)
                     String userId = (String) memberObj;
+                    String username = userId;
                     String role = userId.equals(data.get("adminId")) ? "founder" : "member";
-                    members.add(new Group.Member(userId, role));
+                    members.add(new Group.Member(userId, username, role));
                 } else if (memberObj instanceof Map) {
                     // Handle member object list
                     @SuppressWarnings("unchecked")
                     Map<String, Object> memberData = (Map<String, Object>) memberObj;
                     Group.Member member = new Group.Member();
                     member.setUserId((String) memberData.get("userId"));
+                    member.setUsername((String) memberData.getOrDefault("username", memberData.get("userId")));
                     member.setRole((String) memberData.getOrDefault("role", "member"));
                     member.setContribution(parseDouble(memberData.get("contribution"), 0.0));
                     member.setJoinedAt(parseDate(memberData.get("joinedAt"), new Date()));
@@ -145,6 +147,7 @@ public class ReadModelService {
 
     private void applyMemberAddedEvent(Group groupData, Map<String, Object> data) {
         String userId = (String) data.get("userId");
+        String username = (String) data.get("username");
         String role = (String) data.getOrDefault("role", "member");
         
         if (groupData.getMembers() == null) {
@@ -156,7 +159,7 @@ public class ReadModelService {
                 .anyMatch(member -> member.getUserId().equals(userId));
         
         if (!alreadyMember) {
-            Group.Member newMember = new Group.Member(userId, role);
+            Group.Member newMember = new Group.Member(userId, username, role);
             groupData.getMembers().add(newMember);
             logger.info("User {} joined group: {}", userId, groupData.getGroupId());
         }
@@ -191,6 +194,7 @@ public class ReadModelService {
 
     private void applyJoinRequestCreatedEvent(Group groupData, Map<String, Object> data) {
         String userId = (String) data.get("userId");
+        String username = (String) data.get("username");
         String requestId = (String) data.get("requestId");
         
         if (groupData.getRequests() == null) {
@@ -202,7 +206,7 @@ public class ReadModelService {
                 .anyMatch(request -> request.getRequestId().equals(requestId));
         
         if (!requestExists) {
-            Group.JoinRequest joinRequest = new Group.JoinRequest(userId);
+            Group.JoinRequest joinRequest = new Group.JoinRequest(userId, username);
             joinRequest.setRequestId(requestId);
             joinRequest.setState("waiting");
             groupData.getRequests().add(joinRequest);

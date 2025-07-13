@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 public class CreateGroupRequest {
         private String adminId;
+        private String adminName;
         private String name;
         private Double minContribution;
         private Integer maxMembers;
@@ -21,11 +22,12 @@ public class CreateGroupRequest {
         // Constructors
         public CreateGroupRequest() {}
 
-        public CreateGroupRequest(String adminId, String name, Double minContribution, Integer maxMembers,
+        public CreateGroupRequest(String adminId, String adminName, String name, Double minContribution, Integer maxMembers,
                                 String description, String profileImage, String visibility,
                                 String contributionFrequency, Date contributionDate,
                                 String payoutFrequency, Date payoutDate, List<String> members) {
             this.adminId = adminId;
+            this.adminName = adminName;
             this.name = name;
             this.minContribution = minContribution;
             this.maxMembers = maxMembers;
@@ -42,6 +44,8 @@ public class CreateGroupRequest {
         // Getters and setters
         public String getAdminId() { return adminId; }
         public void setAdminId(String adminId) { this.adminId = adminId; }
+        public String getAdminName() { return adminName; }
+        public void setAdminName(String adminName) { this.adminName = adminName; }
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
         public Double getMinContribution() { return minContribution; }

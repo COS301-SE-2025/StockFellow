@@ -56,13 +56,12 @@ const StokvelRequests = () => {
             const data = await response.json();
             console.log("API Response: ", data);
 
-            // Fixed: Use correct response structure - data.requests, not data.group.requests
             const pendingRequests = data.requests?.map((req: any) => ({
                 requestId: req.requestId,
                 userId: req.userId,
                 state: req.state,
                 timestamp: new Date(req.timestamp),
-                profileName: req.userId, // You should fetch actual user names here
+                profileName: req.username, 
                 profileImage: null
             })) || [];
             

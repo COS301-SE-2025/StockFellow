@@ -24,26 +24,21 @@ public class GroupService {
     }
 
     public CreateGroupResult createGroup(CreateGroupRequest request) {
-        logger.info("Creating group '{}' for adminId: {}", request.getName(), request.getAdminId());
+        logger.info("Creating group '{}' for adminId: {} with username: {}", request.getName(), request.getAdminId(), request.getAdminName());
 
-        // Validate the request
         validateCreateGroupRequest(request);
 
-        // Generate unique group ID
         String groupId = generateGroupId();
 
-        // Ensure admin is included in members list
         List<String> members = new ArrayList<>(request.getMembers());
         if (!members.contains(request.getAdminId())) {
-            members.add(0, request.getAdminId()); // Add admin at the beginning
+            members.add(0, request.getAdminId());
         }
 
-        // Create and publish group created event
         Map<String, Object> eventData = buildGroupCreatedEventData(groupId, request, members);
         Event event = new Event("GroupCreated", eventData);
         String eventId = eventStoreService.saveEvent(groupId, event);
 
-        // Build and save the group read model
         Group group = buildGroupFromRequest(groupId, request, members);
         groupRepository.save(group);
 
@@ -122,7 +117,8 @@ public class GroupService {
         List<Group.Member> members = new ArrayList<>();
         for (String memberId : memberIds) {
             String role = memberId.equals(request.getAdminId()) ? "founder" : "member";
-            members.add(new Group.Member(memberId, role));
+            String username = memberId.equals(request.getAdminId()) ? request.getAdminName() : memberId;
+            members.add(new Group.Member(memberId, username, role));
         }
         group.setMembers(members);
         group.setRequests(new ArrayList<>());

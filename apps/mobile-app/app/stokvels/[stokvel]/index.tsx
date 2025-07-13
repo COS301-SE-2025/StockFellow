@@ -92,7 +92,7 @@ const Stokvel = () => {
           balance: data.group.balance ? `R ${data.group.balance.toFixed(2)}` : "R 0.00",
           members: data.group.members?.map((member: any) => ({
             id: member.userId,
-            name: member.userId,
+            name: member.username,
             role: member.role,
             contribution: member.contribution ? `R ${member.contribution.toFixed(2)}` : "R 0.00",
             tier: member.role === 'admin' ? 3 : 1,
