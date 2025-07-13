@@ -7,6 +7,7 @@ import com.stockfellow.transactionservice.service.MandateService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,13 +20,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @Tag(name = "Mandates", description = "Operations related to user mandates for group participation")
-@RequestMapping("/api/mandates")
+@RequestMapping("/api/transaction/mandates")
 public class MandateController {
 
     private static final Logger logger = LoggerFactory.getLogger(MandateController.class);
@@ -43,23 +46,43 @@ public class MandateController {
                     content = @Content(mediaType = "application/json", 
                                      schema = @Schema(implementation = MandateResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated - missing X-User-Id header"),
         @ApiResponse(responseCode = "409", description = "Business logic conflict (e.g., mandate already exists)"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<MandateResponse> createMandate(
+    @Parameter(name = "X-User-Id", description = "User ID from gateway authentication", 
+                in = ParameterIn.HEADER, required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+
+    public ResponseEntity<?> createMandate(
             @Valid @RequestBody 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "Mandate creation request", 
                 required = true,
                 content = @Content(schema = @Schema(implementation = CreateMandateRequest.class))
-            ) CreateMandateRequest request) {
-        
-        logger.info("Received request to create mandate for user " + request.getPayerUserId() + " in group " + request.getGroupId());
+            ) CreateMandateRequest request, HttpServletRequest httpRequest) {
         
         try {
+            String userIdHeader = httpRequest.getHeader("X-User-Id");
+
+            if (userIdHeader == null || userIdHeader.isEmpty()) {
+                logger.warn("Missing X-User-Id header in request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            UUID userId;
+            try {
+                userId = UUID.fromString(userIdHeader);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+            }
+
+            logger.info("Received request to create mandate for user " + userId + " in group " + request.getGroupId());
+
             Mandate mandate = mandateService.createMandate(request);
             MandateResponse response = MandateResponse.from(mandate);
-            
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             logger.warn("Invalid request: " + e.getMessage());
@@ -70,7 +93,7 @@ public class MandateController {
         } catch (Exception e) {
             logger.warn("Unexpected error creating mandate: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        }    
     }
 
     @GetMapping

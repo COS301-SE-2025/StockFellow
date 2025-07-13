@@ -265,7 +265,6 @@ const SignUp = () => {
                   handleChangeText={handlePasswordChange}
                   otherStyles="mt-3"
                   placeholder='Create a password'
-                  secureTextEntry
                   error={errors.password}
                 />
 
@@ -275,7 +274,6 @@ const SignUp = () => {
                   handleChangeText={handleConfirmPasswordChange}
                   otherStyles="mt-3"
                   placeholder='Confirm your password'
-                  secureTextEntry
                   error={errors.confirmPassword}
                 />
 

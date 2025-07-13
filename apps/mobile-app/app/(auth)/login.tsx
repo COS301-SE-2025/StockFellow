@@ -109,7 +109,6 @@ const Login = () => {
                   handleChangeText={(e) => setForm({ ...form, password: e })}
                   otherStyles="mt-3"
                   placeholder='Password'
-                  secureTextEntry
                   error={errors.password}
                 />
 

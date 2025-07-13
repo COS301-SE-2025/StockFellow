@@ -123,7 +123,6 @@ public class GroupsController {
     public ResponseEntity<?> viewGroup(@PathVariable String groupId, HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
             
             if (userId == null || userId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

@@ -1,46 +1,222 @@
-// apps/mobile-app/src/services/cardService.ts
-import * as FileSystem from 'expo-file-system';
-import { Alert } from 'react-native';
+// src/services/cardService.ts
 
-const CARDS_FILE = `${FileSystem.documentDirectory}mockCards.json`;
+import authService from './authService';
 
-// Import using relative path from src
-const defaultData = require('./mockData.json');
+//const API_BASE_URL = process.env.API_BASE_URL || '';
 
-interface Card {
-  id: string;
+// interface BankDetails {
+//   id: string;
+//   userId: string;
+//   bank: string;
+//   last4Digits: string;
+//   cardHolder: string;
+//   expiryMonth: number;
+//   expiryYear: number;
+//   cardType: string;
+//   isActive: boolean;
+//   createdAt: string;
+//   updatedAt: string;
+// }
+
+interface CreateBankDetailsRequest {
   bank: string;
   cardNumber: string;
-  cardHolderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cardType: 'mastercard' | 'visa';
-  isActive?: boolean;
+  cardHolder: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cardType: string;
 }
 
-export const loadCards = async (): Promise<Card[]> => {
-  try {
-    const fileInfo = await FileSystem.getInfoAsync(CARDS_FILE);
-    if (!fileInfo.exists) {
-      await FileSystem.writeAsStringAsync(CARDS_FILE, JSON.stringify(defaultData));
-      return defaultData;
+interface BankDetailResponse {
+  id: string;
+  bank: string;
+  last4Digits: string; // Might want to mask this in the UI
+  cardHolder: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cardType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const cardService = {
+  /**
+   * Add new bank details for the authenticated user
+   */
+  async addBankDetails(data: CreateBankDetailsRequest): Promise<BankDetailResponse> {
+    try {
+      const response = await authService.apiRequest('/transaction/bank-details', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add bank details');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding bank details:', error);
+      throw error;
     }
-    
-    const content = await FileSystem.readAsStringAsync(CARDS_FILE);
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('Error loading cards:', error);
-    Alert.alert('Error', 'Failed to load cards');
-    return [];
-  }
+  },
+
+  /**
+   * Get all bank details for the authenticated user
+   */
+  async getUserBankDetails(): Promise<BankDetailResponse[]> {
+    try {
+      const response = await authService.apiRequest('/transaction/bank-details/user');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch bank details');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user bank details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get the active bank details for the authenticated user
+   */
+  async getActiveBankDetails(): Promise<BankDetailResponse> {
+    try {
+      const response = await authService.apiRequest('/transaction/bank-details/user/active');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch active bank details');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching active bank details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get specific bank details by ID
+   */
+  async getBankDetailsById(bankDetailsId: string): Promise<BankDetailResponse> {
+    try {
+      const response = await authService.apiRequest(
+        `/transaction/bank-details/${bankDetailsId}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch bank details');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching bank details by ID:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Activate a specific bank details record
+   */
+  async activateBankDetails(bankDetailsId: string): Promise<BankDetailResponse> {
+    try {
+      const response = await authService.apiRequest(
+        `/transaction/bank-details/${bankDetailsId}/activate`,
+        {
+          method: 'PUT',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to activate bank details');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error activating bank details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deactivate a specific bank details record
+   */
+  async deactivateBankDetails(bankDetailsId: string): Promise<void> {
+    try {
+      const response = await authService.apiRequest(
+        `/transaction/bank-details/${bankDetailsId}/deactivate`,
+        {
+          method: 'PUT',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to deactivate bank details');
+      }
+    } catch (error) {
+      console.error('Error deactivating bank details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a specific bank details record
+   */
+  async deleteBankDetails(bankDetailsId: string): Promise<void> {
+    try {
+      const response = await authService.apiRequest(
+        `/transaction/bank-details/${bankDetailsId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete bank details');
+      }
+    } catch (error) {
+      console.error('Error deleting bank details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get count of bank details for the authenticated user
+   */
+  async getBankDetailsCount(): Promise<number> {
+    try {
+      const response = await authService.apiRequest('/transaction/bank-details/user/count');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get bank details count');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting bank details count:', error);
+      throw error;
+    }
+  },
+
+  
+
+  /**
+   * Format expiry date for display
+   */
+  formatExpiryDate(month: number, year: number): string {
+    return `${month.toString().padStart(2, '0')}/${year.toString().slice(-2)}`;
+  },
 };
 
-export const saveCards = async (cards: Card[]): Promise<void> => {
-  try {
-    await FileSystem.writeAsStringAsync(CARDS_FILE, JSON.stringify(cards));
-  } catch (error) {
-    console.error('Error saving cards:', error);
-    Alert.alert('Error', 'Failed to save cards');
-  }
-};
-
+export default cardService;
