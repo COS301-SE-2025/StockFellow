@@ -33,7 +33,7 @@ public class RouteConfig {
             
             // Group service route
             new Route(
-                "/api/group/**",
+                "/api/groups/**",
                 false,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(groupServiceUrl, true)

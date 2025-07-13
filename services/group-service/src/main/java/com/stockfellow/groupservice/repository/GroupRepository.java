@@ -11,8 +11,16 @@ import java.util.Optional;
 @Repository
 public interface GroupRepository extends MongoRepository<Group, String> {
     
+    // Find group by groupId field (not the MongoDB _id)
+    Optional<Group> findByGroupId(String groupId);
+
     // Find groups where the user is a member
-    List<Group> findByMembersContaining(String userId);
+    @Query("{ 'members.userId': ?0 }")
+    List<Group> findGroupsByUserId(String userId);
+
+    // Legacy name for query: findGroupsByUserId
+    @Query("{ 'members.userId': ?0 }")
+    List<Group> findByMembersUserId(String userId);
     
     // Find groups by admin ID
     List<Group> findByAdminId(String adminId);
@@ -45,4 +53,16 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     // Count total members in a group
     @Query(value = "{ '_id': ?0 }", fields = "{ 'members': 1 }")
     Optional<Group> findGroupMembersOnly(String groupId);
+
+    // Get groups where user is admin or member (useful for user dashboard)
+    @Query("{ $or: [ { 'adminId': ?0 }, { 'members.userId': ?0 } ] }")
+    List<Group> findByAdminIdOrMembersUserId(String userId);
+
+    // Count groups where user is a member
+    @Query(value = "{ 'members.userId': ?0 }", count = true)
+    long countByMembersUserId(String userId);
+
+    // Find groups by member role
+    @Query("{ 'members': { $elemMatch: { 'userId': ?0, 'role': ?1 } } }")
+    List<Group> findByMemberUserIdAndRole(String userId, String role);
 }

@@ -1,21 +1,27 @@
 package com.stockfellow.groupservice.controller;
 
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.stockfellow.groupservice.command.CreateGroupCommand;
-import com.stockfellow.groupservice.command.JoinGroupCommand;
-import com.stockfellow.groupservice.command.ProcessJoinRequestCommand;
 import com.stockfellow.groupservice.model.Group;
+import com.stockfellow.groupservice.service.GroupService;
+import com.stockfellow.groupservice.service.GroupMemberService;
 import com.stockfellow.groupservice.service.ReadModelService;
 import com.stockfellow.groupservice.service.EventStoreService;
-import com.stockfellow.groupservice.repository.GroupRepository;
+import com.stockfellow.groupservice.dto.CreateGroupRequest;
+import com.stockfellow.groupservice.dto.CreateGroupResult;
 import com.stockfellow.groupservice.model.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -24,36 +30,37 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/groups")
+@Tag(name = "Groups", description = "Group management API for creating, joining, and managing investment groups")
 public class GroupsController {
     private static final Logger logger = LoggerFactory.getLogger(GroupsController.class);
-    private final CreateGroupCommand createGroupCommand;
-    private final JoinGroupCommand joinGroupCommand;
-    private final ProcessJoinRequestCommand processJoinRequestCommand;
+    
+    private final GroupService groupService;
+    private final GroupMemberService memberService;
     private final ReadModelService readModelService;
     private final EventStoreService eventStoreService;
-    private final GroupRepository groupRepository;
     private final SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
-    public GroupsController(CreateGroupCommand createGroupCommand,
-                            JoinGroupCommand joinGroupCommand,
-                            ProcessJoinRequestCommand processJoinRequestCommand,
-                            ReadModelService readModelService,
-                            EventStoreService eventStoreService,
-                            GroupRepository groupRepository) {
-        this.createGroupCommand = createGroupCommand;
-        this.joinGroupCommand = joinGroupCommand;
-        this.processJoinRequestCommand = processJoinRequestCommand;
+    public GroupsController(GroupService groupService,
+                           GroupMemberService memberService,
+                           ReadModelService readModelService,
+                           EventStoreService eventStoreService) {
+        this.groupService = groupService;
+        this.memberService = memberService;
         this.readModelService = readModelService;
         this.eventStoreService = eventStoreService;
-        this.groupRepository = groupRepository;
         isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
     @GetMapping
+    @Operation(
+        summary = "Get service information",
+        description = "Returns basic information about the Group Service and available endpoints"
+    )
+    @ApiResponse(responseCode = "200", description = "Service information retrieved successfully")
     public Map<String, Object> getServiceInfo() {
         Map<String, Object> response = new HashMap<>();
         response.put("service", "Group Service");
-        response.put("version", "1.0.0");
+        response.put("version", "2.0.0");
         response.put("endpoints", Arrays.asList(
                 "POST /api/groups/create - Create a new group",
                 "GET /api/groups/user - Get groups for authenticated user",
@@ -67,17 +74,19 @@ public class GroupsController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchPublicGroups(@RequestParam(required = false) String query) {
+    @Operation(
+        summary = "Search public groups",
+        description = "Search for public groups by name or description. If no query is provided, returns all public groups."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Groups retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> searchPublicGroups(
+            @Parameter(description = "Search term to filter groups by name or description")
+            @RequestParam(required = false) String query) {
         try {
-            List<Group> groups;
-            
-            if (query == null || query.trim().isEmpty()) {
-                // If no query provided, return all public groups
-                groups = groupRepository.findPublicGroups();
-            } else {
-                // Search public groups by name containing the query (case-insensitive)
-                groups = groupRepository.findPublicGroupsByNameContaining(query.trim());
-            }
+            List<Group> groups = groupService.searchPublicGroups(query);
             
             // Create response with basic group information for search results
             List<Map<String, Object>> searchResults = new ArrayList<>();
@@ -120,7 +129,19 @@ public class GroupsController {
     }
 
     @GetMapping("/{groupId}/view")
-    public ResponseEntity<?> viewGroup(@PathVariable String groupId, HttpServletRequest httpRequest) {
+    @Operation(
+        summary = "View group details",
+        description = "Get detailed information about a group including members and events. Private groups require membership."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Group details retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Access denied to private group"),
+        @ApiResponse(responseCode = "404", description = "Group not found")
+    })
+    public ResponseEntity<?> viewGroup(
+            @Parameter(description = "Group ID to view") @PathVariable String groupId,
+            HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
             
@@ -129,7 +150,7 @@ public class GroupsController {
                     .body(Map.of("error", "User ID not found in request"));
             }
 
-            // Get group details
+            logger.info("Fetching info for group: {}", groupId);
             Optional<Group> groupOpt = readModelService.getGroup(groupId);
             if (!groupOpt.isPresent()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Group not found"));
@@ -140,7 +161,7 @@ public class GroupsController {
             // Check if user has permission to view group details
             boolean isMember = group.getMembers().stream()
                     .anyMatch(member -> member.getUserId().equals(userId));
-            boolean isAdmin = group.getAdminId().equals(userId);
+            boolean isAdmin = readModelService.isUserAdminOfGroup(groupId, userId);
             
             // For private groups, only members and admins can view full details
             if ("Private".equals(group.getVisibility()) && !isMember && !isAdmin) {
@@ -157,7 +178,7 @@ public class GroupsController {
             response.put("userPermissions", Map.of(
                     "isMember", isMember,
                     "isAdmin", isAdmin,
-                    "canViewRequests", isAdmin || (isMember && ("founder".equals(getMemberRole(group, userId)) || "admin".equals(getMemberRole(group, userId))))
+                    "canViewRequests", isAdmin
             ));
 
             return ResponseEntity.ok(response);
@@ -168,172 +189,59 @@ public class GroupsController {
         }
     }
 
-    /**
-     * Helper method to extract user ID from the authentication object.
-     * 
-     * @param auth The authentication object.
-     * @return The user ID or null if not found.
-     */
-    private String getUserIdFromAuthentication(Authentication auth) {
-        if (auth == null) {
-            return null;
-        }
-        
-        // First try to get from principal directly
-        Object principal = auth.getPrincipal();
-        if (principal instanceof String && !principal.equals("anonymousUser")) {
-            return (String) principal;
-        }
-        
-        // If principal is not a string or is anonymousUser, try to get from JWT details
-        if (auth.getDetails() instanceof DecodedJWT) {
-            DecodedJWT jwt = (DecodedJWT) auth.getDetails();
-            return jwt.getSubject();
-        }
-        
-        // Fallback to name
-        String name = auth.getName();
-        if (name != null && !name.equals("anonymousUser")) {
-            return name;
-        }
-        
-        return null;
-    }
-
-    /**
-     * Create a new group with the provided details.
-     * 
-     * @param request The request body containing group details.
-     * @return ResponseEntity with the result of the group creation.
-     */
     @PostMapping("/create")
-    public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    @Operation(
+        summary = "Create a new group",
+        description = "Create a new investment group with specified parameters"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Group created successfully",
+                content = @Content(schema = @Schema(example = "{\"message\":\"Group created successfully\",\"groupId\":\"group_123\",\"eventId\":\"event_456\"}"))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> createGroup(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Group creation details",
+                content = @Content(
+                    schema = @Schema(implementation = CreateGroupRequestDto.class),
+                    examples = @ExampleObject(
+                        value = "{\n" +
+                                "  \"name\": \"Investment Club\",\n" +
+                                "  \"minContribution\": 100.0,\n" +
+                                "  \"maxMembers\": 10,\n" +
+                                "  \"description\": \"Monthly investment group\",\n" +
+                                "  \"visibility\": \"Public\",\n" +
+                                "  \"contributionFrequency\": \"Monthly\",\n" +
+                                "  \"payoutFrequency\": \"Monthly\",\n" +
+                                "  \"members\": [\"user123\", \"user456\"]\n" +
+                                "}"
+                    )
+                )
+            )
+            @RequestBody Map<String, Object> requestBody,
+            HttpServletRequest httpRequest) {
         try {
             String adminId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
-            
             if (adminId == null || adminId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
             
-            logger.info("Creating group for adminId: {}, username: {}", adminId, username);
+            logger.info("Creating group for adminId: {}", adminId);
 
-            // Extract fields from request matching frontend payload
-            String name = (String) request.get("name");
-            Object minContributionObj = request.get("minContribution");
-            Object maxMembersObj = request.get("maxMembers");
-            String description = (String) request.get("description");
-            String profileImage = (String) request.get("profileImage");
-            String visibility = (String) request.get("visibility");
-            String contributionFrequency = (String) request.get("contributionFrequency");
-            String contributionDateStr = (String) request.get("contributionDate");
-            String payoutFrequency = (String) request.get("payoutFrequency");
-            String payoutDateStr = (String) request.get("payoutDate");
-            List<String> members = (List<String>) request.getOrDefault("members", new ArrayList<>());
+            // Parse and validate the request body
+            CreateGroupRequest request = parseCreateGroupRequest(requestBody, adminId);
 
-            // Validate required fields
-            if (name == null || name.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Group name is required"));
-            }
-            if (minContributionObj == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Minimum contribution is required"));
-            }
-            if (maxMembersObj == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Maximum members is required"));
-            }
-            if (visibility == null || visibility.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Visibility is required"));
-            }
-            if (contributionFrequency == null || contributionFrequency.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Contribution frequency is required"));
-            }
-            if (payoutFrequency == null || payoutFrequency.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Payout frequency is required"));
-            }
+            // Call the service to create the group
+            CreateGroupResult result = groupService.createGroup(request);
 
-            // Parse numeric values
-            Double minContribution;
-            Integer maxMembers;
-            
-            try {
-                minContribution = minContributionObj instanceof Number ?
-                        ((Number) minContributionObj).doubleValue() :
-                        Double.parseDouble(minContributionObj.toString());
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid minimum contribution format"));
-            }
-
-            try {
-                maxMembers = maxMembersObj instanceof Number ?
-                        ((Number) maxMembersObj).intValue() :
-                        Integer.parseInt(maxMembersObj.toString());
-            } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid maximum members format"));
-            }
-
-            // Validate values
-            if (!Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(contributionFrequency)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid contribution frequency. Must be: Monthly, Bi-weekly, or Weekly"));
-            }
-            if (!Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(payoutFrequency)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid payout frequency. Must be: Monthly, Bi-weekly, or Weekly"));
-            }
-            if (!Arrays.asList("Private", "Public").contains(visibility)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid visibility. Must be: Private or Public"));
-            }
-            if (minContribution <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Minimum contribution must be greater than 0"));
-            }
-            if (maxMembers <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Maximum members must be greater than 0"));
-            }
-            if (members.size() > maxMembers) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Number of initial members cannot exceed maximum members"));
-            }
-
-            // Parse dates from ISO format
-            Date contributionDate = null;
-            Date payoutDate = null;
-            
-            if (contributionDateStr != null && !contributionDateStr.trim().isEmpty()) {
-                try {
-                    contributionDate = isoFormatter.parse(contributionDateStr);
-                } catch (ParseException e) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid contribution date format. Expected ISO format"));
-                }
-            }
-            
-            if (payoutDateStr != null && !payoutDateStr.trim().isEmpty()) {
-                try {
-                    payoutDate = isoFormatter.parse(payoutDateStr);
-                } catch (ParseException e) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid payout date format. Expected ISO format"));
-                }
-            }
-
-            // Generate unique group ID
-            String groupId = "group_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
-
-            // Initialize members with admin as the first member if empty
-            if (members.isEmpty()) {
-                members.add(adminId);
-            } else if (!members.contains(adminId)) {
-                // Ensure admin is always included
-                members.add(0, adminId); // Add admin at the beginning
-            }
-
-            // Execute command
-            String eventId = createGroupCommand.execute(groupId, adminId, name, minContribution, maxMembers,
-                    description, profileImage, visibility, contributionFrequency, contributionDate,
-                    payoutFrequency, payoutDate, members);
-            
-            logger.info("Group created with ID: {} by admin: {}", groupId, adminId);
-
+            // Build successful response
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Group created successfully");
-            response.put("groupId", groupId);
-            response.put("eventId", eventId);
+            response.put("message", result.getMessage());
+            response.put("groupId", result.getGroupId());
+            response.put("eventId", result.getEventId());
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
@@ -342,22 +250,31 @@ public class GroupsController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             logger.error("Unexpected error during group creation: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal server error"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
     @GetMapping("/user")
+    @Operation(
+        summary = "Get user's groups",
+        description = "Retrieve all groups that the authenticated user is a member of"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "User groups retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     public ResponseEntity<?> getUserGroups(HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
             
             if (userId == null || userId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
 
-            List<Group> groups = readModelService.getUserGroups(userId);
+            List<Group> groups = groupService.getUserGroups(userId);
             return ResponseEntity.ok(groups);
         } catch (Exception e) {
             logger.error("Error fetching user groups: {}", e.getMessage(), e);
@@ -365,54 +282,31 @@ public class GroupsController {
         }
     }
 
-    /**
-     * Request to join a public group (GET request)
-     * This adds the user to the group's request array
-     */
     @GetMapping("/{groupId}/join")
-    public ResponseEntity<?> requestToJoinGroup(@PathVariable String groupId, HttpServletRequest httpRequest) {
+    @Operation(
+        summary = "Request to join a group",
+        description = "Send a join request to a public group. Private groups require an invitation."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Join request sent successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request (already member, group full, etc.)"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Cannot join private group"),
+        @ApiResponse(responseCode = "404", description = "Group not found")
+    })
+    public ResponseEntity<?> requestToJoinGroup(
+            @Parameter(description = "ID of the group to join") @PathVariable String groupId,
+            HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
             
             if (userId == null || userId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
 
-            // Check if group exists
-            Group group = readModelService.getGroup(groupId)
-                    .orElseThrow(() -> new IllegalStateException("Group not found"));
-            
-            // Only allow requests for public groups
-            if (!"Public".equals(group.getVisibility())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Cannot request to join private groups. You need an invite link."));
-            }
-            
-            // Check if user is already a member
-            boolean alreadyMember = group.getMembers().stream()
-                    .anyMatch(member -> member.getUserId().equals(userId));
-            
-            if (alreadyMember) {
-                return ResponseEntity.badRequest().body(Map.of("error", "You are already a member of this group"));
-            }
-            
-            // Check if user already has a pending request
-            boolean hasPendingRequest = group.getRequests().stream()
-                    .anyMatch(request -> request.getUserId().equals(userId) && "waiting".equals(request.getState()));
-            
-            if (hasPendingRequest) {
-                return ResponseEntity.badRequest().body(Map.of("error", "You already have a pending request for this group"));
-            }
-            
-            // Check if group is full
-            if (group.getMembers().size() >= group.getMaxMembers()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Group is full"));
-            }
-
-            // Create join request for public group
-            String eventId = joinGroupCommand.createJoinRequest(groupId, userId);
+            // Create join request using the member service
+            String eventId = memberService.requestToJoinGroup(groupId, userId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Join request sent successfully. Waiting for admin approval.");
@@ -420,10 +314,10 @@ public class GroupsController {
             response.put("eventId", eventId);
             response.put("status", "pending");
             
-            logger.info("User {} requested to join public group {}", userId, groupId);
+            logger.info("User {} requested to join group {}", userId, groupId);
             return ResponseEntity.ok(response);
             
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             logger.error("Error requesting to join group: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -432,47 +326,46 @@ public class GroupsController {
         }
     }
 
-    /**
-     * Get all join requests for a group (admin only)
-     */
     @GetMapping("/{groupId}/requests")
-    public ResponseEntity<?> getGroupJoinRequests(@PathVariable String groupId, HttpServletRequest httpRequest) {
+    @Operation(
+        summary = "Get join requests for a group",
+        description = "Retrieve all pending join requests for a group. Only group admins can access this."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Join requests retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Access denied - admin only"),
+        @ApiResponse(responseCode = "404", description = "Group not found")
+    })
+    public ResponseEntity<?> getGroupJoinRequests(
+            @Parameter(description = "Group ID to get requests for") @PathVariable String groupId,
+            HttpServletRequest httpRequest) {
         try {
             String userId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
             
             if (userId == null || userId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "User ID not found in request"));
             }
 
-            // Check if group exists
+            // Check if user is admin
+            if (!readModelService.isUserAdminOfGroup(groupId, userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. Only group admins can view join requests."));
+            }
+
+            // Get pending requests
+            List<Group.JoinRequest> pendingRequests = memberService.getGroupJoinRequests(groupId);
+
+            // Get group details for response
             Optional<Group> groupOpt = readModelService.getGroup(groupId);
             if (!groupOpt.isPresent()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Group not found"));
             }
 
-            Group group = groupOpt.get();
-            
-            // Check if user is admin or has permission to view requests
-            boolean isAdmin = group.getAdminId().equals(userId);
-            boolean canViewRequests = isAdmin || group.getMembers().stream()
-                    .anyMatch(member -> member.getUserId().equals(userId) && 
-                             ("admin".equals(member.getRole()) || "founder".equals(member.getRole())));
-            
-            if (!canViewRequests) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied. Only group admins can view join requests."));
-            }
-
-            // Filter only pending requests
-            List<Group.JoinRequest> pendingRequests = group.getRequests().stream()
-                    .filter(request -> "waiting".equals(request.getState()))
-                    .collect(java.util.stream.Collectors.toList());
-
             Map<String, Object> response = new HashMap<>();
             response.put("groupId", groupId);
-            response.put("groupName", group.getName());
+            response.put("groupName", groupOpt.get().getName());
             response.put("requests", pendingRequests);
             response.put("totalPendingRequests", pendingRequests.size());
             
@@ -485,14 +378,35 @@ public class GroupsController {
         }
     }
 
-    /**
-     * Process join request (accept/reject) - POST request
-     */
     @PostMapping("/{groupId}/request")
-    public ResponseEntity<?> processJoinRequest(@PathVariable String groupId, @RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    @Operation(
+        summary = "Process a join request",
+        description = "Accept or reject a pending join request. Only group admins can perform this action."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Join request processed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Access denied - admin only"),
+        @ApiResponse(responseCode = "404", description = "Group or request not found")
+    })
+    public ResponseEntity<?> processJoinRequest(
+            @Parameter(description = "Group ID") @PathVariable String groupId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Join request processing details",
+                content = @Content(
+                    examples = @ExampleObject(
+                        value = "{\n" +
+                                "  \"requestId\": \"req_123456\",\n" +
+                                "  \"action\": \"accept\"\n" +
+                                "}"
+                    )
+                )
+            )
+            @RequestBody Map<String, Object> request,
+            HttpServletRequest httpRequest) {
         try {
             String adminId = httpRequest.getHeader("X-User-Id");
-            String username = httpRequest.getHeader("X-User-Name");
             
             if (adminId == null || adminId.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -509,21 +423,8 @@ public class GroupsController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Action must be 'accept' or 'reject'"));
             }
 
-            // Check if group exists and user is admin
-            Group group = readModelService.getGroup(groupId)
-                    .orElseThrow(() -> new IllegalStateException("Group not found"));
-            
-            boolean isAdmin = group.getAdminId().equals(adminId) || 
-                            group.getMembers().stream()
-                                    .anyMatch(member -> member.getUserId().equals(adminId) && 
-                                             ("admin".equals(member.getRole()) || "founder".equals(member.getRole())));
-            
-            if (!isAdmin) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only group admins can process join requests"));
-            }
-
-            String eventId = processJoinRequestCommand.execute(groupId, requestId, action, adminId);
+            // Process the join request using the member service
+            String eventId = memberService.processJoinRequest(groupId, requestId, action, adminId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Join request " + action + "ed successfully");
@@ -541,7 +442,7 @@ public class GroupsController {
             logger.info("Admin {} {} join request {} for group {}", adminId, action, requestId, groupId);
             return ResponseEntity.ok(response);
             
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             logger.error("Error processing join request: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -550,11 +451,134 @@ public class GroupsController {
         }
     }
 
-    private String getMemberRole(Group group, String userId) {
-        return group.getMembers().stream()
-                .filter(member -> member.getUserId().equals(userId))
-                .map(Group.Member::getRole)
-                .findFirst()
-                .orElse(null);
+    // Helper method to parse create group request
+    private CreateGroupRequest parseCreateGroupRequest(Map<String, Object> requestBody, String adminId) {
+        // Extract and validate required fields
+        String name = extractStringField(requestBody, "name", true);
+        Double minContribution = extractDoubleField(requestBody, "minContribution", true);
+        Integer maxMembers = extractIntegerField(requestBody, "maxMembers", true);
+        String visibility = extractStringField(requestBody, "visibility", true);
+        String contributionFrequency = extractStringField(requestBody, "contributionFrequency", true);
+        String payoutFrequency = extractStringField(requestBody, "payoutFrequency", true);
+
+        // Extract optional fields
+        String description = extractStringField(requestBody, "description", false);
+        String profileImage = extractStringField(requestBody, "profileImage", false);
+        Date contributionDate = extractDateField(requestBody, "contributionDate");
+        Date payoutDate = extractDateField(requestBody, "payoutDate");
+        
+        @SuppressWarnings("unchecked")
+        List<String> members = (List<String>) requestBody.getOrDefault("members", new ArrayList<>());
+
+        return new CreateGroupRequest(
+            adminId, name, minContribution, maxMembers, description, profileImage,
+            visibility, contributionFrequency, contributionDate, payoutFrequency, 
+            payoutDate, members
+        );
+    }
+
+    private String extractStringField(Map<String, Object> request, String fieldName, boolean required) {
+        String value = (String) request.get(fieldName);
+        
+        if (required && (value == null || value.trim().isEmpty())) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        
+        return value != null ? value.trim() : null;
+    }
+
+    private Double extractDoubleField(Map<String, Object> request, String fieldName, boolean required) {
+        Object value = request.get(fieldName);
+        
+        if (required && value == null) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            if (value instanceof Number) {
+                return ((Number) value).doubleValue();
+            } else {
+                return Double.parseDouble(value.toString());
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid " + fieldName + " format");
+        }
+    }
+
+    private Integer extractIntegerField(Map<String, Object> request, String fieldName, boolean required) {
+        Object value = request.get(fieldName);
+        
+        if (required && value == null) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            if (value instanceof Number) {
+                return ((Number) value).intValue();
+            } else {
+                return Integer.parseInt(value.toString());
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid " + fieldName + " format");
+        }
+    }
+
+    private Date extractDateField(Map<String, Object> request, String fieldName) {
+        String dateStr = (String) request.get(fieldName);
+        
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            return isoFormatter.parse(dateStr);
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Invalid " + fieldName + " format. Expected ISO format");
+        }
+    }
+
+    // DTO class for Swagger documentation
+    @Schema(description = "Request payload for creating a new group")
+    public static class CreateGroupRequestDto {
+        @Schema(description = "Group name", example = "Investment Club", required = true)
+        public String name;
+        
+        @Schema(description = "Minimum contribution amount", example = "100.0", required = true)
+        public Double minContribution;
+        
+        @Schema(description = "Maximum number of members", example = "10", required = true)
+        public Integer maxMembers;
+        
+        @Schema(description = "Group description", example = "Monthly investment group")
+        public String description;
+        
+        @Schema(description = "Profile image URL")
+        public String profileImage;
+        
+        @Schema(description = "Group visibility", example = "Public", allowableValues = {"Public", "Private"}, required = true)
+        public String visibility;
+        
+        @Schema(description = "Contribution frequency", example = "Monthly", allowableValues = {"Weekly", "Bi-weekly", "Monthly"}, required = true)
+        public String contributionFrequency;
+        
+        @Schema(description = "Contribution date in ISO format", example = "2025-07-15T10:00:00.000Z")
+        public String contributionDate;
+        
+        @Schema(description = "Payout frequency", example = "Monthly", allowableValues = {"Weekly", "Bi-weekly", "Monthly"}, required = true)
+        public String payoutFrequency;
+        
+        @Schema(description = "Payout date in ISO format", example = "2025-07-30T10:00:00.000Z")
+        public String payoutDate;
+        
+        @Schema(description = "List of initial member user IDs", example = "[\"user123\", \"user456\"]")
+        public List<String> members;
     }
 }
