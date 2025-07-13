@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(36) PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
@@ -115,9 +114,44 @@ CREATE TABLE IF NOT EXISTS transaction_events (
 CREATE INDEX IF NOT EXISTS events_txn_created_idx ON transaction_events (transaction_id, created_at);
 CREATE INDEX IF NOT EXISTS events_type_created_idx ON transaction_events (event_type, created_at);
 
+-- ========== payment_method_changes ==========
+CREATE TABLE IF NOT EXISTS payment_method_changes (
+    change_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR(36) NOT NULL, // Changed from UUID to VARCHAR(36)
+    old_method_id UUID,
+    new_method_id UUID NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    flagged BOOLEAN NOT NULL DEFAULT FALSE,
+    ip_address INET,
+    reason VARCHAR(500),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS payment_changes_user_id_idx ON payment_method_changes(user_id);
+CREATE INDEX IF NOT EXISTS payment_changes_timestamp_idx ON payment_method_changes(timestamp);
+CREATE INDEX IF NOT EXISTS payment_changes_flagged_idx ON payment_method_changes(flagged);
+
+-- ========== suspicious_users ==========
+CREATE TABLE IF NOT EXISTS suspicious_users (
+    suspicious_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR(36) NOT NULL,  -- Changed from UUID to VARCHAR(36)
+    reason VARCHAR(500) NOT NULL,
+    flagged_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed BOOLEAN NOT NULL DEFAULT FALSE,
+    reviewed_at TIMESTAMP,
+    reviewed_by VARCHAR(255),
+    severity VARCHAR(20) DEFAULT 'MEDIUM',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS suspicious_users_user_id_idx ON suspicious_users(user_id);
+CREATE INDEX IF NOT EXISTS suspicious_users_reviewed_idx ON suspicious_users(reviewed);
+CREATE INDEX IF NOT EXISTS suspicious_users_flagged_at_idx ON suspicious_users(flagged_at);
+CREATE INDEX IF NOT EXISTS suspicious_users_severity_idx ON suspicious_users(severity);
+
 -- ========== Foreign Keys ==========
 ALTER TABLE transactions
-  ADD CONSTRAINT IF NOT EXISTS fk_transactions_cycle 
+ADD CONSTRAINT IF NOT EXISTS fk_transactions_cycle 
   FOREIGN KEY (cycle_id) REFERENCES group_cycles(cycle_id);
 
 ALTER TABLE transactions
@@ -131,3 +165,12 @@ ALTER TABLE payment_attempts
 ALTER TABLE transaction_events
   ADD CONSTRAINT IF NOT EXISTS fk_events_transaction 
   FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id);
+
+--  foreign key constraints for fraud detection tables  ///////// just added
+ALTER TABLE payment_method_changes
+  ADD CONSTRAINT IF NOT EXISTS fk_payment_changes_user 
+  FOREIGN KEY (user_id) REFERENCES users(user_id);
+
+ALTER TABLE suspicious_users
+  ADD CONSTRAINT IF NOT EXISTS fk_suspicious_users_user 
+  FOREIGN KEY (user_id) REFERENCES users(user_id);
