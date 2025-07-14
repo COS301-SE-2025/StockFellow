@@ -5,6 +5,7 @@ import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.model.Group.JoinRequest;
 import com.stockfellow.groupservice.model.Group.Member;
 import com.stockfellow.groupservice.repository.GroupRepository;
+import com.stockfellow.groupservice.dto.NextPayeeResult;
 
 import java.util.Arrays;
 import java.util.Calendar;
@@ -211,6 +212,94 @@ public class GroupMemberService {
         eventStoreService.saveEvent(groupId, event);
         
         logger.info("Join request rejected for user {} in group {} by admin {}", userId, groupId, adminId);
+    }
+
+    /**
+     * Get the next member to receive payout for a group
+     */
+    public NextPayeeResult getNextPayee(String groupId) {
+        logger.info("Getting next payee for group {}", groupId);
+
+        // Get the group
+        Group group = groupRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        // Initialize payout order if not set
+        logger.info("Getting next payee for group {}", groupId);
+        if (group.getPayoutOrder() == null || group.getPayoutOrder().isEmpty()) {
+            group.initializePayoutOrder();
+            groupRepository.save(group);
+        }
+
+        // Get next payee
+        logger.info("Getting next payee for group {}", groupId);
+        String nextRecipientId = group.getNextPayoutRecipient();
+        if (nextRecipientId == null) {
+            throw new IllegalStateException("No members available for payout in this group");
+        }
+
+        // Get recipient details
+        logger.info("Getting next payee for group {}", groupId);
+        Group.Member recipient = group.getMembers().stream()
+                .filter(member -> member.getUserId().equals(nextRecipientId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Next payee not found in members list"));
+
+        return new NextPayeeResult(
+                groupId,
+                group.getName(),
+                nextRecipientId,
+                recipient.getUsername(),
+                recipient.getRole(),
+                group.getCurrentPayoutPosition() != null ? group.getCurrentPayoutPosition() : 0,
+                group.getPayoutOrder().size(),
+                group.getBalance(),
+                group.getLastPayoutRecipient(),
+                group.getLastPayoutDate(),
+                group.getPayoutFrequency(),
+                group.getPayoutDate()
+        );
+    } 
+
+    /**
+     * Record that a payout has been made and advance to next member
+     */
+    public NextPayeeResult recordPayout(String groupId, String recipientId, Double amount) {
+        logger.info("Recording payout of {} to {} for group {}", amount, recipientId, groupId);
+
+        // Get the group
+        Group group = groupRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        // Verify the recipient is correct
+        String expectedRecipient = group.getNextPayoutRecipient();
+        if (!recipientId.equals(expectedRecipient)) {
+            throw new IllegalArgumentException("Payout recipient mismatch. Expected: " + expectedRecipient + ", Got: " + recipientId);
+        }
+
+        // Update payout tracking using MongoDB atomic update
+        Query query = new Query(Criteria.where("groupId").is(groupId));
+        Update update = new Update()
+                .set("lastPayoutRecipient", recipientId)
+                .set("lastPayoutDate", new Date())
+                .inc("currentPayoutPosition", 1);
+
+        mongoTemplate.updateFirst(query, update, Group.class);
+
+        // Create payout event
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("groupId", groupId);
+        eventData.put("recipientId", recipientId);
+        eventData.put("amount", amount);
+        eventData.put("payoutDate", new Date());
+
+        Event event = new Event("PayoutProcessed", eventData);
+        eventStoreService.saveEvent(groupId, event);
+
+        logger.info("Recorded payout of {} to {} for group {}", amount, recipientId, groupId);
+
+        // Return info for next payout
+        return getNextPayee(groupId);
     }
 
     /*

@@ -7,7 +7,9 @@ import com.stockfellow.groupservice.service.ReadModelService;
 import com.stockfellow.groupservice.service.EventStoreService;
 import com.stockfellow.groupservice.dto.CreateGroupRequest;
 import com.stockfellow.groupservice.dto.CreateGroupResult;
+import com.stockfellow.groupservice.dto.NextPayeeResult;
 import com.stockfellow.groupservice.model.Event;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -433,7 +435,6 @@ public class GroupsController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Action must be 'accept' or 'reject'"));
             }
 
-            // Process the join request using the member service
             String eventId = memberService.processJoinRequest(groupId, requestId, action, adminId);
 
             Map<String, Object> response = new HashMap<>();
@@ -461,7 +462,134 @@ public class GroupsController {
         }
     }
 
-    // Helper method to parse create group request
+
+    @GetMapping("/{groupId}/next-payee")
+    @Operation(
+        summary = "Get next member to be paid out for a group",
+        description = "Fetches the next member to be paid out in the next cycle for a group based on the payoutOrder array"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Next payee retrieved successfully",
+                content = @Content(schema = @Schema(example = "{\"groupId\":\"group_123\",\"recipientId\":\"user456\",\"recipientUsername\":\"john_doe\",\"currentPosition\":2,\"totalMembers\":5,\"groupBalance\":1500.00}"))),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Access denied - admin only"),
+        @ApiResponse(responseCode = "404", description = "Group not found"),
+        @ApiResponse(responseCode = "400", description = "No members available for payout")
+    })
+    public ResponseEntity<?> getNextPayee(
+            @Parameter(description = "Group ID to get payee for") @PathVariable String groupId,
+            HttpServletRequest httpRequest) {
+        try {
+
+            // Get next payee from service
+            NextPayeeResult result = memberService.getNextPayee(groupId);
+            
+            // Convert to response format
+            Map<String, Object> response = new HashMap<>();
+            response.put("groupId", result.getGroupId());
+            response.put("groupName", result.getGroupName());
+            response.put("recipientId", result.getRecipientId());
+            response.put("recipientUsername", result.getRecipientUsername());
+            response.put("recipientRole", result.getRecipientRole());
+            response.put("currentPosition", result.getCurrentPosition());
+            response.put("totalMembers", result.getTotalMembers());
+            response.put("groupBalance", result.getGroupBalance());
+            response.put("lastPayoutRecipient", result.getLastPayoutRecipient());
+            response.put("lastPayoutDate", result.getLastPayoutDate());
+            response.put("payoutFrequency", result.getPayoutFrequency());
+            response.put("nextPayoutDate", result.getNextPayoutDate());
+
+            logger.info("Next payee for group {}: {} ({})", groupId, result.getRecipientUsername(), result.getRecipientId());
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request for next payee: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("State error getting next payee: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error getting next payee for group {}: {}", groupId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @PostMapping("/{groupId}/record-payout")
+    @Operation(
+        summary = "Record a payout and advance to next member",
+        description = "Records that a payout has been made and advances the payout position to the next member"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Payout recorded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid payout data"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @ApiResponse(responseCode = "403", description = "Access denied"),
+        @ApiResponse(responseCode = "404", description = "Group not found")
+    })
+    public ResponseEntity<?> recordPayout(
+            @Parameter(description = "Group ID") @PathVariable String groupId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Payout recording details",
+                content = @Content(
+                    examples = @ExampleObject(
+                        value = "{\n" +
+                                "  \"recipientId\": \"user123\",\n" +
+                                "  \"amount\": 1500.00\n" +
+                                "}"
+                    )
+                )
+            )
+            @RequestBody Map<String, Object> request,
+            HttpServletRequest httpRequest) {
+        try {
+
+            String recipientId = (String) request.get("recipientId");
+            Object amountObj = request.get("amount");
+
+            if (recipientId == null || recipientId.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Recipient ID is required"));
+            }
+            if (amountObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Amount is required"));
+            }
+
+            Double amount;
+            try {
+                amount = amountObj instanceof Number ? 
+                    ((Number) amountObj).doubleValue() : 
+                    Double.parseDouble(amountObj.toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount format"));
+            }
+
+            // Record payout via service
+            NextPayeeResult nextPayee = memberService.recordPayout(groupId, recipientId, amount);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Payout recorded successfully");
+            response.put("processedRecipient", recipientId);
+            response.put("processedAmount", amount);
+            response.put("nextPayee", Map.of(
+                "recipientId", nextPayee.getRecipientId(),
+                "recipientUsername", nextPayee.getRecipientUsername(),
+                "position", nextPayee.getCurrentPosition()
+            ));
+            
+            logger.info("Payout of {} recorded for {} in group {}", amount, recipientId, groupId);
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid payout recording request: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error recording payout for group {}: {}", groupId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+        }
+    }
+
+
     private CreateGroupRequest parseCreateGroupRequest(Map<String, Object> requestBody, String adminId, String adminName) {
         // Extract and validate required fields
         String name = extractStringField(requestBody, "name", true);
@@ -555,7 +683,6 @@ public class GroupsController {
         }
     }
 
-    // DTO class for Swagger documentation
     @Schema(description = "Request payload for creating a new group")
     public static class CreateGroupRequestDto {
         @Schema(description = "Group name", example = "Investment Club", required = true)
