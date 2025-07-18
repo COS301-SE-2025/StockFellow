@@ -21,8 +21,12 @@ const profile = () => {
                 source={icons.profile}
                 resizeMode="cover"
               />
-            </View>{}
+            </View>
           </TouchableOpacity>
+
+          <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black mb-4">Son Goku</Text>
+
+          
           </View>
       </ScrollView>
     </SafeAreaView>
