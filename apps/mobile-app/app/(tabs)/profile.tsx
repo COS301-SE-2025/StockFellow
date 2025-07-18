@@ -49,15 +49,34 @@ const profile = () => {
           
           </View>
           
-          {/* Current Tier */}
-          <View className="bg-[#1DA1FA] rounded-lg p-2 mb-4">
-            <Text className="text-white font-['PlusJakartaSans-Regular'] text-2xl mb-1 ml-2">Tier 1</Text>
+          {/* Tier tasks */}
+          <View className="rounded-lg overflow-hidden">
+            {/* Current Tier */}
+            <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
+              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">Tier 1</Text>
+            </View>
+            
+            {/* Tasks */}
+            <View className="bg-gray-100 px-4 py-4 rounded-b-lg">
+              <View className="flex-row items-center mb-3">
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Join a stokvel group</Text>
+              </View>
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Verify your account information</Text>
+              </View>
+              
+              <View className="flex-row items-center">
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Complete the tutorial guide</Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        
+        </View>
       </ScrollView>
-      
     </SafeAreaView>
   )
 }
