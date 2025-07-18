@@ -24,7 +24,7 @@ const profile = () => {
             </View>
           </TouchableOpacity>
 
-          <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black mb-4">Son Goku</Text>
+          <Text className="text-3xl font-['PlusJakartaSans-Bold'] text-black mb-4">Son Goku</Text>
 
           {/* Buttons */}
           <View className="flex-row gap-3">
@@ -35,8 +35,9 @@ const profile = () => {
               <Text className="text-white font-['PlusJakartaSans-Medium'] text-m">Settings</Text>
             </TouchableOpacity>
           </View>
-
         </View>
+
+        {/* Badges and Rank*/}
         <View className="mb-6">
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Badges</Text>
           <View className="flex-row gap-4">
@@ -47,7 +48,14 @@ const profile = () => {
           <View className="flex-row gap-4">
           
           </View>
+          
+          {/* Current Tier */}
+          <View className="bg-[#1DA1FA] rounded-lg p-2 mb-4">
+            <Text className="text-white font-['PlusJakartaSans-Regular'] text-2xl mb-1 ml-2">Tier 1</Text>
+          </View>
         </View>
+
+        
       </ScrollView>
       
     </SafeAreaView>
