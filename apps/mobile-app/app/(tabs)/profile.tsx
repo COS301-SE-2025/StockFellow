@@ -27,7 +27,7 @@ const profile = () => {
           <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black mb-4">Son Goku</Text>
 
           {/* Buttons */}
-          <View className="flex-row gap-3 mb-8">
+          <View className="flex-row gap-3">
             <TouchableOpacity className="bg-[#1DA1FA] px-6 py-3 rounded-full">
               <Text className="text-white font-['PlusJakartaSans-Medium'] text-m">Edit Profile</Text>
             </TouchableOpacity>
@@ -35,8 +35,21 @@ const profile = () => {
               <Text className="text-white font-['PlusJakartaSans-Medium'] text-m">Settings</Text>
             </TouchableOpacity>
           </View>
+
+        </View>
+        <View className="mb-6">
+          <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Badges</Text>
+          <View className="flex-row gap-4">
+          
+          </View>
+
+          <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Rank</Text>
+          <View className="flex-row gap-4">
+          
+          </View>
         </View>
       </ScrollView>
+      
     </SafeAreaView>
   )
 }
