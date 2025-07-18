@@ -1,14 +1,32 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Text, View, Image, TouchableOpacity, ScrollView } from 'react-native'
 import React from 'react'
-import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import TopBar from '../../src/components/TopBar';
+import { icons } from '../../src/constants';
+
 const profile = () => {
   return (
-    <View className='flex-1 justify-center items-center'>
-      <Text>profile</Text>
-    </View>
+    <SafeAreaView className="flex-1 bg-white">
+      <TopBar title="Your Profile" />
+      
+      <ScrollView className="flex-1 px-6">
+        {/* Profile Section */}
+        <View className="items-center mt-8 mb-8">
+          {/* Profile picture */}
+          <TouchableOpacity className="relative mb-4">
+            <View className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-4 overflow-hidden">
+              {/* actual profile image will go here */}
+              <Image 
+                className='w-full h-full'
+                source={icons.profile}
+                resizeMode="cover"
+              />
+            </View>{}
+          </TouchableOpacity>
+          </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
 export default profile
-
-const styles = StyleSheet.create({})
