@@ -116,6 +116,17 @@ const Login = () => {
                   Forgot Password?
                 </Link>
 
+
+                <Link
+                  href={{
+                    pathname: "/mfaVerification",
+                    params: { email: form.username } // Pass the username/email as param
+                  }}
+                  className="text-[#1DA1FA] font-medium self-start mt-4 mb-4 text-sm"
+                >
+                  MFA Verification
+                </Link>
+
                 <CustomButton
                   title="Login"
                   containerStyles="bg-[#1DA1FA] rounded-xl px-8 py-4 my-4"
