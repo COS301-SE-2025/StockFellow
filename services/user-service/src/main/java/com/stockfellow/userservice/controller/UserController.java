@@ -29,7 +29,7 @@ public class UserController {
                 "version", "1.0.0",
                 "endpoints", List.of(
                     "GET /api/users/profile - Get user profile (requires auth)",
-                    "POST /api/users/register - Register new user (requires Keycloak token)",
+                    "POST /api/users/verifyID - Verify user ID ",
                     "GET /api/users/:id - Get user by ID (requires auth)"
                 )
             ));
@@ -95,31 +95,10 @@ public class UserController {
         }
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterUserRequest request, HttpServletRequest httpRequest) {
-        try {
-            if (request.getName() == null || request.getEmail() == null || 
-                request.getSaId() == null || request.getMobileNumber() == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
-            }
-
-            // Extract user ID from gateway headers
-            String userId = httpRequest.getHeader("X-User-Id");
-            
-            if (userId == null || userId.isEmpty()) {
-                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
-            }
-            
-            Map<String, Object> event = registerUserService.execute(userId, request);
-
-            return ResponseEntity.status(201).body(Map.of(
-                "message", "User registered successfully",
-                "userId", userId,
-                "eventId", event.get("_id")
-            ));
-        } catch (Exception e) {
-            System.err.println("Registration error: " + e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    @PostMapping("/verifyID")
+    public ResponseEntity<?> verfiyID(@RequestBody RegisterUserRequest request, HttpServletRequest httpRequest) {
+      // get pdf file from request
+      // verify ID with smile ID or idfy 
+      // after verification add user to document to alfersco 
     }
 }
