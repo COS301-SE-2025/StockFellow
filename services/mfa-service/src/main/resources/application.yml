@@ -1,0 +1,39 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: mfa-service
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        transport:
+          protocol: smtp
+        smtp:
+          auth: true
+          starttls:
+            enable: ${MAIL_STARTTLS:true}
+          ssl:
+            enable: ${MAIL_SSL:false}
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+        debug: false
+
+app:
+  mail:
+    from: ${MAIL_FROM:noreply@stockfellow.com}
+  mfa:
+    otp:
+      length: 6
+      expiry-minutes: 5
+
+logging:
+  level:
+    com.stockfellow.mfa: DEBUG
+    org.springframework.mail: INFO
