@@ -65,7 +65,7 @@ public class KeycloakService {
     private String adminClientId;
 
     // Add MFA service configuration
-    @Value("${mfa.service.url:http://localhost:8087}")
+    @Value("http://mfa-service:8087")
     private String mfaServiceUrl;
 
     @Value("${app.mfa.enabled:true}")

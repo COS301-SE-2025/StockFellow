@@ -6,10 +6,10 @@ spring:
     name: mfa-service
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    host: ${MFA_MAIL_HOST:smtp.gmail.com}
+    port: ${MFA_MAIL_PORT:587}
+    username: ${MFA_MAIL_USERNAME}
+    password: ${MFA_MAIL_PASSWORD}
     properties:
       mail:
         transport:
@@ -17,9 +17,9 @@ spring:
         smtp:
           auth: true
           starttls:
-            enable: ${MAIL_STARTTLS:true}
+            enable: ${MFA_MAIL_STARTTLS:true}
           ssl:
-            enable: ${MAIL_SSL:false}
+            enable: ${MFA_MAIL_SSL:false}
           connectiontimeout: 5000
           timeout: 3000
           writetimeout: 5000
@@ -27,7 +27,7 @@ spring:
 
 app:
   mail:
-    from: ${MAIL_FROM:noreply@stockfellow.com}
+    from: ${MFA_MAIL_FROM:noreply@stockfellow.com}
   mfa:
     otp:
       length: 6
