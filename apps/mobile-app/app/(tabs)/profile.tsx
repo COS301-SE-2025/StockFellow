@@ -45,8 +45,37 @@ const profile = () => {
           </View>
 
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Rank</Text>
-          <View className="flex-row gap-4">
           
+          {/* Rank Progress Section */}
+          <View className="flex-row items-center mb-6">
+            {/* Level 1 Icon with Number */}
+            <View className="relative">
+              <Image 
+                source={icons.levelTwo}
+                className="w-12 h-12"
+                resizeMode="contain"
+              />
+              <View className="absolute inset-0 items-center justify-center">
+                <Text className="text-white font-['PlusJakartaSans-Bold'] text-lg">2</Text>
+              </View>
+            </View>
+            
+            {/* Progress Bar */}
+            <View className="flex-1 h-3 rounded-full mx-6" style={{ backgroundColor: '#F0F7FA' }}>
+              <View className="h-3 bg-[#1DA1FA] rounded-full" style={{ width: '60%' }} />
+            </View>
+            
+            {/* Level 2 Icon with Number */}
+            <View className="relative">
+              <Image 
+                source={icons.levelThree}
+                className="w-12 h-12"
+                resizeMode="contain"
+              />
+              <View className="absolute inset-0 items-center justify-center">
+                <Text className="text-white font-['PlusJakartaSans-Bold'] text-lg">3</Text>
+              </View>
+            </View>
           </View>
           
           {/* Tier tasks */}
@@ -57,19 +86,19 @@ const profile = () => {
             </View>
             
             {/* Tasks */}
-            <View className="bg-gray-100 px-4 py-4 rounded-b-lg">
+            <View className="px-4 py-4 rounded-b-lg" style={{ backgroundColor: '#F0F7FA' }}>
               <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
                 <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Join a stokvel group</Text>
               </View>
               
               <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
                 <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Verify your account information</Text>
               </View>
               
               <View className="flex-row items-center">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-3" />
+                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
                 <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Complete the tutorial guide</Text>
               </View>
             </View>
