@@ -11,10 +11,10 @@ const profile = () => {
       
       <ScrollView className="flex-1 px-6">
         {/* Profile Section */}
-        <View className="items-center mt-8 mb-8">
+        <View className="items-center mt-4 mb-6">
           {/* Profile picture */}
-          <TouchableOpacity className="relative mb-4">
-            <View className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-4 overflow-hidden">
+          <TouchableOpacity className="relative mb-3">
+            <View className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-3 overflow-hidden">
               {/* actual profile image will go here */}
               <Image 
                 className='w-full h-full'
@@ -24,7 +24,7 @@ const profile = () => {
             </View>
           </TouchableOpacity>
 
-          <Text className="text-3xl font-['PlusJakartaSans-Bold'] text-black mb-4">Son Goku</Text>
+          <Text className="text-3xl font-['PlusJakartaSans-Bold'] text-black mb-3">Son Goku</Text>
 
           {/* Buttons */}
           <View className="flex-row gap-3">
@@ -40,8 +40,56 @@ const profile = () => {
         {/* Badges and Rank*/}
         <View className="mb-6">
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Badges</Text>
-          <View className="flex-row gap-4">
           
+          {/* Badges Container with Horizontal Scroll */}
+          <View className="mb-6">
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ 
+                flexGrow: 1, 
+                justifyContent: 'center',
+                paddingHorizontal: 16
+              }}
+            >
+              <View className="flex-row items-center justify-center" style={{ gap: 16 }}>
+                {/* Badge 1 */}
+                <View className="w-16 h-16 items-center justify-center">
+                  <Image 
+                    source={icons.badgeOne}
+                    className="w-16 h-16"
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                {/* Badge 2 */}
+                <View className="w-16 h-16 items-center justify-center">
+                  <Image 
+                    source={icons.badgeTwo}
+                    className="w-16 h-16"
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                {/* Badge 3 */}
+                <View className="w-16 h-16 items-center justify-center">
+                  <Image 
+                    source={icons.badgeThree}
+                    className="w-16 h-16"
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                {/* Badge 4 */}
+                <View className="w-16 h-16 items-center justify-center">
+                  <Image 
+                    source={icons.badgeFour}
+                    className="w-16 h-16"
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+            </ScrollView>
           </View>
 
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Rank</Text>
