@@ -17,6 +17,7 @@ import transactions from "../../assets/icons/transactions.png";
 import transactions_filled from "../../assets/icons/transactions_filled.png";
 import profile from "../../assets/icons/profile.png";
 import profile_filled from "../../assets/icons/profile_filled.png";
+import email from "../../assets/icons/email.png";
 
 // stokvels pages
 import camera from "../../assets/icons/camera.png";
@@ -84,6 +85,7 @@ export default {
   transactions_filled,
   profile,
   profile_filled,
+  email,
   camera,
   stokvelpfp,
   gallery,

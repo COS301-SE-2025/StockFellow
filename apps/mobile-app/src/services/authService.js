@@ -260,6 +260,45 @@ class AuthService {
       return { valid: false };
     }
   }
+
+  async verifyMfaCode(email, code) {
+  try {
+    const response = await this.apiRequest('/auth/mfa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ email, code })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return { success: false, error: error.message };
+    }
+    
+    const data = await response.json();
+    // Store tokens or session as needed
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+async resendMfaCode(email) {
+  try {
+    const response = await this.apiRequest('/auth/mfa/resend', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to resend code');
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 }
+
 
 export default new AuthService();

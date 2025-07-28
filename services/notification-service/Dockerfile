@@ -1,25 +1,35 @@
-# Use Maven official image as builder
-FROM maven:3-openjdk-17-slim AS builder
+# Build stage
+FROM openjdk:17-jdk-slim AS builder
 
 WORKDIR /app
 
-# Copy pom and download dependencies
+# Install Maven
+RUN apt-get update && \
+    apt-get install -y maven && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy pom.xml and download dependencies
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy source files
-COPY src ./src
+# Copy source and build
+COPY src src
+RUN mvn package -DskipTests
 
-# Build application
-RUN mvn clean package -DskipTests
-
-# Use lightweight JDK image to run the app
+# Runtime stage
 FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-# Copy the built JAR from the builder image
-COPY --from=builder /app/target/*.jar app.jar
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Run the JAR
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Copy the built jar from builder stage
+COPY --from=builder /app/target/notification-service-1.0.0.jar app.jar
+
+# Expose the ports
+EXPOSE 4050
+EXPOSE 5008
+
+# Run the application
+CMD ["java", "-jar", "app.jar"]
