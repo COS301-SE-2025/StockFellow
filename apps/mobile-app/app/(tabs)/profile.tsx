@@ -1,13 +1,24 @@
-import { Text, View, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native'
+import { Text, View, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Switch } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
+import { useTheme } from '../../app/_layout';
+import { useTutorial } from '../../src/components/help/TutorialContext';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Linking } from 'react-native';
+import HelpMenu from '../../src/components/help/HelpMenu';
 
 const profile = () => {
+  const { isDarkMode, toggleTheme } = useTheme();
+  const { startTutorial } = useTutorial();
+  const router = useRouter();
+
   // Modal states
   const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [helpMenuVisible, setHelpMenuVisible] = useState(false);
   
   // Edit Profile states
   const [profileData, setProfileData] = useState({
@@ -16,13 +27,16 @@ const profile = () => {
     profileImage: null as string | null
   });
 
+  // Settings states
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
   const handleSaveProfile = () => {
     Alert.alert('Success', 'Profile updated successfully!');
     setEditProfileVisible(false);
   };
 
   const handleSettings = () => {
-    console.log('Settings button pressed');
+    setSettingsVisible(true);
   };
 
   const handleImagePicker = async () => {
@@ -179,7 +193,7 @@ const profile = () => {
           
           {/* Rank Progress Section */}
           <View className="flex-row items-center mb-6">
-            {/* Level 1 Icon with Number */}
+            {/* Level Icon with Number */}
             <View className="relative">
               <Image 
                 source={icons.levelTwo}
@@ -196,7 +210,7 @@ const profile = () => {
               <View className="h-3 bg-[#1DA1FA] rounded-full" style={{ width: '60%' }} />
             </View>
             
-            {/* Level 2 Icon with Number */}
+            {/* Level Icon with Number */}
             <View className="relative">
               <Image 
                 source={icons.levelThree}
@@ -213,7 +227,7 @@ const profile = () => {
           <View className="rounded-lg overflow-hidden">
             {/* Current Tier */}
             <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
-              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">Tier 1</Text>
+              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">Tier 2</Text>
             </View>
             
             {/* Tasks */}
@@ -327,6 +341,129 @@ const profile = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Settings Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={settingsVisible}
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white rounded-2xl p-6 w-11/12">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black">Settings</Text>
+              <TouchableOpacity onPress={() => setSettingsVisible(false)}>
+                <Image 
+                  source={icons.close}
+                  className="w-6 h-6"
+                  style={{ tintColor: '#666' }}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View className="space-y-6">
+              {/* Dark Mode Setting */}
+              <View className="flex-row justify-between items-center py-3">
+                <View className="flex-row items-center flex-1">
+                  <Image 
+                    source={icons.light}
+                    className="w-6 h-6 mr-3"
+                    style={{ tintColor: '#1DA1FA' }}
+                  />
+                  <View className="flex-1">
+                    <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Dark Mode</Text>
+                    <Text className="text-gray-600 text-sm">Switch to dark theme</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={isDarkMode}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: '#E5E5E5', true: '#1DA1FA' }}
+                  thumbColor={isDarkMode ? '#FFFFFF' : '#f4f3f4'}
+                />
+              </View>
+
+              {/* Notifications Setting */}
+              <View className="flex-row justify-between items-center py-3">
+                <View className="flex-row items-center flex-1">
+                  <Image 
+                    source={icons.bell}
+                    className="w-6 h-6 mr-3"
+                    style={{ tintColor: '#1DA1FA' }}
+                  />
+                  <View className="flex-1">
+                    <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Notifications</Text>
+                    <Text className="text-gray-600 text-sm">Receive app notifications</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={setNotificationsEnabled}
+                  trackColor={{ false: '#E5E5E5', true: '#1DA1FA' }}
+                  thumbColor={notificationsEnabled ? '#FFFFFF' : '#f4f3f4'}
+                />
+              </View>
+
+              {/* Help & Support - Opens HelpMenu with Tutorial, Contact Support, and FAQ */}
+              <TouchableOpacity 
+                className="flex-row items-center py-3"
+                onPress={() => {
+                  setSettingsVisible(false);
+                  // Same functionality as TopBar - show HelpMenu with all help options
+                  setHelpMenuVisible(true);
+                }}
+              >
+                <Image 
+                  source={icons.help}
+                  className="w-6 h-6 mr-3"
+                  style={{ tintColor: '#1DA1FA' }}
+                />
+                <View className="flex-1">
+                  <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Help & Support</Text>
+                  <Text className="text-gray-600 text-sm">Tutorial, FAQ, and contact support</Text>
+                </View>
+                <Image 
+                  source={icons.right}
+                  className="w-5 h-5"
+                  style={{ tintColor: '#666' }}
+                />
+              </TouchableOpacity>
+
+              {/* View Notifications */}
+              <TouchableOpacity 
+                className="flex-row items-center py-3"
+                onPress={() => {
+                  setSettingsVisible(false);
+                  // Same functionality as TopBar - navigate to notifications
+                  router.push('/notifications');
+                }}
+              >
+                <Image 
+                  source={icons.bell_filled}
+                  className="w-6 h-6 mr-3"
+                  style={{ tintColor: '#1DA1FA' }}
+                />
+                <View className="flex-1">
+                  <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">View Notifications</Text>
+                  <Text className="text-gray-600 text-sm">See your notification history</Text>
+                </View>
+                <Image 
+                  source={icons.right}
+                  className="w-5 h-5"
+                  style={{ tintColor: '#666' }}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Help Menu Modal */}
+      <HelpMenu 
+        isVisible={helpMenuVisible}
+        onClose={() => setHelpMenuVisible(false)}
+      />
     </SafeAreaView>
   )
 }
