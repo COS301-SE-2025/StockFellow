@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Redis for caching
   redis:
@@ -60,6 +58,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL Database for Alfresco
+  alfresco-postgres:
+    image: postgres:15
+    container_name: alfresco-postgres
+    volumes:
+      - alfresco_postgres_data:/var/lib/postgresql/data
+      - ./alfresco/init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_DB: alfresco
+      POSTGRES_USER: alfresco
+      POSTGRES_PASSWORD: alfresco123
+      POSTGRES_MULTIPLE_DATABASES: alfresco,activiti
+    ports:
+      - "5434:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "alfresco"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ActiveMQ
   activemq:
     image: apache/activemq-artemis:latest-alpine
@@ -80,6 +100,237 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Alfresco Search Services (Solr6) - Fixed to use available version
+  alfresco-search:
+    image: alfresco/alfresco-search-services:2.0.8.1
+    container_name: alfresco-search
+    environment:
+      SOLR_ALFRESCO_HOST: alfresco-content-repository
+      SOLR_ALFRESCO_PORT: 8080
+      SOLR_SOLR_HOST: alfresco-search
+      SOLR_SOLR_PORT: 8983
+      SOLR_CREATE_ALFRESCO_DEFAULTS: alfresco,archive
+      ALFRESCO_SECURE_COMMS: secret
+      JAVA_TOOL_OPTIONS: "-Dalfresco.secureComms.secret=secret"
+    ports:
+      - "8983:8983"
+    networks:
+      - stockfellow-net
+    volumes:
+      - alfresco_search_data:/opt/alfresco-search-services/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/cores"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Alfresco Content Repository - Fixed to use Community Edition
+  alfresco-content-repository:
+    image: alfresco/alfresco-content-repository-community:23.2.1
+    container_name: alfresco-content-repository
+    depends_on:
+      alfresco-postgres:
+        condition: service_healthy
+      alfresco-search:
+        condition: service_healthy
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -Dencryption.keystore.type=JCEKS
+        -Dencryption.cipherAlgorithm=DESede/CBC/PKCS5Padding
+        -Dencryption.keyAlgorithm=DESede
+        -Dencryption.keystore.location=/usr/local/tomcat/shared/classes/alfresco/extension/keystore/keystore
+        -Dmetadata-keystore.password=mp6yc0UD9e
+        -Dmetadata-keystore.aliases=metadata
+        -Dmetadata-keystore.metadata.password=oKIWzVdEdA
+        -Dmetadata-keystore.metadata.algorithm=DESede
+      JAVA_OPTS: >-
+        -Ddb.driver=org.postgresql.Driver
+        -Ddb.username=alfresco
+        -Ddb.password=alfresco123
+        -Ddb.url=jdbc:postgresql://alfresco-postgres:5432/alfresco
+        -Dsolr.host=alfresco-search
+        -Dsolr.port=8983
+        -Dsolr.http.connection.timeout=1000
+        -Dsolr.secureComms=secret
+        -Dsolr.sharedSecret=secret
+        -Dsolr.base.url=/solr
+        -Dindex.subsystem.name=solr6
+        -Dshare.host=127.0.0.1
+        -Dshare.port=8080
+        -Dalfresco.host=localhost
+        -Dalfresco.port=8080
+        -Daos.baseUrlOverwrite=http://localhost:8080/alfresco/aos
+        -Dmessaging.broker.url="failover:(nio://activemq:61616)?timeout=3000&jms.useCompression=true"
+        -Ddeployment.method=DOCKER_COMPOSE
+        -Dtransform.service.enabled=true
+        -Dtransform.service.url=http://transform-router:8095
+        -Dsfs.url=http://shared-file-store:8099/
+        -DlocalTransform.pdfrenderer.url=http://alfresco-pdf-renderer:8090/
+        -DlocalTransform.imagemagick.url=http://imagemagick:8090/
+        -DlocalTransform.libreoffice.url=http://libreoffice:8090/
+        -DlocalTransform.tika.url=http://tika:8090/
+        -DlocalTransform.misc.url=http://transform-misc:8090/
+        -Dlegacy.transform.service.enabled=true
+        -Dalfresco-pdf-renderer.url=http://alfresco-pdf-renderer:8090/
+        -Djodconverter.url=http://libreoffice:8090/
+        -Dimg.url=http://imagemagick:8090/
+        -Dtika.url=http://tika:8090/
+        -Dtransform.misc.url=http://transform-misc:8090/
+        -Dcsrf.filter.enabled=false
+        -Dalfresco.restApi.basicAuthScheme=true
+        -Dauthentication.protection.enabled=false
+        -XX:MinRAMPercentage=50
+        -XX:MaxRAMPercentage=80
+    ports:
+      - "8080:8080"
+    networks:
+      - stockfellow-net
+    volumes:
+      - alfresco_acs_data:/usr/local/tomcat/alf_data
+      - ./alfresco/keystore:/usr/local/tomcat/shared/classes/alfresco/extension/keystore
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/probes/-ready-"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Transform Router - Fixed to use available version
+  transform-router:
+    image: alfresco/alfresco-transform-router:4.0.1
+    container_name: transform-router
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      CORE_AIO_URL: "http://transform-core-aio:8090"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8095:8095"
+    networks:
+      - stockfellow-net
+    depends_on:
+      - activemq
+
+  # Shared File Store - Fixed to use available version
+  shared-file-store:
+    image: alfresco/alfresco-shared-file-store:4.0.1
+    container_name: shared-file-store
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      scheduler.content.age.millis: 86400000
+      scheduler.cleanup.interval: 86400000
+    ports:
+      - "8099:8099"
+    networks:
+      - stockfellow-net
+    volumes:
+      - shared_file_store_data:/tmp/Alfresco/sfs
+
+  # Transform Core AIO (All-in-One Transformer) - Fixed to use available version
+  transform-core-aio:
+    image: alfresco/alfresco-transform-core-aio:5.0.1
+    container_name: transform-core-aio
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8090:8090"
+    networks:
+      - stockfellow-net
+    depends_on:
+      - activemq
+      - shared-file-store
+
+  # PDF Renderer
+  alfresco-pdf-renderer:
+    image: alfresco/alfresco-pdf-renderer:5.0.1
+    container_name: alfresco-pdf-renderer
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8091:8090"
+    networks:
+      - stockfellow-net
+
+  # ImageMagick
+  imagemagick:
+    image: alfresco/alfresco-imagemagick:5.0.1
+    container_name: imagemagick
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8092:8090"
+    networks:
+      - stockfellow-net
+
+  # LibreOffice
+  libreoffice:
+    image: alfresco/alfresco-libreoffice:5.0.1
+    container_name: libreoffice
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8093:8090"
+    networks:
+      - stockfellow-net
+
+  # Tika
+  tika:
+    image: alfresco/alfresco-tika:5.0.1
+    container_name: tika
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8094:8090"
+    networks:
+      - stockfellow-net
+
+  # Transform Misc
+  transform-misc:
+    image: alfresco/alfresco-transform-misc:5.0.1
+    container_name: transform-misc
+    environment:
+      JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"  
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: "http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file"
+    ports:
+      - "8096:8090"
+    networks:
+      - stockfellow-net
+
+  # Alfresco Share (Optional Web UI) - Fixed to use Community Edition
+  alfresco-share:
+    image: alfresco/alfresco-share:23.2.1
+    container_name: alfresco-share
+    depends_on:
+      - alfresco-content-repository
+    environment:
+      REPO_HOST: "alfresco-content-repository"
+      REPO_PORT: "8080"
+      JAVA_OPTS: >-
+        -XX:MinRAMPercentage=50
+        -XX:MaxRAMPercentage=80
+        -Dalfresco.host=localhost
+        -Dalfresco.port=8080
+        -Dalfresco.context=alfresco
+        -Dalfresco.protocol=http
+    ports:
+      - "8081:8080"
+    networks:
+      - stockfellow-net
+    volumes:
+      - alfresco_share_data:/usr/local/tomcat/shared/classes/alfresco/web-extension
 
   # Keycloak 
   keycloak:
@@ -115,6 +366,7 @@ services:
     depends_on:
       - keycloak
       - redis
+      - alfresco-content-repository
     ports:
       - "${API_GATEWAY_PORT}:3000"
       - "${API_GATEWAY_DEBUG_PORT}:5007"
@@ -133,6 +385,9 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
+      - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
+      - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
       - JVM_OPTS=${JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
@@ -156,6 +411,7 @@ services:
     container_name: user-service
     depends_on:
       - keycloak
+      - alfresco-content-repository
     ports:
       - "${USER_SERVICE_PORT}:4000"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
@@ -164,6 +420,10 @@ services:
       - SPRING_DATA_MONGODB_URI=${USER_SERVICE_MONGODB_URI}
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
+      - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
+      - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
+      - ALFRESCO_SITE_NAME=${ALFRESCO_SITE_NAME:-stockfellow}
       - JVM_OPTS=${USER_SERVICE_JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
@@ -290,6 +550,10 @@ networks:
 volumes:
   postgres_data:
   notification_postgres_data:
-  mongodb_data:
+  alfresco_postgres_data:
   redis_data:
   activemq_data:
+  alfresco_acs_data:
+  alfresco_search_data:
+  alfresco_share_data:
+  shared_file_store_data:
