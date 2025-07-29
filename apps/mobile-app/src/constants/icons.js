@@ -18,6 +18,8 @@ import transactions_filled from "../../assets/icons/transactions_filled.png";
 import profile from "../../assets/icons/profile.png";
 import profile_filled from "../../assets/icons/profile_filled.png";
 import email from "../../assets/icons/email.png";
+import pdf from "../../assets/icons/pdf.png";
+import uploaded from "../../assets/icons/uploaded.png";
 
 // stokvels pages
 import camera from "../../assets/icons/camera.png";
@@ -86,6 +88,8 @@ export default {
   profile,
   profile_filled,
   email,
+  pdf,
+  uploaded,
   camera,
   stokvelpfp,
   gallery,
