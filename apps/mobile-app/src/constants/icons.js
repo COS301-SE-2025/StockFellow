@@ -67,6 +67,19 @@ import debitcard from '../../assets/icons/debitcard.png';
 import remainder from '../../assets/icons/remainder.png';
 import alert from '../../assets/icons/alert.png';
 
+// levels 
+import levelOne from '../../assets/icons/level-one.png';
+import levelTwo from '../../assets/icons/level-two.png';
+import levelThree from '../../assets/icons/level-three.png';
+import levelFour from '../../assets/icons/level-four.png';
+import levelFive from '../../assets/icons/level-five.png';
+
+// badges
+import badgeOne from '../../assets/icons/badge-one.png'
+import badgeTwo from '../../assets/icons/badge-two.png';
+import badgeThree from '../../assets/icons/badge-three.png';
+import badgeFour from '../../assets/icons/badge-four.png';
+
 export default {
   eyehide,
   eye,
@@ -100,14 +113,12 @@ export default {
   growth,
   contribute,
   notifications,
-
   request,
   bell,
   bell_filled,
   settings,
   avatar,
   help,
-
   fnb,
   nedbank,
   capitec,
@@ -115,20 +126,24 @@ export default {
   standardbank,
   mastercard,
   visa,
-
   tutorial,
   support,
   close,
   faq,
-  visa,
-
   money,
   up,
   right,
   line,
-  
   debitcard,
   alert,
   remainder,
-
+  levelOne,
+  levelTwo,
+  levelThree,
+  levelFour,
+  levelFive,
+  badgeOne,
+  badgeTwo,
+  badgeThree,
+  badgeFour,
 };
