@@ -18,6 +18,8 @@ import transactions_filled from "../../assets/icons/transactions_filled.png";
 import profile from "../../assets/icons/profile.png";
 import profile_filled from "../../assets/icons/profile_filled.png";
 import email from "../../assets/icons/email.png";
+import pdf from "../../assets/icons/pdf.png";
+import uploaded from "../../assets/icons/uploaded.png";
 
 // stokvels pages
 import camera from "../../assets/icons/camera.png";
@@ -65,6 +67,19 @@ import debitcard from '../../assets/icons/debitcard.png';
 import remainder from '../../assets/icons/remainder.png';
 import alert from '../../assets/icons/alert.png';
 
+// levels 
+import levelOne from '../../assets/icons/level-one.png';
+import levelTwo from '../../assets/icons/level-two.png';
+import levelThree from '../../assets/icons/level-three.png';
+import levelFour from '../../assets/icons/level-four.png';
+import levelFive from '../../assets/icons/level-five.png';
+
+// badges
+import badgeOne from '../../assets/icons/badge-one.png'
+import badgeTwo from '../../assets/icons/badge-two.png';
+import badgeThree from '../../assets/icons/badge-three.png';
+import badgeFour from '../../assets/icons/badge-four.png';
+
 export default {
   eyehide,
   eye,
@@ -86,6 +101,8 @@ export default {
   profile,
   profile_filled,
   email,
+  pdf,
+  uploaded,
   camera,
   stokvelpfp,
   gallery,
@@ -96,14 +113,12 @@ export default {
   growth,
   contribute,
   notifications,
-
   request,
   bell,
   bell_filled,
   settings,
   avatar,
   help,
-
   fnb,
   nedbank,
   capitec,
@@ -111,20 +126,24 @@ export default {
   standardbank,
   mastercard,
   visa,
-
   tutorial,
   support,
   close,
   faq,
-  visa,
-
   money,
   up,
   right,
   line,
-  
   debitcard,
   alert,
   remainder,
-
+  levelOne,
+  levelTwo,
+  levelThree,
+  levelFour,
+  levelFive,
+  badgeOne,
+  badgeTwo,
+  badgeThree,
+  badgeFour,
 };

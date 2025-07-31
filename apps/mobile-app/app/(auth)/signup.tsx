@@ -1,12 +1,14 @@
-import { Text, View } from 'react-native';
+import { Text, View, Alert } from 'react-native';
 import React, { useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
+import PDFUpload from '../../src/components/pdfUpload';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import authService from '../../src/services/authService'; // Import the auth service
+import authService from '../../src/services/authService';
+import * as DocumentPicker from 'expo-document-picker';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -31,7 +33,10 @@ const SignUp = () => {
     confirmPassword: ''
   });
 
+  const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
   const passwordRef = useRef<string>('');
 
@@ -100,8 +105,46 @@ const SignUp = () => {
       valid = false;
     }
 
+     if (!bankStatement) {
+      newErrors.password = 'Please upload your 3-month bank statement';
+      valid = false;
+    }
+
+    if (!payslip) {
+      newErrors.password = 'Please upload your latest payslip';
+      valid = false;
+    }
+
+
     setErrors(newErrors);
     return valid;
+  };
+
+  const handleDocumentUpload = async (type: 'bankStatement' | 'payslip') => {
+    try {
+      setUploadingDoc(type);
+      const res = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+      });
+
+      if (res.canceled) {
+        console.log('File selection canceled');
+        return;
+      }
+
+      if (res.assets && res.assets[0]) {
+        if (type === 'bankStatement') {
+          setBankStatement(res.assets[0]);
+        } else {
+          setPayslip(res.assets[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Error during document picker:', err);
+      Alert.alert('Error', 'Failed to select document. Please try again.');
+    } finally {
+      setUploadingDoc(null);
+    }
   };
 
   const handlePasswordChange = (text: string) => {
@@ -124,16 +167,33 @@ const SignUp = () => {
       try {
         console.log('Attempting registration...');
 
-        // Use the auth service for registration
-        const registrationResult = await authService.register({
-          username: form.username,
-          firstName: form.firstName,
-          lastName: form.lastName,
-          email: form.email,
-          password: form.password,
-          contactNumber: form.contactNumber,
-          idNumber: form.idNumber,
-        });
+        // Prepare form data with documents
+        const formData = new FormData();
+        formData.append('username', form.username);
+        formData.append('firstName', form.firstName);
+        formData.append('lastName', form.lastName);
+        formData.append('email', form.email);
+        formData.append('password', form.password);
+        formData.append('contactNumber', form.contactNumber);
+        formData.append('idNumber', form.idNumber);
+        
+        if (bankStatement) {
+          formData.append('bankStatement', {
+            uri: bankStatement.uri,
+            name: bankStatement.name,
+            type: 'application/pdf',
+          } as any);
+        }
+        
+        if (payslip) {
+          formData.append('payslip', {
+            uri: payslip.uri,
+            name: payslip.name,
+            type: 'application/pdf',
+          } as any);
+        }
+
+        const registrationResult = await authService.register(formData);
 
         if (registrationResult.success) {
           console.log('Registration successful');
@@ -275,6 +335,17 @@ const SignUp = () => {
                   otherStyles="mt-3"
                   placeholder='Confirm your password'
                   error={errors.confirmPassword}
+                />
+                {/* 3 Month Bank Statement Upload */}
+                <PDFUpload 
+                  heading="3 Month Bank Statement"
+                  onDocumentSelect={(doc) => setBankStatement(doc)}
+                />
+
+                {/* Payslip Upload */}
+                <PDFUpload 
+                  heading="Latest Payslip"
+                  onDocumentSelect={(doc) => setPayslip(doc)}
                 />
 
                 <CustomButton
