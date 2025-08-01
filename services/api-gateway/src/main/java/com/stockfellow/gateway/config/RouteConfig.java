@@ -19,6 +19,9 @@ public class RouteConfig {
     
     @Value("${services.transaction-service.url:http://transaction-service:4080}")
     private String transactionServiceUrl;
+
+    @Value("${services.transaction-service.url:http://mfa-service:8087}")
+    private String mfaServiceUrl;
     
     @Bean
     public List<Route> routes() {
@@ -46,6 +49,14 @@ public class RouteConfig {
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(transactionServiceUrl, true)
             ),
+
+            // MFA routes
+            new Route(
+                "/api/mfa/**",
+                false,
+                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.Proxy(transactionServiceUrl, true)
+            ),
             
             // Default api route
             new Route(
@@ -53,7 +64,7 @@ public class RouteConfig {
                 false,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(userServiceUrl, true)
-            )
+            )    
         );
     }
 }
