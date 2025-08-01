@@ -28,6 +28,7 @@ public class MfaController {
         this.emailService = emailService;
     }
 
+    // Used by Gateway for login
     @PostMapping("/send-otp")
     public ResponseEntity<MfaResponse> sendOTP(@Valid @RequestBody MfaRequest request) {
         try {
@@ -48,13 +49,14 @@ public class MfaController {
         }
     }
 
+    
     @PostMapping("/verify-otp")
     public ResponseEntity<MfaResponse> verifyOTP(@Valid @RequestBody MfaVerifyRequest request) {
         try {
             logger.info("Verifying OTP for user: {}", request.getEmail());
 
             boolean isValid = otpService.verifyOTP(request.getEmail(), request.getOtpCode());
-
+            
             if (isValid) {
                 // Generate session token or mark user as MFA verified
                 String sessionToken = generateSessionToken(request.getEmail());
