@@ -29,6 +29,7 @@ public class MfaController {
     }
 
     // Used by Gateway for login
+    // sends otp to user email after login attempt
     @PostMapping("/send-otp")
     public ResponseEntity<MfaResponse> sendOTP(@Valid @RequestBody MfaRequest request) {
         try {
@@ -49,14 +50,14 @@ public class MfaController {
         }
     }
 
-    
+    // verifies the otp sent to user - checks if the OTP is valid and not expired
     @PostMapping("/verify-otp")
     public ResponseEntity<MfaResponse> verifyOTP(@Valid @RequestBody MfaVerifyRequest request) {
         try {
             logger.info("Verifying OTP for user: {}", request.getEmail());
 
             boolean isValid = otpService.verifyOTP(request.getEmail(), request.getOtpCode());
-            
+
             if (isValid) {
                 // Generate session token or mark user as MFA verified
                 String sessionToken = generateSessionToken(request.getEmail());
@@ -73,6 +74,7 @@ public class MfaController {
         }
     }
 
+    // Endpoint to check if a valid OTP exists for the user
     @GetMapping("/status/{email}")
     public ResponseEntity<MfaResponse> getOTPStatus(@PathVariable String email) {
         boolean hasValidOTP = otpService.hasValidOTP(email);
@@ -80,6 +82,8 @@ public class MfaController {
                 hasValidOTP ? "Valid OTP exists" : "No valid OTP found"));
     }
 
+    // Endpoint to invalidate the OTP for the user: eg they have too many failed
+    // login attempts
     @DeleteMapping("/invalidate/{email}")
     public ResponseEntity<MfaResponse> invalidateOTP(@PathVariable String email) {
         otpService.invalidateOTP(email);
