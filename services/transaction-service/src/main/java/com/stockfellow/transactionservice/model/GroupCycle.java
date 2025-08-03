@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "group_cycles")
+@Table(name = "group_cycle")
 public class GroupCycle {
     
     @Id
@@ -17,66 +17,99 @@ public class GroupCycle {
     @Column(name = "group_id", nullable = false)
     private UUID groupId;
     
-    @Column(name = "cycle_month", nullable = false, length = 7)
-    private String cycleMonth;
+    @Column(name = "cycle_period", nullable = false)
+    private String cyclePeriod;
     
     @Column(name = "recipient_user_id", nullable = false)
     private UUID recipientUserId;
     
-    @Column(name = "recipient_payment_method_id", nullable = false)
-    private UUID recipientPaymentMethodId;
-    
     @Column(name = "contribution_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal contributionAmount;
     
-    @Column(name = "collection_date", nullable = false)
-    private LocalDate collectionDate;
+    @Column(name = "current_total", precision = 19, scale = 2)
+    private BigDecimal currentTotal;
     
-    @Column(name = "total_expected_amount", nullable = false, precision = 19, scale = 2)
-    private BigDecimal totalExpectedAmount;
+    @Column(name = "expected_total", nullable = false, precision = 19, scale = 2)
+    private BigDecimal expectedTotal;
     
-    @Column(name = "successful_payments", nullable = false)
-    private Integer successfulPayments = 0;
+    @Column(name = "collection_start_date", nullable = false)
+    private LocalDate collectionStartDate;
     
-    @Column(name = "failed_payments", nullable = false)
-    private Integer failedPayments = 0;
+    @Column(name = "collection_end_date", nullable = false)
+    private LocalDate collectionEndDate;
     
-    @Column(name = "status", nullable = false, length = 20)
-    private String status = "PENDING";
+    @Column(name = "payout_date")
+    private LocalDate payoutDate;
+    
+    @Column(name = "successful_count")
+    private Integer successfulCount = 0;
+    
+    @Column(name = "failed_count")
+    private Integer failedCount = 0;
+    
+    @Column(name = "pending_count")
+    private Integer pendingCount = 0;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private CycleStatus status;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Constructors
+    public GroupCycle() {}
+
+    public GroupCycle(UUID groupId, String cyclePeriod, UUID recipientUserId, 
+                     BigDecimal contributionAmount, BigDecimal expectedTotal,
+                     LocalDate collectionStartDate, LocalDate collectionEndDate) {
+        this.groupId = groupId;
+        this.cyclePeriod = cyclePeriod;
+        this.recipientUserId = recipientUserId;
+        this.contributionAmount = contributionAmount;
+        this.expectedTotal = expectedTotal;
+        this.collectionStartDate = collectionStartDate;
+        this.collectionEndDate = collectionEndDate;
+        this.status = CycleStatus.PENDING;
+        this.currentTotal = BigDecimal.ZERO;
+    }
 
     // Getters
     public UUID getCycleId() { return cycleId; }
     public UUID getGroupId() { return groupId; }
-    public String getCycleMonth() { return cycleMonth; }
+    public String getCyclePeriod() { return cyclePeriod; }
     public UUID getRecipientUserId() { return recipientUserId; }
-    public UUID getRecipientPaymentMethodId() { return recipientPaymentMethodId; }
     public BigDecimal getContributionAmount() { return contributionAmount; }
-    public LocalDate getCollectionDate() { return collectionDate; }
-    public BigDecimal getTotalExpectedAmount() { return totalExpectedAmount; }
-    public Integer getSuccessfulPayments() { return successfulPayments; }
-    public Integer getFailedPayments() { return failedPayments; }
-    public String getStatus() { return status; }
+    public BigDecimal getCurrentTotal() { return currentTotal; }
+    public BigDecimal getExpectedTotal() { return expectedTotal; }
+    public LocalDate getCollectionStartDate() { return collectionStartDate; }
+    public LocalDate getCollectionEndDate() { return collectionEndDate; }
+    public LocalDate getPayoutDate() { return payoutDate; }
+    public Integer getSuccessfulCount() { return successfulCount; }
+    public Integer getFailedCount() { return failedCount; }
+    public Integer getPendingCount() { return pendingCount; }
+    public CycleStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     // Setters
     public void setCycleId(UUID cycleId) { this.cycleId = cycleId; }
     public void setGroupId(UUID groupId) { this.groupId = groupId; }
-    public void setCycleMonth(String cycleMonth) { this.cycleMonth = cycleMonth; }
+    public void setCyclePeriod(String cyclePeriod) { this.cyclePeriod = cyclePeriod; }
     public void setRecipientUserId(UUID recipientUserId) { this.recipientUserId = recipientUserId; }
-    public void setRecipientPaymentMethodId(UUID recipientPaymentMethodId) { this.recipientPaymentMethodId = recipientPaymentMethodId; }
     public void setContributionAmount(BigDecimal contributionAmount) { this.contributionAmount = contributionAmount; }
-    public void setCollectionDate(LocalDate collectionDate) { this.collectionDate = collectionDate; }
-    public void setTotalExpectedAmount(BigDecimal totalExpectedAmount) { this.totalExpectedAmount = totalExpectedAmount; }
-    public void setSuccessfulPayments(Integer successfulPayments) { this.successfulPayments = successfulPayments; }
-    public void setFailedPayments(Integer failedPayments) { this.failedPayments = failedPayments; }
-    public void setStatus(String status) { this.status = status; }
+    public void setCurrentTotal(BigDecimal currentTotal) { this.currentTotal = currentTotal; }
+    public void setExpectedTotal(BigDecimal expectedTotal) { this.expectedTotal = expectedTotal; }
+    public void setCollectionStartDate(LocalDate collectionStartDate) { this.collectionStartDate = collectionStartDate; }
+    public void setCollectionEndDate(LocalDate collectionEndDate) { this.collectionEndDate = collectionEndDate; }
+    public void setPayoutDate(LocalDate payoutDate) { this.payoutDate = payoutDate; }
+    public void setSuccessfulCount(Integer successfulCount) { this.successfulCount = successfulCount; }
+    public void setFailedCount(Integer failedCount) { this.failedCount = failedCount; }
+    public void setPendingCount(Integer pendingCount) { this.pendingCount = pendingCount; }
+    public void setStatus(CycleStatus status) { this.status = status; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
@@ -85,24 +118,34 @@ public class GroupCycle {
         if (cycleId == null) {
             cycleId = UUID.randomUUID();
         }
-        LocalDateTime now = LocalDateTime.now();
         if (createdAt == null) {
-            createdAt = now;
-        }
-        updatedAt = now;
-        if (successfulPayments == null) {
-            successfulPayments = 0;
-        }
-        if (failedPayments == null) {
-            failedPayments = 0;
+            createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = "PENDING";
+            status = CycleStatus.PENDING;
         }
+        if (currentTotal == null) {
+            currentTotal = BigDecimal.ZERO;
+        }
+        if (successfulCount == null) successfulCount = 0;
+        if (failedCount == null) failedCount = 0;
+        if (pendingCount == null) pendingCount = 0;
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Cycle Status Enum
+    public enum CycleStatus {
+        PENDING,
+        ACTIVE,
+        COLLECTING,
+        COLLECTION_COMPLETE,
+        PAYOUT_PENDING,
+        COMPLETED,
+        FAILED,
+        CANCELLED
     }
 }
