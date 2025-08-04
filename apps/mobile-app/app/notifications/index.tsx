@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import TopBar from '../../src/components/TopBar';
 import NotificationItem from '../../src/components/NotificationItem';
-import NotificationService, { Notification } from '../../src/services/NotificationService';
+import NotificationService, { Notification } from '../../src/services/notificationService';
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);

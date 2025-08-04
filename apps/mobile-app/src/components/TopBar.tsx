@@ -107,7 +107,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { icons } from '../constants';
 import { useTheme } from '../../app/_layout';
 import HelpButton from './help/HelpButton';
-import NotificationService from '../services/NotificationService';
+import NotificationService from '../services/notificationService';
 
 interface TopBarProps {
   title?: string;
