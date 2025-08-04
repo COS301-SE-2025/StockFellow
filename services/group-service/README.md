@@ -4,6 +4,14 @@ This service manages investment groups (stokvels) for the StockFellow fintech pl
 
 ## Stokvel Management rules
 
+#### Tiers
+- Tier 1 (R50-R199)
+- Tier 2 (R200-499)
+- Tier 3 (R500-R999)
+- Tier 4 (R1000-R2499)
+- Tier 5 (R2500-R4999)
+- Tier 6 (R5000+)
+
 ### Joining Rules
 - When a user is verified with a tier, they are automatically assigned to a stokvel of the same tier
 - If there are no available stokvels in that user's tier, a new stokvel is created with that user as its first member
@@ -12,7 +20,7 @@ This service manages investment groups (stokvels) for the StockFellow fintech pl
 - Stokvel tier is set to the first members tier
 - Max members is set to 10
 - Minimum contribution amount is set to the minimum amount of the tier's range(e.g. If tier 4 is R1000-R1500, Minimum contribution amount = R1000)
-- Stokvel name is set to "Stokvel #XXX" on default.
+- Stokvel name is set to "Stokvel #XXXXXX" on default.
 - Contribution/Payout Date is set the date of stokvel creation
 - Contribution/Payout Frequency is set to monthly.
 ### Management Rules
