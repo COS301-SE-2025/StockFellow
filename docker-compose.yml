@@ -48,14 +48,14 @@ services:
       - notification_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: notification_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
     ports:
-      - "5433:5432"
+      - "5440:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "admin"]
+      test: ["CMD", "pg_isready", "-U", "notification_user", "-d", "notification_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -79,7 +79,7 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
 
   # Keycloak 
   keycloak:
@@ -209,7 +209,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
+      retries:  ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
   # Transaction Service
@@ -254,7 +254,7 @@ services:
     depends_on:
       - notification-postgres
       - activemq
-      - group-service
+      - group-service  
     ports:
       - "4050:4050"
       - "5008:5008"  # Debug port
@@ -262,8 +262,10 @@ services:
       - SERVER_PORT=4050
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://notification-postgres:5432/notification_db
-      - SPRING_DATASOURCE_USERNAME=admin
-      - SPRING_DATASOURCE_PASSWORD=admin123
+      - SPRING_DATASOURCE_USERNAME=notification_user
+      - SPRING_DATASOURCE_PASSWORD=notification_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
       - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
       - ACTIVEMQ_USER=admin
       - ACTIVEMQ_PASSWORD=admin
@@ -281,47 +283,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-# MFA Service (Spring Boot)
-  mfa-service:
-    build:
-      context: ./services/mfa-service
-      dockerfile: Dockerfile
-    container_name: mfa-service
-    depends_on:
-      - keycloak
-      - user-service
-    ports:
-      - "${MFA_SERVICE_PORT}:8087"  # Changed from 4090 to 8087
-      - "${MFA_SERVICE_DEBUG_PORT}:5008"
-    environment:
-      - SERVER_PORT=8087  # Override to ensure port is 8087
-      - SPRING_PROFILES_ACTIVE=${MFA_SERVICE_SPRING_PROFILE}
-      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
-      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
-      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
-      - USER_SERVICE_URL=${USER_SERVICE_URL}
-      - JVM_OPTS=${MFA_SERVICE_JVM_OPTS}
-      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
-      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
-      # Mail configuration
-      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
-      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
-      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
-      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
-      - MFA_MAIL_FROM=${MFA_MAIL_FROM}
-      - MFA_MAIL_STARTTLS=${MFA_MAIL_STARTTLS}
-      - MFA_MAIL_SSL=${MFA_MAIL_SSL}
-    networks:
-      - stockfellow-net
-    volumes:
-      - ./services/mfa-service/src:/app/src
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
-      interval: ${HEALTH_CHECK_INTERVAL:-30s}
-      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
-      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+      start_period: 60s
+    restart: unless-stopped
 
 networks:
   stockfellow-net:
