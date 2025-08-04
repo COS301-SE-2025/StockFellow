@@ -30,9 +30,9 @@ public class TransferController {
     @PostMapping
     public ResponseEntity<TransferResponseDto> createTransfer(@Valid @RequestBody CreateTransferDto createDto) {
         Transfer transfer = transferService.createTransfer(createDto);
-        activityLogService.logActivity(transfer.getUserId(), transfer.getCycleId(), 
-                                     ActivityLog.EntityType.TRANSFER, transfer.getTransferId(), 
-                                     "TRANSFER_CREATED", null, null);
+        // activityLogService.logActivity(transfer.getUserId(), transfer.getCycleId(), 
+        //                              ActivityLog.EntityType.TRANSFER, transfer.getTransferId(), 
+        //                              "TRANSFER_CREATED", null, null);
         return ResponseEntity.status(HttpStatus.CREATED)
                            .body(TransferResponseDto.fromEntity(transfer));
     }

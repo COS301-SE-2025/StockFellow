@@ -40,15 +40,6 @@ public class UserSyncController {
         return ResponseEntity.ok(UserResponseDto.fromEntity(user));
     }
     
-    // Update user status (e.g., suspend, activate)
-    @PutMapping("/{userId}/status")
-    public ResponseEntity<UserResponseDto> updateUserStatus(
-            @PathVariable UUID userId,
-            @RequestBody UpdateUserStatusDto statusDto) {
-        User user = userService.updateStatus(userId, statusDto.getStatus());
-        return ResponseEntity.ok(UserResponseDto.fromEntity(user));
-    }
-    
     // Batch sync users (for initial data migration)
     @PostMapping("/sync/batch")
     public ResponseEntity<List<UserResponseDto>> syncUsers(@Valid @RequestBody List<SyncUserDto> syncDtos) {

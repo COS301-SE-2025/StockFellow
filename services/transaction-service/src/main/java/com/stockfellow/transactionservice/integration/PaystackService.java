@@ -33,6 +33,8 @@ public class PaystackService {
         return new PaystackTransactionResponse();
     }
 
-    p
-
+    public PaystackTransactionVerificationResponse verifyTransaction(String reference) {
+        //TODO: Implement
+        return new PaystackTransactionVerificationResponse();
+    }
 }

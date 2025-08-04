@@ -19,13 +19,13 @@ import io.swagger.v3.oas.annotations.Operation;
 @RestController
 @RequestMapping("/api/payment-methods")
 @CrossOrigin(origins = "*")
-public class PaymentMethodController {
+public class PaymentDetailsController {
     
     @Autowired
     private PaymentDetailsService paymentDetailsService;
     
-    @Autowired
-    private ActivityLogService activityLogService;
+    // @Autowired
+    // private ActivityLogService activityLogService;
 
     // === PAYER DETAILS (Card/Payment Methods) ===
     
@@ -33,14 +33,14 @@ public class PaymentMethodController {
     @PostMapping("/payer")
     public ResponseEntity<PayerDetailsResponseDto> addPayerDetails(
             @Valid @RequestBody CreatePayerDetailsDto createDto) {
-        PayerDetails created = payerDetailsService.addPayerDetails(createDto);
+        PayerDetails created = paymentDetailsService.addPayerDetails(createDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                            .body(PayerDetailsResponseDto.fromEntity(created));
     }
     
     @GetMapping("/payer/user/{userId}")
     public ResponseEntity<List<PayerDetailsResponseDto>> getPayerDetailsByUser(@PathVariable UUID userId) {
-        List<PayerDetails> payerDetails = paymentDetailsService.findByUserId(userId);
+        List<PayerDetails> payerDetails = paymentDetailsService.findPayerDetailsByUserId(userId);
         return ResponseEntity.ok(payerDetails.stream()
                                .map(PayerDetailsResponseDto::fromEntity)
                                .toList());
@@ -75,7 +75,7 @@ public class PaymentMethodController {
     
     @GetMapping("/payout/user/{userId}")
     public ResponseEntity<List<PayoutDetailsResponseDto>> getPayoutDetailsByUser(@PathVariable UUID userId) {
-        List<PayoutDetails> payoutDetails = paymentDetailsService.findByUserId(userId);
+        List<PayoutDetails> payoutDetails = paymentDetailsService.findPayoutDetailsByUserId(userId);
         return ResponseEntity.ok(payoutDetails.stream()
                                .map(PayoutDetailsResponseDto::fromEntity)
                                .toList());
@@ -90,8 +90,8 @@ public class PaymentMethodController {
     }
     
     @PutMapping("/payout/{payoutId}/set-default")
-    public ResponseEntity<PayoutDetailsResponseDto> setDefaultPayoutMethod(@PathVariable UUID payoutId) {
-        PayoutDetails payoutDetails = paymentDetailsService.setAsDefault(payoutId);
+    public ResponseEntity<PayoutDetailsResponseDto> setActivePayoutMethod(@PathVariable UUID payoutId) {
+        PayoutDetails payoutDetails = paymentDetailsService.setAsActive(payoutId);
         return ResponseEntity.ok(PayoutDetailsResponseDto.fromEntity(payoutDetails));
     }
     

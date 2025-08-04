@@ -33,9 +33,9 @@ public class TransactionController {
                 description = "Creates a new transaction for a group cycle with specified parameters")
     public ResponseEntity<TransactionResponseDto> createTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
         Transaction transaction = transactionService.createTransaction(createDto);
-        activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
-                                     ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
-                                     "TRANSACTION_CREATED", null, null);
+        // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
+        //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
+        //                              "TRANSACTION_CREATED", null, null);
         return ResponseEntity.status(HttpStatus.CREATED)
                            .body(TransactionResponseDto.fromEntity(transaction));
     }

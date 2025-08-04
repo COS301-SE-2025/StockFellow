@@ -1,5 +1,5 @@
-package com.stockfellow.transactionservice.service;
+// package com.stockfellow.transactionservice.service;
 
-public class ActivityLogService {
+// public class ActivityLogService {
     
-}
+// }

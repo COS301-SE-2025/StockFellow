@@ -2,6 +2,8 @@ package com.stockfellow.transactionservice.model;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -9,26 +11,32 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.Map;
 
 // User Entity
 @Entity
 @Table(name = "users")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class User {
     
     @Id
     @Column(name = "user_id")
+    @JsonProperty("id")
     private UUID userId;
     
     @Column(name = "email", nullable = false, unique = true)
     private String email;
     
     @Column(name = "first_name")
+    @JsonProperty("first_name")
     private String firstName;
     
     @Column(name = "last_name")
+    @JsonProperty("last_name")
     private String lastName;
     
     @Column(name = "phone")
+    @JsonProperty("phone")
     private String phone;
     
     @Enumerated(EnumType.STRING)
@@ -40,6 +48,14 @@ public class User {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Transient  // Don't persist to database
+    @JsonProperty("customer_code")
+    private String customerCode;
+    
+    @Transient
+    @JsonProperty("metadata")
+    private Map<String, Object> metadata;
 
     // Constructors
     public User() {}
