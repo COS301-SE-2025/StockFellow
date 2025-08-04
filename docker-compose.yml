@@ -285,6 +285,46 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+# MFA Service (Spring Boot)
+  mfa-service:
+    build:
+      context: ./services/mfa-service
+      dockerfile: Dockerfile
+    container_name: mfa-service
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${MFA_SERVICE_PORT}:8087"  # Changed from 4090 to 8087
+      - "${MFA_SERVICE_DEBUG_PORT}:5008"
+    environment:
+      - SERVER_PORT=8087  # Override to ensure port is 8087
+      - SPRING_PROFILES_ACTIVE=${MFA_SERVICE_SPRING_PROFILE}
+      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - JVM_OPTS=${MFA_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+      # Mail configuration
+      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
+      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
+      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
+      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+      - MFA_MAIL_FROM=${MFA_MAIL_FROM}
+      - MFA_MAIL_STARTTLS=${MFA_MAIL_STARTTLS}
+      - MFA_MAIL_SSL=${MFA_MAIL_SSL}
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/mfa-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
 networks:
   stockfellow-net:
