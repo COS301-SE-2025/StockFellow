@@ -19,6 +19,9 @@ public class RouteConfig {
     
     @Value("${services.transaction-service.url:http://transaction-service:4080}")
     private String transactionServiceUrl;
+
+    @Value("${services.notification-service.url:http://notification-service:4050}")
+    private String notificationServiceUrl;
     
     @Bean
     public List<Route> routes() {
@@ -45,6 +48,14 @@ public class RouteConfig {
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(transactionServiceUrl, true)
+            ),
+
+            // Notification service route
+            new Route(
+                "/api/notification/**",
+                true,
+                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.Proxy(notificationServiceUrl, true)
             ),
             
             // Default api route

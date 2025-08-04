@@ -37,6 +37,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
             .antMatchers("/auth/login").permitAll()
             .antMatchers("/actuator/**").permitAll()
             .antMatchers("/api/transaction/**").authenticated()
+            .antMatchers("/api/transaction/**").authenticated()
             .anyRequest().permitAll()
             .and()
             .csrf().disable(); // Disable CSRF for API gateway

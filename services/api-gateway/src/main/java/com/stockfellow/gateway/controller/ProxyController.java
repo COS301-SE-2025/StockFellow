@@ -13,7 +13,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
-import java.net.URI;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
@@ -69,7 +68,6 @@ public class ProxyController {
             String requestPath = request.getRequestURI();
             logger.debug("Proxying {} request to: {}", method, requestPath);
             
-            // Find matching route
             Optional<Route> matchingRoute = findMatchingRoute(requestPath);
             
             if (matchingRoute.isEmpty()) {
@@ -79,16 +77,12 @@ public class ProxyController {
             
             Route route = matchingRoute.get();
             
-            // Build target URL
             String targetUrl = buildTargetUrl(route, request);
             
-            // Build headers (including user context from AuthFilter)
             HttpHeaders headers = buildProxyHeaders(request);
             
-            // Create HTTP entity
             HttpEntity<Object> entity = new HttpEntity<>(body, headers);
             
-            // Make the proxied request
             logger.debug("Forwarding to: {} {}", method, targetUrl);
             ResponseEntity<String> response = restTemplate.exchange(
                 targetUrl,
@@ -97,7 +91,6 @@ public class ProxyController {
                 String.class
             );
             
-            // Return response with appropriate headers
             return ResponseEntity.status(response.getStatusCode())
                 .headers(filterResponseHeaders(response.getHeaders()))
                 .body(response.getBody());
@@ -119,7 +112,7 @@ public class ProxyController {
                     return true;
                 }
                 
-                // Path pattern matching
+                // Path pattern match
                 if (routeUrl.endsWith("/**")) {
                     String basePath = routeUrl.substring(0, routeUrl.length() - 3);
                     return requestPath.startsWith(basePath);
@@ -292,7 +285,7 @@ public class ProxyController {
                   java.time.Instant.now() + "\"}");
     }
     
-    // Route information endpoint (useful for debugging)
+    // Route information endpoint
     @GetMapping("/routes")
     public ResponseEntity<?> getRoutes(HttpServletRequest request) {
         // Only show routes if user has admin role
