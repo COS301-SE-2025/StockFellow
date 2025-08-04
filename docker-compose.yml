@@ -40,6 +40,47 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL Database for Notification Service
+  notification-postgres:
+    image: postgres:15
+    container_name: notification-postgres
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
+    ports:
+      - "5440:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "notification_user", "-d", "notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ActiveMQ
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: activemq
+    ports:
+      - "61616:61616"  # OpenWire protocol
+      - "8161:8161"    # Web console
+      - "5672:5672"    # AMQP
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    networks:
+      - stockfellow-net
+    volumes:
+      - activemq_data:/var/lib/artemis-instance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   # Keycloak 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -168,7 +209,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
+      retries:  ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
   # Transaction Service
@@ -204,6 +245,46 @@ services:
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    depends_on:
+      - notification-postgres
+      - activemq
+      - group-service  
+    ports:
+      - "4050:4050"
+      - "5008:5008"  # Debug port
+    environment:
+      - SERVER_PORT=4050
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://notification-postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=notification_user
+      - SPRING_DATASOURCE_PASSWORD=notification_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_USER_SERVICE_URL=http://user-service:4000
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/notification-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4050/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
 # MFA Service (Spring Boot)
   mfa-service:
     build:
@@ -251,5 +332,7 @@ networks:
 
 volumes:
   postgres_data:
+  notification_postgres_data:
   mongodb_data:
   redis_data:
+  activemq_data:

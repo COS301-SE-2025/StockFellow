@@ -1,12 +1,14 @@
-import { Text, View } from 'react-native';
+import { Text, View, Alert } from 'react-native';
 import React, { useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
+// import PDFUpload from '../../src/components/pdfUpload';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import authService from '../../src/services/authService'; // Import the auth service
+import authService from '../../src/services/authService';
+// import * as DocumentPicker from 'expo-document-picker';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -31,7 +33,11 @@ const SignUp = () => {
     confirmPassword: ''
   });
 
+  // Commented out PDF-related states
+  // const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  // const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
   const passwordRef = useRef<string>('');
 
@@ -104,6 +110,34 @@ const SignUp = () => {
     return valid;
   };
 
+  // Commented out document upload handler
+  // const handleDocumentUpload = async (type: 'bankStatement' | 'payslip') => {
+  //   try {
+  //     setUploadingDoc(type);
+  //     const res = await DocumentPicker.getDocumentAsync({
+  //       type: 'application/pdf',
+  //     });
+
+  //     if (res.canceled) {
+  //       console.log('File selection canceled');
+  //       return;
+  //     }
+
+  //     if (res.assets && res.assets[0]) {
+  //       if (type === 'bankStatement') {
+  //         setBankStatement(res.assets[0]);
+  //       } else {
+  //         setPayslip(res.assets[0]);
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error('Error during document picker:', err);
+  //     Alert.alert('Error', 'Failed to select document. Please try again.');
+  //   } finally {
+  //     setUploadingDoc(null);
+  //   }
+  // };
+
   const handlePasswordChange = (text: string) => {
     setForm({ ...form, password: text });
     passwordRef.current = text;
@@ -124,16 +158,20 @@ const SignUp = () => {
       try {
         console.log('Attempting registration...');
 
-        // Use the auth service for registration
-        const registrationResult = await authService.register({
+        // Prepare form data without documents
+        const registrationData = {
           username: form.username,
           firstName: form.firstName,
           lastName: form.lastName,
           email: form.email,
           password: form.password,
           contactNumber: form.contactNumber,
-          idNumber: form.idNumber,
-        });
+          idNumber: form.idNumber
+        };
+
+        console.log('Registration data:', registrationData);
+
+        const registrationResult = await authService.register(registrationData);
 
         if (registrationResult.success) {
           console.log('Registration successful');
@@ -170,6 +208,7 @@ const SignUp = () => {
       } catch (error) {
         console.error('Registration error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+        Alert.alert('Registration Error', errorMessage);
         setErrors({
           ...errors,
           email: errorMessage,
@@ -276,6 +315,17 @@ const SignUp = () => {
                   placeholder='Confirm your password'
                   error={errors.confirmPassword}
                 />
+                {/* 3 Month Bank Statement Upload */}
+                {/* <PDFUpload 
+                  heading="3 Month Bank Statement"
+                  onDocumentSelect={(doc) => setBankStatement(doc)}
+                /> */}
+
+                {/* Payslip Upload */}
+                {/* <PDFUpload 
+                  heading="Latest Payslip"
+                  onDocumentSelect={(doc) => setPayslip(doc)}
+                /> */}
 
                 <CustomButton
                   title="Sign Up"
