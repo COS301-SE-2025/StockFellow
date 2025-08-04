@@ -71,7 +71,7 @@ services:
       POSTGRES_PASSWORD: alfresco123
       POSTGRES_MULTIPLE_DATABASES: alfresco,activiti
     ports:
-      - "5434:5432"
+      - "5435:5432"
     networks:
       - stockfellow-net
     healthcheck:
@@ -101,7 +101,7 @@ services:
       timeout: 10s
       retries: 5
 
-  # Alfresco Search Services (Solr6) - Fixed to use available version
+  # Alfresco Search Services (Solr6)
   alfresco-search:
     image: alfresco/alfresco-search-services:2.0.8.1
     container_name: alfresco-search
@@ -126,7 +126,7 @@ services:
       retries: 5
       start_period: 60s
 
-  # Alfresco Content Repository - Fixed to use Community Edition
+  # Alfresco Content Repository
   alfresco-content-repository:
     image: alfresco/alfresco-content-repository-community:23.2.1
     container_name: alfresco-content-repository
@@ -197,9 +197,9 @@ services:
       retries: 5
       start_period: 120s
 
-  # Transform Router - Fixed to use available version
+  # Transform Router - Fixed image version
   transform-router:
-    image: alfresco/alfresco-transform-router:4.0.1
+    image: alfresco/alfresco-transform-router:1.5.3
     container_name: transform-router
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -213,9 +213,9 @@ services:
     depends_on:
       - activemq
 
-  # Shared File Store - Fixed to use available version
+  # Shared File Store - Using correct version
   shared-file-store:
-    image: alfresco/alfresco-shared-file-store:4.0.1
+    image: alfresco/alfresco-shared-file-store:0.16.1
     container_name: shared-file-store
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -228,9 +228,9 @@ services:
     volumes:
       - shared_file_store_data:/tmp/Alfresco/sfs
 
-  # Transform Core AIO (All-in-One Transformer) - Fixed to use available version
+  # Transform Core AIO - Using correct version
   transform-core-aio:
-    image: alfresco/alfresco-transform-core-aio:5.0.1
+    image: alfresco/alfresco-transform-core-aio:2.5.7
     container_name: transform-core-aio
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -244,9 +244,9 @@ services:
       - activemq
       - shared-file-store
 
-  # PDF Renderer
+  # PDF Renderer - Using correct version
   alfresco-pdf-renderer:
-    image: alfresco/alfresco-pdf-renderer:5.0.1
+    image: alfresco/alfresco-pdf-renderer:2.5.7
     container_name: alfresco-pdf-renderer
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -257,9 +257,9 @@ services:
     networks:
       - stockfellow-net
 
-  # ImageMagick
+  # ImageMagick - Using correct version
   imagemagick:
-    image: alfresco/alfresco-imagemagick:5.0.1
+    image: alfresco/alfresco-imagemagick:2.5.7
     container_name: imagemagick
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -270,9 +270,9 @@ services:
     networks:
       - stockfellow-net
 
-  # LibreOffice
+  # LibreOffice - Using correct version
   libreoffice:
-    image: alfresco/alfresco-libreoffice:5.0.1
+    image: alfresco/alfresco-libreoffice:2.5.7
     container_name: libreoffice
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -283,9 +283,9 @@ services:
     networks:
       - stockfellow-net
 
-  # Tika
+  # Tika - Using correct version
   tika:
-    image: alfresco/alfresco-tika:5.0.1
+    image: alfresco/alfresco-tika:2.5.7
     container_name: tika
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"
@@ -296,9 +296,9 @@ services:
     networks:
       - stockfellow-net
 
-  # Transform Misc
+  # Transform Misc - Using correct version
   transform-misc:
-    image: alfresco/alfresco-transform-misc:5.0.1
+    image: alfresco/alfresco-transform-misc:2.5.7
     container_name: transform-misc
     environment:
       JAVA_OPTS: " -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=80"  
@@ -309,7 +309,7 @@ services:
     networks:
       - stockfellow-net
 
-  # Alfresco Share (Optional Web UI) - Fixed to use Community Edition
+  # Alfresco Share (Optional Web UI)
   alfresco-share:
     image: alfresco/alfresco-share:23.2.1
     container_name: alfresco-share
