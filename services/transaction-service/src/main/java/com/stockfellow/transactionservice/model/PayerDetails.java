@@ -48,6 +48,9 @@ public class PayerDetails {
     
     @Column(name = "signature")
     private String signature;
+
+    @Column(name = "paystack_reference")
+    private String paystackReference;
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -84,6 +87,7 @@ public class PayerDetails {
     public Boolean getIsActive() { return isActive; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public String getPaystackReference() { return paystackReference; }
 
     // Setters
     public void setPayerId(UUID payerId) { this.payerId = payerId; }
@@ -102,6 +106,8 @@ public class PayerDetails {
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setPaystackReference(String paystackReference) { this.paystackReference = paystackReference; }
+
 
     @PrePersist
     protected void onCreate() {

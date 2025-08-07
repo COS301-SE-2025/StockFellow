@@ -2,7 +2,7 @@ package com.stockfellow.transactionservice.controller;
 
 import com.stockfellow.transactionservice.dto.*;
 import com.stockfellow.transactionservice.model.*;
-import com.stockfellow.transactionservice.service.*;
+import com.stockfellow.transactionservice.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,8 +24,8 @@ public class TransactionController {
     @Autowired
     private TransactionService transactionService;
     
-    @Autowired
-    private ActivityLogService activityLogService;
+    // @Autowired
+    // private ActivityLogService activityLogService;
 
     // Create transaction (called when user contributes to cycle)
     @PostMapping

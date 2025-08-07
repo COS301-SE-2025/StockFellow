@@ -3,8 +3,6 @@ package com.stockfellow.transactionservice.integration.dto;
 import com.stockfellow.transactionservice.model.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.*;
-import java.util.UUID;
 import java.util.Map;
 
 /**

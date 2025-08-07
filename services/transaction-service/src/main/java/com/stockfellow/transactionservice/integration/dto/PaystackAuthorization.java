@@ -2,9 +2,6 @@ package com.stockfellow.transactionservice.integration.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.*;
-import java.util.UUID;
-import java.util.Map;
 
 /**
  * Paystack Authorization object (card details)

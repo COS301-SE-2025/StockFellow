@@ -42,8 +42,8 @@ public class TransactionService {
     @Autowired
     private PayerDetailsRepository payerDetailsRepository;
     
-    @Autowired
-    private ActivityLogService activityLogService;
+    // @Autowired
+    // private ActivityLogService activityLogService;
     
     @Autowired
     private PaystackService paystackService;
@@ -51,7 +51,7 @@ public class TransactionService {
     @Value("${app.transaction.max-retry-count:3}")
     private Integer maxRetryCount;
     
-    @Value("${app.paystack.callback-url}")
+    @Value("${app.paystack.callback-url:http://localhost:4080/api/transactions/callback}")
     private String paystackCallbackUrl;
 
     /**

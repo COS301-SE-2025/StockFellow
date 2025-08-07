@@ -1,10 +1,9 @@
 package com.stockfellow.transactionservice.service;
 
 import com.stockfellow.transactionservice.dto.UpdateUserStatusDto;
-import com.stockfellow.transactionservice.dto.UserResponseDto;
 import com.stockfellow.transactionservice.dto.SyncUserDto;
 import com.stockfellow.transactionservice.repository.UserRepository;
-import com.stockfellow.transactionservice.model.ActivityLog;
+// import com.stockfellow.transactionservice.model.ActivityLog;
 import com.stockfellow.transactionservice.model.User;
 
 import org.slf4j.Logger;

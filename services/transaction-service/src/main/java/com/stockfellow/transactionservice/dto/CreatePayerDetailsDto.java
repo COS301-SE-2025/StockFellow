@@ -1,12 +1,7 @@
 package com.stockfellow.transactionservice.dto;
 
 import com.stockfellow.transactionservice.model.*;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class CreatePayerDetailsDto {
@@ -60,4 +55,10 @@ public class CreatePayerDetailsDto {
     
     public String getBank() { return bank; }
     public void setBank(String bank) { this.bank = bank; }
+
+    public String getBin() { return bin; }
+    public void setBin(String bin) { this.bin = bin; }
+
+    public String getSignature() { return signature; }
+    public void setSignature(String signature) { this.signature = signature; }
 }

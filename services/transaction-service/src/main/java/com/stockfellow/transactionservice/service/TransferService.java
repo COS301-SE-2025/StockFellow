@@ -14,8 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +41,8 @@ public class TransferService {
     @Autowired
     private UserRepository userRepository;
     
-    @Autowired
-    private ActivityLogService activityLogService;
+    // @Autowired
+    // private ActivityLogService activityLogService;
     
     @Autowired
     private PaystackService paystackService;
@@ -367,14 +365,18 @@ public class TransferService {
             PaystackTransferResponse response = paystackService.initiateTransfer(request);
             
             // Update transfer with Paystack response
-            transfer.setPaystackTransferCode(response.getTransferCode());
-            transfer.setStatus(Transfer.TransferStatus.PROCESSING);
-            transfer.setInitiatedAt(LocalDateTime.now());
+            if (response.getStatus()) {
+                transfer.setPaystackTransferCode(response.getData().getTransferCode());
+                transfer.setGatewayStatus(response.getData().getStatus()); 
+                transfer.setStatus(Transfer.TransferStatus.PROCESSING);
+                transfer.setInitiatedAt(LocalDateTime.now());
+
+                transferRepository.save(transfer);
             
-            transferRepository.save(transfer);
-            
-            logger.info("Paystack transfer initiated successfully: {}", transfer.getTransferId());
-            
+                logger.info("Paystack transfer initiated successfully: {}", transfer.getTransferId());
+            } else {
+                throw new RuntimeException("Paystack transfer failed: " + response.getMessage());
+            }     
         } catch (Exception e) {
             logger.error("Failed to initiate Paystack transfer: {}", e.getMessage());
             throw new RuntimeException("Failed to initiate transfer with Paystack: " + e.getMessage());

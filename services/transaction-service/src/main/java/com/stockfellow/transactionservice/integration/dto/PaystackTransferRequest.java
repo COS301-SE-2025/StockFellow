@@ -3,7 +3,6 @@ package com.stockfellow.transactionservice.integration.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.*;
-import java.util.UUID;
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -15,7 +14,7 @@ public class PaystackTransferRequest {
     @JsonProperty("amount")
     @NotNull(message = "Amount is required")
     @Min(value = 1, message = "Amount must be greater than 0")
-    private Integer amount; // Amount in kobo
+    private Integer amount; 
     
     @JsonProperty("recipient")
     @NotBlank(message = "Recipient code is required")
