@@ -14,17 +14,21 @@ import java.util.*;
 @Service
 public class GroupService {
     private static final Logger logger = LoggerFactory.getLogger(GroupService.class);
-    
+    private final GroupMemberService groupMemberService;
     private final EventStoreService eventStoreService;
     private final GroupRepository groupRepository;
 
-    public GroupService(EventStoreService eventStoreService, GroupRepository groupRepository) {
+    public GroupService(EventStoreService eventStoreService,
+            GroupRepository groupRepository,
+            GroupMemberService groupMemberService) {
         this.eventStoreService = eventStoreService;
         this.groupRepository = groupRepository;
+        this.groupMemberService = groupMemberService;
     }
 
     public CreateGroupResult createGroup(CreateGroupRequest request) {
-        logger.info("Creating group '{}' for adminId: {} with username: {}", request.getName(), request.getAdminId(), request.getAdminName());
+        logger.info("Creating group '{}' for adminId: {} with username: {}", request.getName(), request.getAdminId(),
+                request.getAdminName());
 
         validateCreateGroupRequest(request);
 
@@ -57,16 +61,17 @@ public class GroupService {
         if (request.getMaxMembers() == null || request.getMaxMembers() <= 0) {
             throw new IllegalArgumentException("Maximum members must be greater than 0");
         }
-        if (request.getVisibility() == null || 
-            !Arrays.asList("Private", "Public").contains(request.getVisibility())) {
+        if (request.getVisibility() == null ||
+                !Arrays.asList("Private", "Public").contains(request.getVisibility())) {
             throw new IllegalArgumentException("Visibility must be 'Private' or 'Public'");
         }
-        if (request.getContributionFrequency() == null || 
-            !Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(request.getContributionFrequency())) {
-            throw new IllegalArgumentException("Invalid contribution frequency. Must be: Monthly, Bi-weekly, or Weekly");
+        if (request.getContributionFrequency() == null ||
+                !Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(request.getContributionFrequency())) {
+            throw new IllegalArgumentException(
+                    "Invalid contribution frequency. Must be: Monthly, Bi-weekly, or Weekly");
         }
-        if (request.getPayoutFrequency() == null || 
-            !Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(request.getPayoutFrequency())) {
+        if (request.getPayoutFrequency() == null ||
+                !Arrays.asList("Monthly", "Bi-weekly", "Weekly").contains(request.getPayoutFrequency())) {
             throw new IllegalArgumentException("Invalid payout frequency. Must be: Monthly, Bi-weekly, or Weekly");
         }
         if (request.getMembers().size() > request.getMaxMembers()) {
@@ -78,7 +83,8 @@ public class GroupService {
         return "group_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private Map<String, Object> buildGroupCreatedEventData(String groupId, CreateGroupRequest request, List<String> members) {
+    private Map<String, Object> buildGroupCreatedEventData(String groupId, CreateGroupRequest request,
+            List<String> members) {
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("groupId", groupId);
         eventData.put("adminId", request.getAdminId());
@@ -142,4 +148,62 @@ public class GroupService {
         return groupRepository.findPublicGroupsByNameContaining(query);
     }
     // public List<Group> getPublicGroups()
+
+    public CreateGroupResult createGroupForTier(Integer tier, String userId, String username) {
+        // Find oldest non-full group in this tier
+        Optional<Group> availableGroup = findAvailableGroupInTier(tier);
+
+        if (availableGroup.isPresent()) {
+            // Add user to existing group using GroupMemberService
+            Group group = availableGroup.get();
+            try {
+                groupMemberService.addMemberToGroup(group.getGroupId(), userId, username);
+                return new CreateGroupResult(group.getGroupId(), null, "Added to existing group");
+            } catch (Exception e) {
+                logger.error("Failed to add member to group: {}", e.getMessage());
+                throw new RuntimeException("Failed to add member to existing group");
+            }
+        } else {
+            // Create new group for this tier
+            return createNewGroupForTier(tier, userId, username);
+        }
+    }
+
+    private Optional<Group> findAvailableGroupInTier(Integer tier) {
+        // Find all groups in this tier that aren't full
+        List<Group> groups = groupRepository.findByTier(tier);
+
+        return groups.stream()
+                .filter(g -> g.getMembers().size() < g.getMaxMembers())
+                .sorted(Comparator.comparing(Group::getCreatedAt))
+                .findFirst();
+    }
+
+    private CreateGroupResult createNewGroupForTier(Integer tier, String adminId, String adminName) {
+        Double minContribution = Group.TIER_RANGES.get(tier)[0];
+
+        CreateGroupRequest request = new CreateGroupRequest();
+        request.setAdminId(adminId);
+        request.setAdminName(adminName);
+        request.setName(generateStokvelName());
+        request.setMinContribution(minContribution);
+        request.setMaxMembers(10); // Fixed at 10 members
+        request.setVisibility("Private"); // Stokvels are private groups
+        request.setContributionFrequency("Monthly");
+        request.setPayoutFrequency("Monthly");
+        request.setTier(tier);
+
+        // Current date for contribution/payout dates
+        Date now = new Date();
+        request.setContributionDate(now);
+        request.setPayoutDate(now);
+
+        return createGroup(request);
+    }
+
+    private String generateStokvelName() {
+        // Alternative implementation since countByNameStartingWith isn't available
+        // Using a simple timestamp-based approach
+        return "Stokvel #" + System.currentTimeMillis();
+    }
 }

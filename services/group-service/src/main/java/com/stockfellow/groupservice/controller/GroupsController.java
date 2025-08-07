@@ -589,6 +589,47 @@ public class GroupsController {
         }
     }
 
+    @PostMapping("/join-tier")
+    @Operation(
+        summary = "Join or create stokvel based on tier",
+        description = "Automatically joins user to a stokvel of their tier or creates a new one"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully joined or created stokvel"),
+        @ApiResponse(responseCode = "400", description = "Invalid tier"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<?> joinOrCreateStokvel(
+            @Parameter(description = "User's tier (1-6)") @RequestParam Integer tier,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = httpRequest.getHeader("X-User-Id");
+            String username = httpRequest.getHeader("X-Username");
+            
+            if (userId == null || username == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+            }
+            
+            if (tier < 1 || tier > 6) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid tier (must be 1-6)"));
+            }
+
+            CreateGroupResult result = groupService.createGroupForTier(tier, userId, username);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", result.getMessage(),
+                "groupId", result.getGroupId()
+            ));
+            
+        } catch (Exception e) {
+            logger.error("Error joining stokvel: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+        }
+    }
+
 
     private CreateGroupRequest parseCreateGroupRequest(Map<String, Object> requestBody, String adminId, String adminName) {
         // Extract and validate required fields

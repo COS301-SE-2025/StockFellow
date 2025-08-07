@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface GroupRepository extends MongoRepository<Group, String> {
-    
+
     // Find group by groupId field (not the MongoDB _id)
     Optional<Group> findByGroupId(String groupId);
 
@@ -21,35 +21,35 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     // Legacy name for query: findGroupsByUserId
     @Query("{ 'members.userId': ?0 }")
     List<Group> findByMembersUserId(String userId);
-    
+
     // Find groups by admin ID
     List<Group> findByAdminId(String adminId);
-    
+
     // Find groups by visibility
     List<Group> findByVisibility(String visibility);
-    
+
     // Find public groups for discovery
     @Query("{ 'visibility': 'Public' }")
     List<Group> findPublicGroups();
-    
+
     // Find groups by name (case-insensitive)
     @Query("{ 'name': { $regex: ?0, $options: 'i' } }")
     List<Group> findByNameContainingIgnoreCase(String name);
-    
+
     // Find public groups by name containing search term (case-insensitive)
     @Query("{ 'visibility': 'Public', 'name': { $regex: ?0, $options: 'i' } }")
     List<Group> findPublicGroupsByNameContaining(String name);
-    
+
     // Advanced search for public groups (name or description)
     @Query("{ 'visibility': 'Public', $or: [ " +
-           "{ 'name': { $regex: ?0, $options: 'i' } }, " +
-           "{ 'description': { $regex: ?0, $options: 'i' } } ] }")
+            "{ 'name': { $regex: ?0, $options: 'i' } }, " +
+            "{ 'description': { $regex: ?0, $options: 'i' } } ] }")
     List<Group> findPublicGroupsByNameOrDescriptionContaining(String searchTerm);
-    
+
     // Check if a user is already a member of a group
     @Query("{ '_id': ?0, 'members': ?1 }")
     Optional<Group> findByGroupIdAndMembersContaining(String groupId, String userId);
-    
+
     // Count total members in a group
     @Query(value = "{ '_id': ?0 }", fields = "{ 'members': 1 }")
     Optional<Group> findGroupMembersOnly(String groupId);
@@ -65,4 +65,12 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     // Find groups by member role
     @Query("{ 'members': { $elemMatch: { 'userId': ?0, 'role': ?1 } } }")
     List<Group> findByMemberUserIdAndRole(String userId, String role);
+
+    // Add tier query method
+    @Query("{ 'tier': ?0 }")
+    List<Group> findByTier(Integer tier);
+
+    // Add count method for stokvel names
+    @Query(value = "{ 'name': { $regex: '^Stokvel #', $options: 'i' } }", count = true)
+    long countStokvelGroups();
 }

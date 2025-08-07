@@ -174,7 +174,7 @@ public class GroupMemberService {
         }
     }
 
-    private void addMemberToGroup(String groupId, String userId, String username) {
+    public void addMemberToGroup(String groupId, String userId, String username) {
         Member newMember = new Member(userId, username, "member");
         
         Query query = new Query(Criteria.where("groupId").is(groupId));
