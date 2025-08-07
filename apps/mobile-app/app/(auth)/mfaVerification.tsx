@@ -81,78 +81,124 @@ const MfaVerification = () => {
         }
     };
 
-    const handleVerify = async () => {
-        const verificationCode = digits.join('');
-        if (verificationCode.length !== 6) {
-            Alert.alert('Invalid Code', 'Please enter a complete 6-digit verification code');
-            return;
-        }
+    // const handleVerify = async () => {
+    //     const verificationCode = digits.join('');
+    //     if (verificationCode.length !== 6) {
+    //         Alert.alert('Invalid Code', 'Please enter a complete 6-digit verification code');
+    //         return;
+    //     }
 
-        setIsSubmitting(true);
-        try {
-            const result = await authService.verifyMfaCode(email.toString(), verificationCode);
+    //     setIsSubmitting(true);
+    //     try {
+    //         const result = await authService.verifyMfaCode(email.toString(), verificationCode);
 
-            if (result.success) {
-                router.push('/(tabs)/home');
-            } else {
-                let errorMessage = 'Verification failed. Please try again.';
-                if (result.error?.includes('expired')) {
-                    errorMessage = 'This code has expired. Please request a new one.';
-                } else if (result.error?.includes('invalid')) {
-                    errorMessage = 'Invalid verification code. Please try again.';
-                }
-                Alert.alert('Verification Error', errorMessage);
-                setDigits(Array(6).fill(''));
-                inputRefs.current[0]?.focus();
+    //         if (result.success) {
+    //             router.push('/(tabs)/home');
+    //         } else {
+    //             let errorMessage = 'Verification failed. Please try again.';
+    //             if (result.error?.includes('expired')) {
+    //                 errorMessage = 'This code has expired. Please request a new one.';
+    //             } else if (result.error?.includes('invalid')) {
+    //                 errorMessage = 'Invalid verification code. Please try again.';
+    //             }
+    //             Alert.alert('Verification Error', errorMessage);
+    //             setDigits(Array(6).fill(''));
+    //             inputRefs.current[0]?.focus();
+    //         }
+    //     } catch (error) {
+    //         let errorMessage = 'Unable to verify code. Please try again.';
+    //         if (error instanceof Error) {
+    //             errorMessage = error.message;
+    //         }
+    //         Alert.alert('Network Error', errorMessage);
+    //         console.error('MFA verification error:', error);
+    //         setDigits(Array(6).fill(''));
+    //         inputRefs.current[0]?.focus();
+    //     } finally {
+    //         setIsSubmitting(false);
+    //     }
+    // };
+
+
+const handleVerify = async () => {
+    const verificationCode = digits.join('');
+    if (verificationCode.length !== 6) {
+        Alert.alert('Invalid Code', 'Please enter a complete 6-digit verification code');
+        return;
+    }
+
+    setIsSubmitting(true);
+    try {
+        
+        const result = await authService.verifyMfaCode(
+            email.toString(), 
+            verificationCode,
+            params.tempSession?.toString() || ''  
+        );
+
+        if (result.success) {
+            router.push('/(tabs)/home');
+        } else {
+            let errorMessage = 'Verification failed. Please try again.';
+            if (result.error?.includes('expired')) {
+                errorMessage = 'This code has expired. Please request a new one.';
+            } else if (result.error?.includes('invalid')) {
+                errorMessage = 'Invalid verification code. Please try again.';
             }
-        } catch (error) {
-            let errorMessage = 'Unable to verify code. Please try again.';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            Alert.alert('Network Error', errorMessage);
-            console.error('MFA verification error:', error);
+            Alert.alert('Verification Error', errorMessage);
             setDigits(Array(6).fill(''));
             inputRefs.current[0]?.focus();
-        } finally {
-            setIsSubmitting(false);
         }
-    };
-
-    const handleResendCode = async () => {
-        if (countdown > 0) {
-            Alert.alert(
-                'Wait a moment',
-                `Please wait ${countdown} seconds before requesting a new code.`
-            );
-            return;
+    } catch (error) {
+        let errorMessage = 'Unable to verify code. Please try again.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
         }
+        Alert.alert('Network Error', errorMessage);
+        console.error('MFA verification error:', error);
+        setDigits(Array(6).fill(''));
+        inputRefs.current[0]?.focus();
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
-        try {
-            setIsSubmitting(true);
-            const result = await authService.resendMfaCode(email.toString());
+  // resend endpoint not implemented in backend 
 
-            if (result.success) {
-                setCountdown(60);
-                setDigits(Array(6).fill(''));
-                inputRefs.current[0]?.focus();
-                Alert.alert(
-                    'New Code Sent',
-                    `A new 6-digit code has been sent to ${email}. It will expire in ${codeExpiryMinutes} minutes.`
-                );
-            } else {
-                throw new Error(result.error || 'Failed to resend code');
-            }
-        } catch (error) {
-            let errorMessage = 'Failed to send new code. Please try again later.';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            Alert.alert('Resend Failed', errorMessage);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    // const handleResendCode = async () => {
+    //     if (countdown > 0) {
+    //         Alert.alert(
+    //             'Wait a moment',
+    //             `Please wait ${countdown} seconds before requesting a new code.`
+    //         );
+    //         return;
+    //     }
+
+    //     try {
+    //         setIsSubmitting(true);
+    //         const result = await authService.resendMfaCode(email.toString());
+
+    //         if (result.success) {
+    //             setCountdown(60);
+    //             setDigits(Array(6).fill(''));
+    //             inputRefs.current[0]?.focus();
+    //             Alert.alert(
+    //                 'New Code Sent',
+    //                 `A new 6-digit code has been sent to ${email}. It will expire in ${codeExpiryMinutes} minutes.`
+    //             );
+    //         } else {
+    //             throw new Error(result.error || 'Failed to resend code');
+    //         }
+    //     } catch (error) {
+    //         let errorMessage = 'Failed to send new code. Please try again later.';
+    //         if (error instanceof Error) {
+    //             errorMessage = error.message;
+    //         }
+    //         Alert.alert('Resend Failed', errorMessage);
+    //     } finally {
+    //         setIsSubmitting(false);
+    //     }
+    // };
 
     return (
         <GestureHandlerRootView className='flex-1'>
@@ -215,14 +261,14 @@ const MfaVerification = () => {
 
                             <View className="flex-row items-center mt-4 justify-center">
                                 <Text className="text-[#0C0C0F] text-sm">
-                                    Didn't receive a code?{' '}
+                                    Didn't receive a code? Please go back to login and try again.
                                 </Text>
-                                <Text
+                                {/* <Text
                                     className={`text-sm ${countdown > 0 ? 'text-[#1DA1FA]' : 'text-[#1DA1FA] font-medium'}`}
                                     onPress={handleResendCode}
                                 >
                                     Resend {countdown > 0 ? `(in ${countdown}s)` : ''}
-                                </Text>
+                                </Text> */}
                             </View>
 
                             <CustomButton
@@ -247,3 +293,5 @@ const MfaVerification = () => {
 };
 
 export default MfaVerification;
+
+
