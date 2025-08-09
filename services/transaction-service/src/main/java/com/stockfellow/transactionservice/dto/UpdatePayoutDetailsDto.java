@@ -4,7 +4,7 @@ import com.stockfellow.transactionservice.model.*;
 
 public class UpdatePayoutDetailsDto {
     
-    private PayoutDetails.PayoutType type;
+    private String type;
     private String recipientName;
     private String accountNumber;
     private String bankCode;
@@ -18,8 +18,8 @@ public class UpdatePayoutDetailsDto {
     public UpdatePayoutDetailsDto() {}
 
     // Getters and Setters
-    public PayoutDetails.PayoutType getType() { return type; }
-    public void setType(PayoutDetails.PayoutType type) { this.type = type; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
     
     public String getRecipientName() { return recipientName; }
     public void setRecipientName(String recipientName) { this.recipientName = recipientName; }

@@ -1,24 +1,37 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
 import jakarta.validation.constraints.*;
 import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class CreatePayoutDetailsDto {
     
     @NotNull(message = "User ID is required")
+    @JsonProperty("user_id")  // Add this
     private UUID userId;
     
     @NotNull(message = "Payout type is required")
-    private PayoutDetails.PayoutType type;
+    private String type;
     
     @NotBlank(message = "Recipient name is required")
     @Size(max = 100, message = "Recipient name must not exceed 100 characters")
+    @JsonProperty("name")  // Add this
     private String recipientName;
     
+    @NotBlank(message = "Account number is required")
+    @JsonProperty("account_number")  // Add this
     private String accountNumber;
+    
+    @NotBlank(message = "Bank code is required")
+    @JsonProperty("bank_code")  // Add this
     private String bankCode;
+    
+    @NotBlank(message = "Bank name is required")
+    @JsonProperty("bank_name")  // Add this
     private String bankName;
+    
+    // Optional fields
     private String phoneNumber;
     private String provider;
     private String recipientCode;
@@ -30,8 +43,8 @@ public class CreatePayoutDetailsDto {
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
     
-    public PayoutDetails.PayoutType getType() { return type; }
-    public void setType(PayoutDetails.PayoutType type) { this.type = type; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
     
     public String getRecipientName() { return recipientName; }
     public void setRecipientName(String recipientName) { this.recipientName = recipientName; }

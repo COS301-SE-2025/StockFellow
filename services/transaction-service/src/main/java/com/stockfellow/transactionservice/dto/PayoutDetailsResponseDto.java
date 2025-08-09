@@ -9,7 +9,7 @@ public class PayoutDetailsResponseDto {
     
     private UUID payoutId;
     private UUID userId;
-    private PayoutDetails.PayoutType type;
+    private String type;
     private String recipientName;
     private String accountNumber;
     private String bankCode;
@@ -53,8 +53,8 @@ public class PayoutDetailsResponseDto {
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
     
-    public PayoutDetails.PayoutType getType() { return type; }
-    public void setType(PayoutDetails.PayoutType type) { this.type = type; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
     
     public String getRecipientName() { return recipientName; }
     public void setRecipientName(String recipientName) { this.recipientName = recipientName; }

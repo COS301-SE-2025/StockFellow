@@ -14,10 +14,9 @@ public class PayoutDetails {
     
     @Column(name = "user_id", nullable = false)
     private UUID userId;
-    
-    @Enumerated(EnumType.STRING)
+
     @Column(name = "type", nullable = false)
-    private PayoutType type;
+    private String type;
     
     @Column(name = "recp_name", nullable = false)
     private String recipientName;
@@ -55,7 +54,7 @@ public class PayoutDetails {
     // Constructors
     public PayoutDetails() {}
 
-    public PayoutDetails(UUID userId, PayoutType type, String recipientName) {
+    public PayoutDetails(UUID userId, String type, String recipientName) {
         this.userId = userId;
         this.type = type;
         this.recipientName = recipientName;
@@ -64,7 +63,7 @@ public class PayoutDetails {
     // Getters
     public UUID getPayoutId() { return payoutId; }
     public UUID getUserId() { return userId; }
-    public PayoutType getType() { return type; }
+    public String getType() { return type; }
     public String getRecipientName() { return recipientName; }
     public String getAccountNumber() { return accountNumber; }
     public String getBankCode() { return bankCode; }
@@ -80,7 +79,7 @@ public class PayoutDetails {
     // Setters
     public void setPayoutId(UUID payoutId) { this.payoutId = payoutId; }
     public void setUserId(UUID userId) { this.userId = userId; }
-    public void setType(PayoutType type) { this.type = type; }
+    public void setType(String type) { this.type = type; }
     public void setRecipientName(String recipientName) { this.recipientName = recipientName; }
     public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
     public void setBankCode(String bankCode) { this.bankCode = bankCode; }
@@ -115,10 +114,10 @@ public class PayoutDetails {
     }
 
     // Payout Type Enum
-    public enum PayoutType {
-        BANK_ACCOUNT,
-        MOBILE_MONEY,
-        DIGITAL_WALLET,
-        CRYPTO_WALLET
-    }
+    // public enum PayoutType {
+    //     BANK_ACCOUNT,
+    //     MOBILE_MONEY,
+    //     DIGITAL_WALLET,
+    //     CRYPTO_WALLET
+    // }
 }

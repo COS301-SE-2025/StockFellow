@@ -1,5 +1,6 @@
 package com.stockfellow.transactionservice.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockfellow.transactionservice.integration.dto.*;
 import com.stockfellow.transactionservice.service.TransferService;
 
@@ -105,6 +106,11 @@ public class PaystackService {
         try {
             HttpHeaders headers = createHeaders();
             HttpEntity<?> entity = new HttpEntity<>(request, headers);
+
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonRequest = mapper.writeValueAsString(request);
+            logger.info("Sending to Paystack: {}", jsonRequest);
+            logger.info("Request object: {}", request.toString());
 
             ResponseEntity<PaystackTransferRecipientResponse> response = restTemplate.exchange(
                 PAYSTACK_BASE_URL + "/transferrecipient",

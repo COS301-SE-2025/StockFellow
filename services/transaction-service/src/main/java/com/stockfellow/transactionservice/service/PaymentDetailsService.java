@@ -361,8 +361,8 @@ public class PaymentDetailsService {
         paystackRecipient.setType("basa");
         paystackRecipient.setAccountNumber(createDto.getAccountNumber());
         paystackRecipient.setBankCode(createDto.getBankCode());
-        paystackRecipient.setBankName(createDto.getBankName());
-        paystackRecipient.setAccountName(createDto.getRecipientName());
+        paystackRecipient.setCurrency("ZAR");
+        paystackRecipient.setName(createDto.getRecipientName());
         
         PaystackTransferRecipientResponse response;
         try {

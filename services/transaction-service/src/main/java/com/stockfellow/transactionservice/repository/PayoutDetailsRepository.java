@@ -27,12 +27,12 @@ public interface PayoutDetailsRepository extends JpaRepository<PayoutDetails, UU
     /**
      * Find payout details by type
      */
-    List<PayoutDetails> findByType(PayoutDetails.PayoutType type);
+    List<PayoutDetails> findByType(String type);
     
     /**
      * Find payout details by user and type
      */
-    List<PayoutDetails> findByUserIdAndType(UUID userId, PayoutDetails.PayoutType type);
+    List<PayoutDetails> findByUserIdAndType(UUID userId, String type);
     
     /**
      * Find verified payout details

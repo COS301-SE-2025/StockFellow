@@ -6,44 +6,44 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PaystackTransferRecipientRequest {
     @JsonProperty("type")
-    public String type;
+    private String type;
 
     @JsonProperty("account_number")
-    public String accountNumber;
+    private String accountNumber;
 
-    @JsonProperty("account_name")
-    public String accountName;
+    @JsonProperty("name")
+    private String name;
 
     @JsonProperty("bank_code")
-    public String bankCode;
+    private String bankCode;
 
-    @JsonProperty("bank_name")
-    public String bankName;
+    @JsonProperty("currency")
+    private String currency;
 
     public PaystackTransferRecipientRequest() {}
 
     // Getters
     public String getType() {return type;}
     public String getAccountNumber() {return accountNumber;}
-    public String getAccountName() {return accountName;}
+    public String getName() {return name;}
     public String getBankCode() {return bankCode;}
-    public String getBankName() {return bankName;}
+    public String getCurrency() {return currency;}
 
     // Setters
     public void setType(String type) {this.type = type;}
     public void setAccountNumber(String accountNumber) {this.accountNumber = accountNumber;}
-    public void setAccountName(String accountName) {this.accountName = accountName;}
+    public void setName(String accountName) {this.name = accountName;}
     public void setBankCode(String bankCode) {this.bankCode = bankCode;}
-    public void setBankName(String bankName) { this.bankName = bankName;}
+    public void setCurrency(String currency) { this.currency = currency;}
 
     @Override
     public String toString() {
         return "PaystackTransferRecipientRequest{" +
                 "type='" + type + '\'' +
                 ", accountNumber='" + accountNumber + '\'' +
-                ", accountName='" + accountName + '\'' +
+                ", accountName='" + name + '\'' +
                 ", bankCode='" + bankCode + '\'' +
-                ", bankName='" + bankName + '\'' +
+                ", currency='" + currency + '\'' +
                 '}';
     }
 }
