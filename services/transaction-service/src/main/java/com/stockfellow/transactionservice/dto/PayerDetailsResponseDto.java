@@ -9,7 +9,7 @@ public class PayerDetailsResponseDto {
 
     private UUID payerId;
     private UUID userId;
-    private PayerDetails.PaymentMethodType type;
+    private String type;
     private String authCode;
     private String cardType;
     private String last4;
@@ -53,7 +53,7 @@ public class PayerDetailsResponseDto {
     // Getters and Setters
     public UUID getPayerId() { return payerId; }
     public UUID getUserId() { return userId; }
-    public PayerDetails.PaymentMethodType getType() { return type; }
+    public String getType() { return type; }
     public String getAuthCode() { return authCode; }
     public String getCardType() { return cardType; }
     public String getLast4() { return last4; }
@@ -71,7 +71,7 @@ public class PayerDetailsResponseDto {
     // Setters
     public void setPayerId(UUID payerId) { this.payerId = payerId; }
     public void setUserId(UUID userId) { this.userId = userId; }
-    public void setType(PayerDetails.PaymentMethodType type) { this.type = type; }
+    public void setType(String type) { this.type = type; }
     public void setAuthCode(String authCode) { this.authCode = authCode; }
     public void setCardType(String cardType) { this.cardType = cardType; }
     public void setLast4(String last4) { this.last4 = last4; }

@@ -9,6 +9,7 @@ public class UserResponseDto {
     
     private UUID userId;
     private String email;
+    private String paystackUserId;
     private String firstName;
     private String lastName;
     private String fullName;
@@ -26,6 +27,7 @@ public class UserResponseDto {
         UserResponseDto dto = new UserResponseDto();
         dto.userId = user.getUserId();
         dto.email = user.getEmail();
+        dto.paystackUserId = user.getPaysatckUserId();
         dto.firstName = user.getFirstName();
         dto.lastName = user.getLastName();
         dto.fullName = user.getFullName();
@@ -42,6 +44,9 @@ public class UserResponseDto {
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public void setPaystackUserId(String paystackUserId) { this.paystackUserId = paystackUserId; }
+    public String getPaysatckUserId() { return paystackUserId; }
     
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }

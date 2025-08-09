@@ -180,6 +180,7 @@ services:
     depends_on:
       - group-service
       - user-service
+    #   - ngrok
     ports:
       - "${TRANSACTION_SERVICE_PORT}:4080"
     environment:
@@ -188,6 +189,7 @@ services:
       - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
       - PAYSTACK_API_URL=${PAYSTACK_API_URL}
       - PAYSTACK_TEST_API_KEY=${PAYSTACK_TEST_API_KEY}
+      - CALLBACK_BASE_URL=${NGROK_URL:-http://localhost:4080}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=${USER_SERVICE_URL}
@@ -205,6 +207,22 @@ services:
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+  
+  #Used to expose local hosted port online for paystack callback
+#   ngrok:
+#     image: ngrok/ngrok:latest
+#     restart: unless-stopped
+#     command:
+#       - "start"
+#       - "--all"
+#       - "--config"
+#       - "/etc/ngrok.yml"
+#     volumes:
+#       - ./ngrok.yml:/etc/ngrok.yml
+#     ports:
+#       - 4041:4041  
+#     networks:
+#       - stockfellow-net
 
 networks:
   stockfellow-net:

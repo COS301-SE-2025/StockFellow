@@ -15,9 +15,8 @@ public class PayerDetails {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
     
-    @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private PaymentMethodType type;
+    private String type;
     
     @Column(name = "auth_code")
     private String authCode;
@@ -64,7 +63,7 @@ public class PayerDetails {
     // Constructors
     public PayerDetails() {}
 
-    public PayerDetails(UUID userId, PaymentMethodType type, String email) {
+    public PayerDetails(UUID userId, String type, String email) {
         this.userId = userId;
         this.type = type;
         this.email = email;
@@ -73,7 +72,7 @@ public class PayerDetails {
     // Getters
     public UUID getPayerId() { return payerId; }
     public UUID getUserId() { return userId; }
-    public PaymentMethodType getType() { return type; }
+    public String getType() { return type; }
     public String getAuthCode() { return authCode; }
     public String getCardType() { return cardType; }
     public String getLast4() { return last4; }
@@ -92,7 +91,14 @@ public class PayerDetails {
     // Setters
     public void setPayerId(UUID payerId) { this.payerId = payerId; }
     public void setUserId(UUID userId) { this.userId = userId; }
-    public void setType(PaymentMethodType type) { this.type = type; }
+    public void setType(String type) { this.type = type; }
+    // public void setType(String type) {
+    //     try {
+    //         this.type = PaymentMethodType.valueOf(type.toUpperCase());
+    //     } catch (IllegalArgumentException e) {
+    //         throw new IllegalArgumentException("Invalid payment method type: " + type);
+    //     }
+    // }
     public void setAuthCode(String authCode) { this.authCode = authCode; }
     public void setCardType(String cardType) { this.cardType = cardType; }
     public void setLast4(String last4) { this.last4 = last4; }
@@ -131,10 +137,8 @@ public class PayerDetails {
     }
 
     public enum PaymentMethodType {
-        CARD,
-        BANK_TRANSFER,
-        MOBILE_MONEY,
-        WALLET,
-        CRYPTO
+        card,
+        bank_account,
+        mobile_money
     }
 }

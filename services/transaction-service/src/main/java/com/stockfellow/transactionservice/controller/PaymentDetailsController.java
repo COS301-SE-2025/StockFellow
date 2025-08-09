@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,15 @@ import java.util.Map;
 import io.swagger.v3.oas.annotations.tags.*;
 import io.swagger.v3.oas.annotations.Operation;
 
+/*TODO:
+ * ? - /payer/callback
+ * 0 - /payer/webhook
+ * 0 - /payer/initialize
+ * 0 - /payer/user/{userId} 
+ * 0 - /payer/{payerId}/deactivate
+ * X - /payout
+ * X - /payout/user/{userId}
+ */
 
 @RestController
 @Tag(name = "Payment Details", description = "Operations related to payment details (card and account info)")
@@ -26,11 +37,58 @@ public class PaymentDetailsController {
     
     @Autowired
     private PaymentDetailsService paymentDetailsService;
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentDetailsController.class);
     
     // @Autowired
     // private ActivityLogService activityLogService;
 
-    // === PAYER DETAILS (Card/Payment Methods) ===
+    
+    /**
+     * ===================================================
+     * |   Callback (Redirect from Paystack pay page)    |
+     * ===================================================
+     */
+    @GetMapping("/payer/callback")
+    @Operation(summary = "Handle Paystack callback", 
+               description = "Process callback from Paystack after user completes card authorization")
+    public ResponseEntity<Map<String, Object>> handlePaystackCallback(@RequestParam String reference) {
+        
+        return  ResponseEntity.ok(paymentDetailsService.processPaystackCallback(reference));
+    }   
+
+    /**
+     * ===================================================
+     * |      Webhook (Events from Paystack via ngrok)   |
+     * ===================================================
+     */
+    @PostMapping("/payer/webhook")
+    @Operation(summary = "Handle Paystack webhook", 
+            description = "Process webhook notifications from Paystack")
+    public ResponseEntity<String> handlePaystackWebhook(
+            @RequestBody String payload,
+            @RequestHeader("x-paystack-signature") String signature) {
+        
+        try {
+            if (!paymentDetailsService.verifyWebhookSignature(payload, signature)) {
+                logger.warn("Invalid webhook signature");
+                return ResponseEntity.status(400).body("Invalid signature");
+            }
+            
+            paymentDetailsService.processPaystackWebhook(payload);
+            return ResponseEntity.ok("OK");
+            
+        } catch (Exception e) {
+            logger.error("Failed to process webhook", e);
+            return ResponseEntity.status(500).body("Error processing webhook");
+        }
+    }
+
+    /**
+     * ===================================================
+     * |      PAYER DETAILS (Card/Payment Methods)       |
+     * ===================================================
+     */
     @PostMapping("/payer/initialize")
     @Operation(summary = "Initialize card authorization", 
                description = "Initialize Paystack payment to capture and save user's card details")
@@ -39,26 +97,16 @@ public class PaymentDetailsController {
         return  ResponseEntity.ok(paymentDetailsService.initializeCardAuth(initializeDto));
     }
     
-    @PostMapping("/payer/callback")
-    @Operation(summary = "Handle Paystack callback", 
-               description = "Process callback from Paystack after user completes card authorization")
-    public ResponseEntity<Map<String, Object>> handlePaystackCallback(
-            @RequestParam String reference,
-            @RequestParam(required = false) String trxref) {
-        
-        return  ResponseEntity.ok(paymentDetailsService.processPaystackCallback(reference, trxref));
-    }   
     
-    // Add new card (for changes/expiry)
-    @PostMapping("/payer")
-    @Operation(summary = "Add a new card", 
-                description = "Add new card for contributions")
-    public ResponseEntity<PayerDetailsResponseDto> addPayerDetails(@Valid @RequestBody CreatePayerDetailsDto createDto) {
+    // @PostMapping("/payer")
+    // @Operation(summary = "Add a new card", 
+    //             description = "Add new card for contributions")
+    // public ResponseEntity<PayerDetailsResponseDto> addPayerDetails(@Valid @RequestBody CreatePayerDetailsDto createDto) {
         
-        PayerDetails created = paymentDetailsService.addPayerDetails(createDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                           .body(PayerDetailsResponseDto.fromEntity(created));
-    }
+    //     PayerDetails created = paymentDetailsService.addPayerDetails(createDto);
+    //     return ResponseEntity.status(HttpStatus.CREATED)
+    //                        .body(PayerDetailsResponseDto.fromEntity(created));
+    // }
     
     @GetMapping("/payer/user/{userId}")
     @Operation(summary = "Get card details", 
@@ -90,8 +138,11 @@ public class PaymentDetailsController {
         return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(deactivated));
     }
     
-    // === PAYOUT DETAILS (Bank/Recipient Methods) ===
-    
+    /**
+     * ===================================================
+     * |      PAYOUT DETAILS (Bank/Recipient Methods)    |
+     * ===================================================
+     */
     @PostMapping("/payout")
     @Operation(summary = "Add new payout details (bank account)", 
                 description = "Add new payout details (bank account)")

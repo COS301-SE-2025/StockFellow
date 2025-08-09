@@ -30,17 +30,22 @@ public interface PayerDetailsRepository extends JpaRepository<PayerDetails, UUID
     /**
      * Find payer details by type
      */
-    List<PayerDetails> findByType(PayerDetails.PaymentMethodType type);
+    List<PayerDetails> findByType(String type);
     
     /**
      * Find payer details by user and type
      */
-    List<PayerDetails> findByUserIdAndType(UUID userId, PayerDetails.PaymentMethodType type);
+    List<PayerDetails> findByUserIdAndType(UUID userId, String type);
     
     /**
      * Find authenticated payer details
      */
     List<PayerDetails> findByIsAuthenticatedTrue();
+
+    /*
+     * 
+     */
+    Optional<PayerDetails> findFirstByUserIdAndIsAuthenticatedFalse(UUID userId);
     
     /**
      * Find payer details by auth code
@@ -62,8 +67,13 @@ public interface PayerDetailsRepository extends JpaRepository<PayerDetails, UUID
      */
     boolean existsByUserIdAndIsAuthenticatedTrue(UUID userId);
 
+    /*
+     * Check for duplicate records via paystack reference
+     */
+    boolean existsByPaystackReference(String reference);
+
     /**
-     * Check for duplicat payer details by card signature
+     * Check for duplicate payer details by card signature
      */
     boolean existsByUserIdAndSignature(UUID userId, String signature);
     

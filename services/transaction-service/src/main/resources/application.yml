@@ -36,6 +36,7 @@ scheduler:
 
 paystack:
   secretKey: ${PAYSTACK_TEST_API_KEY}
+  callback-base-url: ${CALLBACK_BASE_URL}
   
 server:
   port: 4080 # was 4042

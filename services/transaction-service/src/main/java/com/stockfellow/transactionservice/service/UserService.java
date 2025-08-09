@@ -35,7 +35,7 @@ public class UserService {
         user.setFirstName(syncDto.getFirstName());
         user.setLastName(syncDto.getLastName());
         user.setPhone(syncDto.getPhone());
-        user.setStatus(User.UserStatus.PENDING_VERIFICATION);
+        user.setStatus(User.UserStatus.pending);
 
         user = userRepository.save(user);
 

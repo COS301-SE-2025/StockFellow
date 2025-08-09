@@ -10,7 +10,7 @@ public class CreatePayerDetailsDto {
     private UUID userId;
     
     @NotNull(message = "Payment method type is required")
-    private PayerDetails.PaymentMethodType type;
+    private String type;
     
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
@@ -32,8 +32,8 @@ public class CreatePayerDetailsDto {
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
     
-    public PayerDetails.PaymentMethodType getType() { return type; }
-    public void setType(PayerDetails.PaymentMethodType type) { this.type = type; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

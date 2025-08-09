@@ -20,6 +20,9 @@ public class User {
     
     @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    @Column(name="paystack_user_id")
+    private String paystackUserId;
     
     @Column(name = "first_name")
     @JsonProperty("first_name")
@@ -58,12 +61,13 @@ public class User {
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.status = UserStatus.ACTIVE;
+        this.status = UserStatus.active;
     }
 
     // Getters
     public UUID getUserId() { return userId; }
     public String getEmail() { return email; }
+    public String getPaysatckUserId() { return paystackUserId; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
     public String getPhone() { return phone; }
@@ -74,6 +78,7 @@ public class User {
     // Setters
     public void setUserId(UUID userId) { this.userId = userId; }
     public void setEmail(String email) { this.email = email; }
+    public void setPaystackUserId(String paystackUserId) { this.paystackUserId = paystackUserId; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
     public void setPhone(String phone) { this.phone = phone; }
@@ -95,7 +100,7 @@ public class User {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = UserStatus.ACTIVE;
+            status = UserStatus.active;
         }
     }
 
@@ -106,10 +111,9 @@ public class User {
 
     // User Status Enum
     public enum UserStatus {
-        ACTIVE,
-        INACTIVE,
-        SUSPENDED,
-        PENDING_VERIFICATION,
-        BANNED
+        active,
+        inactive,
+        suspended,
+        pending
     }
 }

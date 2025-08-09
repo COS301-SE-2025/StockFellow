@@ -91,11 +91,32 @@ public class PaystackService {
                 entity,
                 PaystackTransactionVerificationResponse.class
             );
+
+            // logger.info("Raw Paystack response: {}", rawResponse.getBody());
             
             return response.getBody();
         } catch (Exception e) {
             logger.error("Error verifying transaction: ", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to verify transaction");
+        }
+    }
+
+    public PaystackTransferRecipientResponse createTransferRecipient(PaystackTransferRecipientRequest request){
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<?> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<PaystackTransferRecipientResponse> response = restTemplate.exchange(
+                PAYSTACK_BASE_URL + "/transferrecipient",
+                HttpMethod.POST,
+                entity,
+                PaystackTransferRecipientResponse.class
+            );
+
+            return response.getBody();
+        } catch (Exception e) {
+            logger.error("Error creating transfer recipient: ", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create transfer recipient");
         }
     }
 }

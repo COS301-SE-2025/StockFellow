@@ -18,7 +18,7 @@ public class InitializeCardAuthDto {
     
     @Schema(description = "Type of payment method", required = true)
     @NotNull(message = "Payment method type is required")
-    private PayerDetails.PaymentMethodType type;
+    private String type;
 
     // Constructors, getters, and setters
     public InitializeCardAuthDto() {}
@@ -29,6 +29,6 @@ public class InitializeCardAuthDto {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     
-    public PayerDetails.PaymentMethodType getType() { return type; }
-    public void setType(PayerDetails.PaymentMethodType type) { this.type = type; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 }

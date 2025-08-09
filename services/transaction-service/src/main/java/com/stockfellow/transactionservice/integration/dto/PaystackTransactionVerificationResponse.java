@@ -77,7 +77,7 @@ public class PaystackTransactionVerificationResponse {
         private Map<String, Object> metadata;
         
         @JsonProperty("customer")
-        private User customer;
+        private PaystackCustomer customer;
         
         @JsonProperty("authorization")
         private PaystackAuthorization authorization;
@@ -122,8 +122,8 @@ public class PaystackTransactionVerificationResponse {
         public Map<String, Object> getMetadata() { return metadata; }
         public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
         
-        public User getCustomer() { return customer; }
-        public void setCustomer(User customer) { this.customer = customer; }
+        public PaystackCustomer getCustomer() { return customer; }
+        public void setCustomer(PaystackCustomer customer) { this.customer = customer; }
         
         public PaystackAuthorization getAuthorization() { return authorization; }
         public void setAuthorization(PaystackAuthorization authorization) { this.authorization = authorization; }

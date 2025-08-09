@@ -10,14 +10,22 @@ import com.stockfellow.transactionservice.integration.dto.PaystackAuthorization;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionRequest;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionResponse;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionVerificationResponse;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipient;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientRequest;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientResponse;
 import com.stockfellow.transactionservice.repository.UserRepository;
 import com.stockfellow.transactionservice.repository.PayerDetailsRepository;
 import com.stockfellow.transactionservice.repository.PayoutDetailsRepository;
 import com.stockfellow.transactionservice.integration.PaystackService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -41,6 +49,169 @@ public class PaymentDetailsService {
 
     @Autowired
     private PaystackService paystackService;
+
+    @Value("${paystack.callback-base-url}")
+    private String callbackBaseUrl;
+
+    @Value("${paystack.secretKey}")
+    private String paystackKey;
+
+
+    /**
+     * ===================================================
+     * =                 Callback                        =
+     * ===================================================
+     */
+    public Map<String, Object> processPaystackCallback(String reference) {
+        try {
+            // Just verify the transaction succeeded for user feedback
+            PaystackTransactionVerificationResponse verification = paystackService.verifyTransaction(reference);
+            
+            if (verification.getStatus() && "success".equals(verification.getData().getStatus())) {
+                return Map.of(
+                    "status", true,
+                    "message", "Payment completed successfully! We're processing your card details...",
+                    "data", Map.of(
+                        "reference", reference,
+                        "next_step", "card_processing"
+                    )
+                );
+            } else {
+                return Map.of(
+                    "status", false,
+                    "message", "Payment failed. Please try again.",
+                    "reference", reference
+                );
+            }
+        } catch (Exception e) {
+            logger.error("Error processing callback", e);
+            return Map.of(
+                "status", false,
+                "message", "An error occurred. Please contact support.",
+                "reference", reference
+            );
+        }
+    }
+
+    /**
+     * ===================================================
+     * |                      Webhook                    |
+     * ===================================================
+     */
+    public void processPaystackWebhook(String payload) {
+        //logger.info("processPaystackWebhook data = " + payload);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode webhookData = mapper.readTree(payload);
+            
+            String event = webhookData.path("event").asText();
+            JsonNode data = webhookData.path("data");
+
+            logger.info("Webhook event: " + event);
+            
+            if ("charge.success".equals(event) || "authorization.create".equals(event)) {
+                String reference = data.path("reference").asText();
+                
+                // Verify the transaction
+                PaystackTransactionVerificationResponse verification = paystackService.verifyTransaction(reference);
+                
+                if (verification.getStatus() && "success".equals(verification.getData().getStatus())) {
+                    // Same logic as your callback method
+                    processSuccessfulCardAuthorization(verification);
+                }
+            } else {
+                logger.info("Ignoring webhook event: {}", event);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to process webhook payload", e);
+            throw new RuntimeException("Webhook processing failed", e);
+        }
+    }
+
+    private void processSuccessfulCardAuthorization(PaystackTransactionVerificationResponse verification) {
+        try {
+            // // Check if we already processed this reference
+            // String reference = verification.getData().getReference();
+            // if (payerDetailsRepository.existsByPaystackReference(reference)) {
+            //     logger.warn("Authorization already processed for reference: {}", reference);
+            //     return;
+            // }
+            
+            // Extract card authorization details (your existing logic)
+            PaystackAuthorization authorization = verification.getData().getAuthorization();
+            
+            if (authorization == null) {
+                logger.error("No authorization data in verification response");
+                return;
+            }
+
+            // Get user ID from metadata
+            UUID userId = UUID.fromString(
+                verification.getData().getMetadata().get("user_id").toString());
+            
+            // Get user details from your database
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+            // Create PayerDetails with captured card information
+            CreatePayerDetailsDto createDto = new CreatePayerDetailsDto();
+            createDto.setUserId(userId);
+            createDto.setType(verification.getData().getMetadata().get("payment_method_type").toString());
+            createDto.setEmail(user.getEmail()); // From your user entity, not Paystack
+            createDto.setAuthCode(authorization.getAuthorizationCode());
+            createDto.setCardType(authorization.getCardType());
+            createDto.setLast4(authorization.getLast4());
+            createDto.setExpMonth(authorization.getExpMonth());
+            createDto.setExpYear(authorization.getExpYear());
+            createDto.setBin(authorization.getBin());
+            createDto.setBank(authorization.getBank());
+            createDto.setSignature(authorization.getSignature());
+            
+            PayerDetails savedCard = this.addPayerDetails(createDto);
+            
+            // Remove the pending authorization record
+            payerDetailsRepository.findFirstByUserIdAndIsAuthenticatedFalse(userId)
+                .ifPresent(pending -> payerDetailsRepository.delete(pending));
+            
+            logger.info("Card authorization processed successfully for user {} with payer ID {}", 
+                    userId, savedCard.getPayerId());
+            
+            // notificationService.notifyCardSaved(userId, savedCard);
+            
+        } catch (Exception e) {
+            logger.error("Failed to process successful card authorization", e);
+            // Retry logic
+        }
+    }
+
+    public boolean verifyWebhookSignature(String payload, String signature) {
+        try {
+            String secretKey = paystackKey;
+            String computedSignature = computeHmacSha512(payload, secretKey);
+        
+            return signature.equals(computedSignature);
+        } catch (Exception e) {
+            logger.error("Failed to verify webhook signature", e);
+            return false;
+        }
+    }
+
+    private String computeHmacSha512(String data, String key) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA512");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(), "HmacSHA512");
+        mac.init(secretKeySpec);
+        byte[] hash = mac.doFinal(data.getBytes());
+        return bytesToHex(hash);
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
 
     /**
      * ===================================================
@@ -113,26 +284,31 @@ public class PaymentDetailsService {
 
     }
 
+    /*
+     * Create Paystack transaction request for card capture:
+     * - Charges R1.00 in Rands (minimal amount for card auth)
+     * - Add metadata to identify this as card authorization
+     * - Stores pending authorization details
+     */
     public Map<String,Object> initializeCardAuth(InitializeCardAuthDto initDto){
         try {
-            // Create Paystack transaction request for card capture
+            String tempRef = generateAuthReference();
             PaystackTransactionRequest request = new PaystackTransactionRequest();
             request.setEmail(initDto.getEmail());
-            request.setAmount(100); // R1.00 in Rands (minimal amount for card auth)
-            request.setReference(generateAuthReference());
-            request.setCallbackUrl("http://localhost:4080/api/payment-methods/payer/callback");
+            request.setAmount(100); 
+            request.setReference(tempRef);
+            request.setCallbackUrl(callbackBaseUrl+"/api/payment-methods/payer/callback");
             
-            // Add metadata to identify this as card authorization
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("purpose", "card_authorization");
             metadata.put("user_id", initDto.getUserId().toString());
             metadata.put("payment_method_type", initDto.getType().toString());
+            // metadata.put("temp_reference", tempRef);
             request.setMetadata(metadata);
 
             PaystackTransactionResponse response = paystackService.initializeTransaction(request);
             
             if (response.getStatus()) {
-                // Store pending authorization details
                 PayerDetails pendingAuth = new PayerDetails();
                 pendingAuth.setUserId(initDto.getUserId());
                 pendingAuth.setType(initDto.getType());
@@ -165,70 +341,11 @@ public class PaymentDetailsService {
         }
     }
 
-    public Map<String, Object> processPaystackCallback(String reference, String trxref) {
-        try {
-            PaystackTransactionVerificationResponse verification = paystackService.verifyTransaction(reference);
-            
-            if (verification.getStatus() && "success".equals(verification.getData().getStatus())) {
-                
-                // Extract card authorization details
-                PaystackAuthorization authorization = verification.getData().getAuthorization();
-                User customer = verification.getData().getCustomer();
-                
-                if (authorization == null || customer == null) {
-                    return Map.of(
-                        "status", false,
-                        "message", "Invalid authorization data received from Paystack"
-                    );
-                }
-
-                // Create PayerDetails with captured card information
-                CreatePayerDetailsDto createDto = new CreatePayerDetailsDto();
-                createDto.setUserId(UUID.fromString(
-                    verification.getData().getMetadata().get("user_id").toString()));
-                createDto.setType(PayerDetails.PaymentMethodType.valueOf(
-                    verification.getData().getMetadata().get("payment_method_type").toString()));
-                createDto.setEmail(customer.getEmail());
-                createDto.setAuthCode(authorization.getAuthorizationCode());
-                createDto.setCardType(authorization.getCardType());
-                createDto.setLast4(authorization.getLast4());
-                createDto.setExpMonth(authorization.getExpMonth());
-                createDto.setExpYear(authorization.getExpYear());
-                createDto.setBin(authorization.getBin());
-                createDto.setBank(authorization.getBank());
-                createDto.setSignature(authorization.getSignature());
-                
-                PayerDetails savedCard = this.addPayerDetails(createDto);
-                
-                return Map.of(
-                    "status", true,
-                    "message", "Card authorized and saved successfully", // Fixed typo
-                    "data", Map.of(
-                        "card_type", authorization.getCardType(),
-                        "last4", authorization.getLast4(),
-                        "bank", authorization.getBank(),
-                        "payer_id", savedCard.getPayerId()
-                    )
-                );
-            } else {
-                return Map.of(
-                    "status", false,
-                    "message", "Card authorization failed: " + 
-                        (verification.getData() != null ? verification.getData().getMessage() : verification.getMessage())
-                );
-            }            
-        } catch (Exception e) {
-            logger.error("Failed to process card authorization callback", e); // Add logging
-            return Map.of(
-                "status", false,
-                "message", "Failed to process card authorization: " + e.getMessage() // Fixed message
-            );
-        }
-    }
+    
 
     /**
      * ===================================================
-     * =                 PayoutDetails                    =
+     * =                 PayoutDetails                   =
      * ===================================================
      */
     public PayoutDetails addPayoutDetails(CreatePayoutDetailsDto createDto){
@@ -239,12 +356,30 @@ public class PaymentDetailsService {
             .orElseThrow(() -> new RuntimeException("User not found with ID: " + createDto.getUserId()));
 
         validateNoDuplicatePayoutDetails(createDto.getUserId());
-            
+        
+        PaystackTransferRecipientRequest paystackRecipient = new PaystackTransferRecipientRequest();
+        paystackRecipient.setType("basa");
+        paystackRecipient.setAccountNumber(createDto.getAccountNumber());
+        paystackRecipient.setBankCode(createDto.getBankCode());
+        paystackRecipient.setBankName(createDto.getBankName());
+        paystackRecipient.setAccountName(createDto.getRecipientName());
+        
+        PaystackTransferRecipientResponse response;
+        try {
+            response = paystackService.createTransferRecipient(paystackRecipient);
+            if (!response.getStatus()) {
+                throw new RuntimeException("Paystack recipient creation failed: " + response.getMessage());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to create Paystack transfer recipient for user {}", createDto.getUserId(), e);
+            throw new RuntimeException("Failed to create transfer recipient: " + e.getMessage());
+        }
+
         PayoutDetails pd = new PayoutDetails(createDto.getUserId(), createDto.getType(), createDto.getRecipientName());
         pd.setAccountNumber(createDto.getAccountNumber());
         pd.setBankCode(createDto.getBankCode());
         pd.setBankName(createDto.getBankName());
-        pd.setRecipientCode(createDto.getRecipientCode());
+        pd.setRecipientCode(response.getData().getRecipientCode());
         //is default
         //is verified
 
