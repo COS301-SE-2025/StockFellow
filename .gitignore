@@ -8,6 +8,7 @@ coverage/
 *.lcov.info
 
 *.env
+ngrok.yml
 
 # Java
 target/
