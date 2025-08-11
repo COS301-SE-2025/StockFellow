@@ -50,9 +50,8 @@ public class GroupCycle {
     @Column(name = "pending_count")
     private Integer pendingCount = 0;
     
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private CycleStatus status;
+    private String status;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -73,7 +72,7 @@ public class GroupCycle {
         this.expectedTotal = expectedTotal;
         this.collectionStartDate = collectionStartDate;
         this.collectionEndDate = collectionEndDate;
-        this.status = CycleStatus.PENDING;
+        this.status = "pending";
         this.currentTotal = BigDecimal.ZERO;
     }
 
@@ -91,7 +90,7 @@ public class GroupCycle {
     public Integer getSuccessfulCount() { return successfulCount; }
     public Integer getFailedCount() { return failedCount; }
     public Integer getPendingCount() { return pendingCount; }
-    public CycleStatus getStatus() { return status; }
+    public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -109,7 +108,7 @@ public class GroupCycle {
     public void setSuccessfulCount(Integer successfulCount) { this.successfulCount = successfulCount; }
     public void setFailedCount(Integer failedCount) { this.failedCount = failedCount; }
     public void setPendingCount(Integer pendingCount) { this.pendingCount = pendingCount; }
-    public void setStatus(CycleStatus status) { this.status = status; }
+    public void setStatus(String status) { this.status = status; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
@@ -122,7 +121,7 @@ public class GroupCycle {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = CycleStatus.PENDING;
+            status = "pending";
         }
         if (currentTotal == null) {
             currentTotal = BigDecimal.ZERO;
@@ -137,15 +136,15 @@ public class GroupCycle {
         updatedAt = LocalDateTime.now();
     }
 
-    // Cycle Status Enum
-    public enum CycleStatus {
-        PENDING,
-        ACTIVE,
-        COLLECTING,
-        COLLECTION_COMPLETE,
-        PAYOUT_PENDING,
-        COMPLETED,
-        FAILED,
-        CANCELLED
-    }
+    // // Cycle Status Enum
+    // public enum CycleStatus {
+    //     PENDING,
+    //     ACTIVE,
+    //     COLLECTING,
+    //     COLLECTION_COMPLETE,
+    //     PAYOUT_PENDING,
+    //     COMPLETED,
+    //     FAILED,
+    //     CANCELLED
+    // }
 }

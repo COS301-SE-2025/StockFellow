@@ -1,50 +1,65 @@
-// package com.stockfellow.transactionservice.controller;
+package com.stockfellow.transactionservice.controller;
 
-// import com.stockfellow.transactionservice.dto.*;
-// import com.stockfellow.transactionservice.model.*;
-// import com.stockfellow.transactionservice.service.*;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.data.domain.Page;
-// import org.springframework.data.domain.Pageable;
-// import org.springframework.http.ResponseEntity;
-// import org.springframework.web.bind.annotation.*;
-// import java.util.UUID;
+import com.stockfellow.transactionservice.model.ActivityLog;
+import com.stockfellow.transactionservice.service.ActivityLogService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.UUID;
 
-// import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.Operation;
 
-// @RestController
-// @RequestMapping("/api/activity-logs")
-// @CrossOrigin(origins = "*")
-// public class ActivityLogController {
+
+@RestController
+@Tag(name="Activity Log Controller", description = "Get inforamtion about events related to: Users, Transactions, Transfers, GroupCycles, Payment details")
+@RequestMapping("/api/activity-logs")
+@CrossOrigin(origins = "*")
+public class ActivityLogController {
     
-//     @Autowired
-//     private ActivityLogService activityLogService;
+    @Autowired
+    private ActivityLogService activityLogService;
 
-//     // Get activity logs by user
-//     @GetMapping("/user/{userId}")
-//     public ResponseEntity<Page<ActivityLogResponseDto>> getActivityLogsByUser(
-//             @PathVariable UUID userId, 
-//             Pageable pageable) {
-//         Page<ActivityLog> logs = activityLogService.findByUserId(userId, pageable);
-//         return ResponseEntity.ok(logs.map(ActivityLogResponseDto::fromEntity));
-//     }
+    @GetMapping("/user/{userId}")
+    @Operation(summary="Get User logs",
+                description="Get activity logs by user")
+    public ResponseEntity<Page<ActivityLog>> getActivityLogsByUser(
+            @PathVariable UUID userId, 
+            Pageable pageable) {
+        Page<ActivityLog> logs = activityLogService.getLogsByUser(userId, pageable);
+        return ResponseEntity.ok(logs.map(ActivityLog::fromEntity));
+    }
     
-//     // Get activity logs by cycle
-//     @GetMapping("/cycle/{cycleId}")
-//     public ResponseEntity<Page<ActivityLogResponseDto>> getActivityLogsByCycle(
-//             @PathVariable UUID cycleId, 
-//             Pageable pageable) {
-//         Page<ActivityLog> logs = activityLogService.findByCycleId(cycleId, pageable);
-//         return ResponseEntity.ok(logs.map(ActivityLogResponseDto::fromEntity));
-//     }
+    @GetMapping("/cycle/{cycleId}")
+    @Operation(summary="Get Group Cycle logs",
+                description="Get activity logs by cycle")
+    public ResponseEntity<Page<ActivityLog>> getActivityLogsByCycle(
+            @PathVariable UUID cycleId, 
+            Pageable pageable) {
+        Page<ActivityLog> logs = activityLogService.getLogsByCycle(cycleId, pageable);
+        return ResponseEntity.ok(logs.map(ActivityLog::fromEntity));
+    }
+
+    @GetMapping("/entity/{entityType}")
+    @Operation(summary="Get Entity logs",
+                description="Get activity logs by entity")
+    public ResponseEntity<Page<ActivityLog>> getActivityLogsByEntity(
+            @PathVariable ActivityLog.EntityType entityType,
+            Pageable pageable) {
+        Page<ActivityLog> logs = activityLogService.getLogsByEntity(entityType, pageable);
+        return ResponseEntity.ok(logs.map(ActivityLog::fromEntity));
+    }
     
-//     // Get activity logs by entity
-//     @GetMapping("/entity/{entityType}/{entityId}")
-//     public ResponseEntity<Page<ActivityLogResponseDto>> getActivityLogsByEntity(
-//             @PathVariable ActivityLog.EntityType entityType,
-//             @PathVariable UUID entityId,
-//             Pageable pageable) {
-//         Page<ActivityLog> logs = activityLogService.findByEntityTypeAndEntityId(entityType, entityId, pageable);
-//         return ResponseEntity.ok(logs.map(ActivityLogResponseDto::fromEntity));
-//     }
-// }
+    @GetMapping("/entity/{entityType}/{entityId}")
+    @Operation(summary="Get specific entitys logs",
+                description="Get activity logs by entity id")
+    public ResponseEntity<Page<ActivityLog>> getActivityLogsByEntityId(
+            @PathVariable ActivityLog.EntityType entityType,
+            @PathVariable UUID entityId,
+            Pageable pageable) {
+        Page<ActivityLog> logs = activityLogService.getLogsByEntityId(entityType, entityId, pageable);
+        return ResponseEntity.ok(logs.map(ActivityLog::fromEntity));
+    }
+}

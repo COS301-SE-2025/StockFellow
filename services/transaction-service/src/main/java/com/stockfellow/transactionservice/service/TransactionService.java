@@ -368,8 +368,8 @@ public class TransactionService {
         GroupCycle cycle = groupCycleRepository.findById(cycleId)
             .orElseThrow(() -> new RuntimeException("Cycle not found with ID: " + cycleId));
         
-        if (cycle.getStatus() != GroupCycle.CycleStatus.ACTIVE && 
-            cycle.getStatus() != GroupCycle.CycleStatus.COLLECTING) {
+        if (!cycle.getStatus().equals("active") && 
+            !cycle.getStatus().equals("collecting")) {
             throw new RuntimeException("Cycle is not accepting transactions. Status: " + cycle.getStatus());
         }
         
@@ -519,7 +519,7 @@ public class TransactionService {
             
             // Check if collection is complete
             if (completedAmount.compareTo(cycle.getExpectedTotal()) >= 0) {
-                cycle.setStatus(GroupCycle.CycleStatus.COLLECTION_COMPLETE);
+                cycle.setStatus("collection_complete");
             }
             
             groupCycleRepository.save(cycle);

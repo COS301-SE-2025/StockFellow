@@ -61,28 +61,29 @@ public class PaymentDetailsController {
      * ===================================================
      * |      Webhook (Events from Paystack via ngrok)   |
      * ===================================================
-     */
-    @PostMapping("/payer/webhook")
-    @Operation(summary = "Handle Paystack webhook", 
-            description = "Process webhook notifications from Paystack")
-    public ResponseEntity<String> handlePaystackWebhook(
-            @RequestBody String payload,
-            @RequestHeader("x-paystack-signature") String signature) {
+     *  Moved to own Controller
+     */ 
+    // @PostMapping("/payer/webhook")
+    // @Operation(summary = "Handle Paystack webhook", 
+    //         description = "Process webhook notifications from Paystack")
+    // public ResponseEntity<String> handlePaystackWebhook(
+    //         @RequestBody String payload,
+    //         @RequestHeader("x-paystack-signature") String signature) {
         
-        try {
-            if (!paymentDetailsService.verifyWebhookSignature(payload, signature)) {
-                logger.warn("Invalid webhook signature");
-                return ResponseEntity.status(400).body("Invalid signature");
-            }
+    //     try {
+    //         if (!paymentDetailsService.verifyWebhookSignature(payload, signature)) {
+    //             logger.warn("Invalid webhook signature");
+    //             return ResponseEntity.status(400).body("Invalid signature");
+    //         }
             
-            paymentDetailsService.processPaystackWebhook(payload);
-            return ResponseEntity.ok("OK");
+    //         paymentDetailsService.processPaystackWebhook(payload);
+    //         return ResponseEntity.ok("OK");
             
-        } catch (Exception e) {
-            logger.error("Failed to process webhook", e);
-            return ResponseEntity.status(500).body("Error processing webhook");
-        }
-    }
+    //     } catch (Exception e) {
+    //         logger.error("Failed to process webhook", e);
+    //         return ResponseEntity.status(500).body("Error processing webhook");
+    //     }
+    // }
 
     /**
      * ===================================================

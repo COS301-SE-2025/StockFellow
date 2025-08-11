@@ -40,7 +40,7 @@ public class UserSyncController {
     // Get user details
     @GetMapping("/{userId}")
     @Operation(summary = "Get User details", 
-                description = "Gte details for a particular user")
+                description = "Get details for a particular user")
     public ResponseEntity<UserResponseDto> getUser(@PathVariable UUID userId) {
         User user = userService.findById(userId);
         return ResponseEntity.ok(UserResponseDto.fromEntity(user));

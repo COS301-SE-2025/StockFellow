@@ -251,7 +251,7 @@ public class TransferService {
         logger.info("Processing automatic transfers for completed cycles");
         
         // Find cycles that are collection complete but haven't been transferred
-        List<GroupCycle> completedCycles = groupCycleRepository.findByStatus(GroupCycle.CycleStatus.COLLECTION_COMPLETE);
+        List<GroupCycle> completedCycles = groupCycleRepository.findByStatus("collection_complete");
         
         for (GroupCycle cycle : completedCycles) {
             try {
@@ -322,7 +322,7 @@ public class TransferService {
         GroupCycle cycle = groupCycleRepository.findById(cycleId)
             .orElseThrow(() -> new RuntimeException("Cycle not found with ID: " + cycleId));
         
-        if (cycle.getStatus() != GroupCycle.CycleStatus.COLLECTION_COMPLETE) {
+        if (!cycle.getStatus().equals("collection_complete")) {
             throw new RuntimeException("Cycle is not ready for transfer. Status: " + cycle.getStatus());
         }
         
@@ -407,7 +407,7 @@ public class TransferService {
         Optional<GroupCycle> cycleOpt = groupCycleRepository.findById(cycleId);
         if (cycleOpt.isPresent()) {
             GroupCycle cycle = cycleOpt.get();
-            cycle.setStatus(GroupCycle.CycleStatus.COMPLETED);
+            cycle.setStatus("completed");
             groupCycleRepository.save(cycle);
         }
     }

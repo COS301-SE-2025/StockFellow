@@ -29,7 +29,7 @@ public class GroupCycleResponseDto {
     private Integer successfulCount;
     private Integer failedCount;
     private Integer pendingCount;
-    private GroupCycle.CycleStatus status;
+    private String status;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
@@ -99,8 +99,8 @@ public class GroupCycleResponseDto {
     public Integer getPendingCount() { return pendingCount; }
     public void setPendingCount(Integer pendingCount) { this.pendingCount = pendingCount; }
     
-    public GroupCycle.CycleStatus getStatus() { return status; }
-    public void setStatus(GroupCycle.CycleStatus status) { this.status = status; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
