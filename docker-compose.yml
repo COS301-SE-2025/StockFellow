@@ -38,6 +38,30 @@ services:
       timeout: 5s
       retries: 5
 
+
+  # PostgreSQL database for User Service
+  user-service-postgres:
+    image: postgres:15
+    container_name: user-service-postgres
+    volumes:
+      - user_service_postgres_data:/var/lib/postgresql/data
+      - ./services/user-service/init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_DB: userservice_db
+      POSTGRES_USER: userservice_user
+      POSTGRES_PASSWORD: userservice_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "userservice_user", "-d", "userservice_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # PostgreSQL Database for Notification Service
   notification-postgres:
     image: postgres:15
@@ -284,23 +308,31 @@ services:
       dockerfile: Dockerfile.dev
     container_name: user-service
     depends_on:
+      - user-service-postgres
       - keycloak
       - alfresco-content-repository
     ports:
       - "${USER_SERVICE_PORT}:4000"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
-      - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE}
-      - SPRING_DATA_MONGODB_URI=${USER_SERVICE_MONGODB_URI}
+      - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
+      - POSTGRES_HOST=user-service-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=userservice_db
+      - POSTGRES_USER=userservice_user
+      - POSTGRES_PASSWORD=userservice_pass
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
       - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
       - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
       - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
       - ALFRESCO_SITE_NAME=${ALFRESCO_SITE_NAME:-stockfellow}
-      - JVM_OPTS=${USER_SERVICE_JVM_OPTS}
+      - JVM_OPTS=${USER_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+      - JPA_SHOW_SQL=${JPA_SHOW_SQL:-false}
+      - SPRING_WEB_LOG_LEVEL=${SPRING_WEB_LOG_LEVEL:-INFO}
+      - HIBERNATE_SQL_LOG_LEVEL=${HIBERNATE_SQL_LOG_LEVEL:-WARN}
     networks:
       - stockfellow-net
     volumes:
@@ -312,6 +344,7 @@ services:
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+    restart: unless-stopped
   
   # Group Service (Spring Boot)
   group-service:
@@ -428,6 +461,7 @@ volumes:
   postgres_data:
   notification_postgres_data:
   alfresco_postgres_data:
+  user_service_postgres_data:
   redis_data:
   activemq_data:
   alfresco_acs_data:

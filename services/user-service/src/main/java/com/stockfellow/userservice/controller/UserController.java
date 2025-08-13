@@ -1,9 +1,7 @@
 package com.stockfellow.userservice.controller;
 
-import com.stockfellow.userservice.dto.RegisterUserRequest;
 import com.stockfellow.userservice.model.User;
-import com.stockfellow.userservice.service.ReadModelService;
-import com.stockfellow.userservice.service.RegisterUserService;
+import com.stockfellow.userservice.service.UserService;
 import com.stockfellow.userservice.service.SouthAfricanIdValidationService;
 import com.stockfellow.userservice.service.PdfIdExtractionService;
 import com.stockfellow.userservice.service.AlfrescoService;
@@ -14,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -25,10 +23,7 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     
     @Autowired
-    private ReadModelService readModelService;
-
-    // @Autowired
-    // private RegisterUserService registerUserService;
+    private UserService userService;
     
     @Autowired
     private SouthAfricanIdValidationService idValidationService;
@@ -44,11 +39,15 @@ public class UserController {
         try {
             return ResponseEntity.ok(Map.of(
                 "service", "User Service",
-                "version", "1.0.0",
+                "version", "2.0.0",
+                "database", "PostgreSQL",
                 "endpoints", List.of(
                     "GET /api/users/profile - Get user profile (requires auth)",
                     "POST /api/users/verifyID - Verify user ID document",
-                    "GET /api/users/:id - Get user by ID (requires auth)"
+                    "GET /api/users/{id} - Get user by ID (requires auth)",
+                    "GET /api/users/search?name={name} - Search users by name",
+                    "GET /api/users/verified - Get verified users",
+                    "GET /api/users/stats - Get user statistics"
                 )
             ));
         } catch (Exception e) {
@@ -60,7 +59,6 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(HttpServletRequest request) {
         try {
-            // Extract user ID from gateway headers
             String userId = request.getHeader("X-User-Id");
             String username = request.getHeader("X-User-Name");
             
@@ -68,14 +66,12 @@ public class UserController {
                 return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
             }
             
-            User user = readModelService.getUser(userId);
+            User user = userService.getUserByUserId(userId);
             if (user == null) {
                 return ResponseEntity.status(404).body(Map.of("error", "User not found"));
             }
             
-            // Optionally enhance user object with additional context
             if (username != null && !username.equals(user.getUsername())) {
-                // Log discrepancy if needed
                 logger.warn("Username from token: {} differs from DB: {}", username, user.getUsername());
             }
             
@@ -89,7 +85,6 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id, HttpServletRequest request) {
         try {
-            // Extract requesting user ID from gateway headers for authorization
             String requestingUserId = request.getHeader("X-User-Id");
             String userRoles = request.getHeader("X-User-Roles");
             
@@ -105,13 +100,77 @@ public class UserController {
                 return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
             }
             
-            User user = readModelService.getUser(id);
+            User user = userService.getUserByUserId(id);
             if (user == null) {
                 return ResponseEntity.status(404).body(Map.of("error", "User not found"));
             }
             return ResponseEntity.ok(user);
         } catch (Exception e) {
             logger.error("Error getting user by ID", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String name, HttpServletRequest request) {
+        try {
+            String userRoles = request.getHeader("X-User-Roles");
+            if (userRoles == null || !userRoles.contains("admin")) {
+                return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+            }
+            
+            List<User> users = userService.searchUsersByName(name);
+            return ResponseEntity.ok(Map.of(
+                "users", users,
+                "count", users.size()
+            ));
+        } catch (Exception e) {
+            logger.error("Error searching users", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @GetMapping("/verified")
+    public ResponseEntity<?> getVerifiedUsers(HttpServletRequest request) {
+        try {
+            String userRoles = request.getHeader("X-User-Roles");
+            if (userRoles == null || !userRoles.contains("admin")) {
+                return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+            }
+            
+            List<User> verifiedUsers = userService.getVerifiedUsers();
+            return ResponseEntity.ok(Map.of(
+                "verifiedUsers", verifiedUsers,
+                "count", verifiedUsers.size()
+            ));
+        } catch (Exception e) {
+            logger.error("Error getting verified users", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getUserStats(HttpServletRequest request) {
+        try {
+            String userRoles = request.getHeader("X-User-Roles");
+            if (userRoles == null || !userRoles.contains("admin")) {
+                return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+            }
+            
+            List<User> allUsers = userService.getAllUsers();
+            List<User> verifiedUsers = userService.getVerifiedUsers();
+            List<User> incompleteUsers = userService.getUsersWithIncompleteProfiles();
+            
+            return ResponseEntity.ok(Map.of(
+                "totalUsers", allUsers.size(),
+                "verifiedUsers", verifiedUsers.size(),
+                "unverifiedUsers", allUsers.size() - verifiedUsers.size(),
+                "incompleteProfiles", incompleteUsers.size(),
+                "verificationRate", allUsers.size() > 0 ? 
+                    Math.round((double) verifiedUsers.size() / allUsers.size() * 100) : 0
+            ));
+        } catch (Exception e) {
+            logger.error("Error getting user stats", e);
             return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
         }
     }
@@ -123,7 +182,6 @@ public class UserController {
             HttpServletRequest httpRequest) {
         
         try {
-            // Get user ID from headers if not provided in request
             if (userId == null || userId.isEmpty()) {
                 userId = httpRequest.getHeader("X-User-Id");
             }
@@ -143,7 +201,6 @@ public class UserController {
                 ));
             }
             
-            // Check if file is PDF
             String contentType = file.getContentType();
             if (contentType == null || !contentType.equals("application/pdf")) {
                 return ResponseEntity.status(400).body(Map.of(
@@ -152,9 +209,27 @@ public class UserController {
                 ));
             }
             
+            // Check if user exists
+            User user = userService.getUserByUserId(userId);
+            if (user == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "error", "User not found",
+                    "message", "User must be registered before ID verification"
+                ));
+            }
+            
+            // Check if user is already verified
+            if (user.isIdVerified()) {
+                return ResponseEntity.status(409).body(Map.of(
+                    "error", "Already verified",
+                    "message", "User ID is already verified",
+                    "verifiedAt", user.getUpdatedAt()
+                ));
+            }
+            
             logger.info("Starting ID verification process for user: {}", userId);
             
-            // Step 1: Extract ID number from PDF
+            // Extract ID number from PDF
             String extractedIdNumber;
             try {
                 extractedIdNumber = pdfExtractionService.extractIdNumberFromPdf(file);
@@ -174,9 +249,18 @@ public class UserController {
             }
             
             logger.info("Extracted ID number for user {}: {}", userId, 
-                       extractedIdNumber.substring(0, 6) + "XXXXXXX"); // Log partial ID for privacy
+                       extractedIdNumber.substring(0, 6) + "XXXXXXX");
             
-            // Step 2: Validate ID number using Luhn algorithm
+            // Check if ID number is already used by another user
+            User existingUser = userService.getUserByIdNumber(extractedIdNumber);
+            if (existingUser != null && !existingUser.getUserId().equals(userId)) {
+                return ResponseEntity.status(409).body(Map.of(
+                    "error", "ID already registered",
+                    "message", "This ID number is already registered to another user"
+                ));
+            }
+            
+            // Validate ID number using Luhn algorithm
             boolean isValidId = idValidationService.validateSouthAfricanId(extractedIdNumber);
             if (!isValidId) {
                 return ResponseEntity.status(400).body(Map.of(
@@ -185,11 +269,11 @@ public class UserController {
                 ));
             }
             
-            // Step 3: Extract additional information from valid ID
+            // Extract additional information from valid ID
             SouthAfricanIdValidationService.SouthAfricanIdInfo idInfo = 
                 idValidationService.extractIdInfo(extractedIdNumber);
             
-            // Step 4: Store document in Alfresco
+            // Store document in Alfresco
             String documentId;
             try {
                 documentId = alfrescoService.uploadDocument(file, userId, "ID_VERIFICATION");
@@ -202,14 +286,15 @@ public class UserController {
                 ));
             }
             
-            // Step 5: Update user record with verification status
-            //try {
-            //     registerUserService.updateUserVerificationStatus(userId, extractedIdNumber, documentId, idInfo);
-            //     logger.info("User verification status updated for user: {}", userId);
-            // } catch (Exception e) {
-            //     logger.error("Error updating user verification status for user: {}", userId, e);
-            //     // Don't fail the request if this step fails - the core verification is complete
-            // }
+            // Update user record with verification status
+            User updatedUser = userService.updateIdVerificationStatus(userId, extractedIdNumber, documentId, idInfo);
+            
+            if (updatedUser == null) {
+                return ResponseEntity.status(500).body(Map.of(
+                    "error", "Update failed",
+                    "message", "Could not update user verification status"
+                ));
+            }
             
             // Return success response with extracted information
             return ResponseEntity.ok(Map.of(
@@ -222,7 +307,14 @@ public class UserController {
                     "citizenship", idInfo.getCitizenship()
                 ),
                 "documentId", documentId,
-                "verificationTimestamp", System.currentTimeMillis()
+                "verificationTimestamp", System.currentTimeMillis(),
+                "user", Map.of(
+                    "id", updatedUser.getId(),
+                    "userId", updatedUser.getUserId(),
+                    "email", updatedUser.getEmail(),
+                    "idVerified", updatedUser.isIdVerified(),
+                    "updatedAt", updatedUser.getUpdatedAt()
+                )
             ));
             
         } catch (Exception e) {
