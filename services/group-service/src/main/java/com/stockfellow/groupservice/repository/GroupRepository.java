@@ -73,4 +73,7 @@ public interface GroupRepository extends MongoRepository<Group, String> {
     // Add count method for stokvel names
     @Query(value = "{ 'name': { $regex: '^Stokvel #', $options: 'i' } }", count = true)
     long countStokvelGroups();
+
+    @Query("{ 'tier': ?0, 'visibility': ?1 }")
+    List<Group> findByTierAndVisibility(Integer tier, String visibility);
 }

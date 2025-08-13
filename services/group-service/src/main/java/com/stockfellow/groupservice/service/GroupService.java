@@ -5,6 +5,8 @@ import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.repository.GroupRepository;
 import com.stockfellow.groupservice.dto.CreateGroupRequest;
 import com.stockfellow.groupservice.dto.CreateGroupResult;
+import com.stockfellow.groupservice.dto.UpdateGroupRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -140,7 +142,71 @@ public class GroupService {
         return groupRepository.findGroupsByUserId(userId);
     }
 
-    // public void updateGroup(...)
+    public Group updateGroup(String groupId, UpdateGroupRequest updateRequest) {
+        Group group = groupRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        // Validate maxMembers if being updated
+        if (updateRequest.getMaxMembers() != null) {
+            if (updateRequest.getMaxMembers() <= 0) {
+                throw new IllegalArgumentException("Maximum members must be greater than 0");
+            }
+            if (group.getMembers().size() > updateRequest.getMaxMembers()) {
+                throw new IllegalArgumentException("Cannot set max members below current member count");
+            }
+        }
+
+        // Validate visibility if being updated
+        if (updateRequest.getVisibility() != null &&
+                !Arrays.asList("Public", "Private").contains(updateRequest.getVisibility())) {
+            throw new IllegalArgumentException("Visibility must be 'Public' or 'Private'");
+        }
+
+        // Validate frequencies if being updated
+        if (updateRequest.getContributionFrequency() != null &&
+                !Arrays.asList("Weekly", "Bi-weekly", "Monthly").contains(updateRequest.getContributionFrequency())) {
+            throw new IllegalArgumentException("Invalid contribution frequency");
+        }
+        if (updateRequest.getPayoutFrequency() != null &&
+                !Arrays.asList("Weekly", "Bi-weekly", "Monthly").contains(updateRequest.getPayoutFrequency())) {
+            throw new IllegalArgumentException("Invalid payout frequency");
+        }
+
+        // Update fields if they're provided in the request
+        if (updateRequest.getName() != null)
+            group.setName(updateRequest.getName());
+        if (updateRequest.getMaxMembers() != null)
+            group.setMaxMembers(updateRequest.getMaxMembers());
+        if (updateRequest.getDescription() != null)
+            group.setDescription(updateRequest.getDescription());
+        if (updateRequest.getProfileImage() != null)
+            group.setProfileImage(updateRequest.getProfileImage());
+        if (updateRequest.getVisibility() != null)
+            group.setVisibility(updateRequest.getVisibility());
+        if (updateRequest.getContributionFrequency() != null)
+            group.setContributionFrequency(updateRequest.getContributionFrequency());
+        if (updateRequest.getContributionDate() != null)
+            group.setContributionDate(updateRequest.getContributionDate());
+        if (updateRequest.getPayoutFrequency() != null)
+            group.setPayoutFrequency(updateRequest.getPayoutFrequency());
+        if (updateRequest.getPayoutDate() != null)
+            group.setPayoutDate(updateRequest.getPayoutDate());
+
+        // Save the updated group
+        Group savedGroup = groupRepository.save(group);
+
+        // Create and save update event
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("groupId", groupId);
+        eventData.put("updatedFields", updateRequest);
+        eventData.put("updatedAt", new Date());
+
+        Event event = new Event("GroupUpdated", eventData);
+        eventStoreService.saveEvent(groupId, event);
+
+        logger.info("Group {} updated by admin", groupId);
+        return savedGroup;
+    }
     // public void deleteGroup(...)
 
     // // Search Functionalty
@@ -170,8 +236,8 @@ public class GroupService {
     }
 
     private Optional<Group> findAvailableGroupInTier(Integer tier) {
-        // Find all groups in this tier that aren't full
-        List<Group> groups = groupRepository.findByTier(tier);
+        // Find all public(system created groups) groups in this tier that aren't full
+        List<Group> groups = groupRepository.findByTierAndVisibility(tier, "Public");
 
         return groups.stream()
                 .filter(g -> g.getMembers().size() < g.getMaxMembers())
@@ -188,7 +254,7 @@ public class GroupService {
         request.setName(generateStokvelName());
         request.setMinContribution(minContribution);
         request.setMaxMembers(10); // Fixed at 10 members
-        request.setVisibility("Private"); // Stokvels are private groups
+        request.setVisibility("Public");
         request.setContributionFrequency("Monthly");
         request.setPayoutFrequency("Monthly");
         request.setTier(tier);
