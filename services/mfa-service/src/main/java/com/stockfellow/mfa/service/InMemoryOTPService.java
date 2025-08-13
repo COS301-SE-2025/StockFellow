@@ -8,10 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class InMemoryOTPService {
-
+    private static final Logger logger = LoggerFactory.getLogger(InMemoryOTPService.class);
     private final ConcurrentHashMap<String, OTPRecord> otpStore = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -39,6 +41,8 @@ public class InMemoryOTPService {
 
     public boolean verifyOTP(String email, String providedOTP) {
         OTPRecord record = otpStore.get(email);
+
+        logger.info("Expected: {} and got {}", record.getOtpCode(), providedOTP);
 
         if (record == null) {
             return false; // No OTP found for email
