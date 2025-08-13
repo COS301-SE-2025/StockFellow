@@ -1,13 +1,15 @@
 package com.stockfellow.transactionservice.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stockfellow.transactionservice.integration.dto.*;
-import com.stockfellow.transactionservice.service.TransferService;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransactionResponse;
+import com.stockfellow.transactionservice.integration.dto.PaystackChargeRequest;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransactionRequest;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRequest;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferResponse;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransactionVerificationResponse;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientRequest;
+import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -78,6 +80,27 @@ public class PaystackService {
         } catch (Exception e) {
             logger.error("Error initializing transaction: ", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initialize transaction");
+        }
+    }
+
+    public PaystackTransactionResponse chargeTransaction(PaystackChargeRequest request) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<PaystackChargeRequest> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<PaystackTransactionResponse> response = restTemplate.exchange(
+                PAYSTACK_BASE_URL + "/transaction/charge_authorization",
+                HttpMethod.POST,
+                entity,
+                PaystackTransactionResponse.class
+            );
+
+            // logger.info("Raw Paystack response: {}", rawResponse.getBody());
+            
+            return response.getBody();
+        } catch (Exception e) {
+            logger.error("Error charging transaction: ", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to verify transaction");
         }
     }
 

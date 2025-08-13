@@ -208,21 +208,21 @@ services:
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
   
-  #Used to expose local hosted port online for paystack callback
-#   ngrok:
-#     image: ngrok/ngrok:latest
-#     restart: unless-stopped
-#     command:
-#       - "start"
-#       - "--all"
-#       - "--config"
-#       - "/etc/ngrok.yml"
-#     volumes:
-#       - ./ngrok.yml:/etc/ngrok.yml
-#     ports:
-#       - 4041:4041  
-#     networks:
-#       - stockfellow-net
+  # Used to expose local hosted port online for paystack callback
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4041:4041  
+    networks:
+      - stockfellow-net
 
 networks:
   stockfellow-net:

@@ -1,7 +1,5 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-
 public class UpdatePayoutDetailsDto {
     
     private String type;

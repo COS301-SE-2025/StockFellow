@@ -20,7 +20,7 @@ public class CreateTransactionDto {
     @Digits(integer = 17, fraction = 2, message = "Invalid amount format")
     private BigDecimal amount;
     
-    @NotBlank(message = "Paystack reference is required")
+    
     private String paystackReference;
 
     // Constructors

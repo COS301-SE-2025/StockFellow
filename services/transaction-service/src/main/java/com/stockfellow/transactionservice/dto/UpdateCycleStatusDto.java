@@ -1,7 +1,6 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
 
 public class UpdateCycleStatusDto {
     @NotNull(message = "Status is required")

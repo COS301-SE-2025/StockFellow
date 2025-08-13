@@ -3,10 +3,13 @@ package com.stockfellow.transactionservice.service;
 import com.stockfellow.transactionservice.model.ActivityLog;
 import com.stockfellow.transactionservice.repository.ActivityLogRepository;
 
+import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.UUID;
+
+@Service
 public class ActivityLogService {
 
     @Autowired

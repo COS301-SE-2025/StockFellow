@@ -2,7 +2,6 @@ package com.stockfellow.transactionservice.service;
 
 import com.stockfellow.transactionservice.dto.CreateGroupCycleDto;
 import com.stockfellow.transactionservice.dto.GroupCycleResponseDto;
-import com.stockfellow.transactionservice.dto.GroupCycleResponseDto;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.model.GroupCycle;
 

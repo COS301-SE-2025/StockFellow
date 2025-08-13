@@ -1,7 +1,8 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Email;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.media.Schema;
 

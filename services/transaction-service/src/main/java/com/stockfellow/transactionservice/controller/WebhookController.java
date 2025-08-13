@@ -1,19 +1,10 @@
 package com.stockfellow.transactionservice.controller;
-import com.stockfellow.transactionservice.dto.*;
-import com.stockfellow.transactionservice.model.*;
 import com.stockfellow.transactionservice.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-// import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.Map;
 
 import io.swagger.v3.oas.annotations.tags.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,10 +23,10 @@ public class WebhookController {
     @PostMapping
     @Operation(summary = "Handle Paystack webhook", 
             description = "Process webhook notifications from Paystack")
-    public ResponseEntity<String> handlePaystackWebhook(
-            @RequestBody String payload,
+    public ResponseEntity<String> handlePaystackWebhook(@RequestBody String payload,
             @RequestHeader("x-paystack-signature") String signature) {
         
+        logger.info("Received Event on Webhook with payload: " + payload);
         try {
             if (!paymentDetailsService.verifyWebhookSignature(payload, signature)) {
                 logger.warn("Invalid webhook signature");

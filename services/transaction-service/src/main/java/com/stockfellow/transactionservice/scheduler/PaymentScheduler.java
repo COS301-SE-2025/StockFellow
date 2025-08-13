@@ -21,14 +21,10 @@ public class PaymentScheduler {
 
     // private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
     // private final GroupCycleRepository groupCycleRepository;
-    // private final MandateRepository mandateRepository;
     // private final TransactionRepository transactionRepository;
 
-    // public PaymentScheduler(GroupCycleRepository groupCycleRepository,
-    //                        MandateRepository mandateRepository,
-    //                        TransactionRepository transactionRepository) {
+    // public PaymentScheduler(GroupCycleRepository groupCycleRepository, TransactionRepository transactionRepository) {
     //     this.groupCycleRepository = groupCycleRepository;
-    //     this.mandateRepository = mandateRepository;
     //     this.transactionRepository = transactionRepository;
     // }
 
@@ -37,13 +33,11 @@ public class PaymentScheduler {
     // public void processScheduledPayments() {
     //     logger.info("Starting scheduled payment processing");
         
-    //     List<GroupCycle> dueCycles = groupCycleRepository
-    //         .findByStatusAndCollectionDateLessThanEqual("PENDING", LocalDate.now());
+    //     List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionDateLessThanEqual("PENDING", LocalDate.now());
         
     //     logger.info("{} Pending cycles found", dueCycles.size());
     //     for (GroupCycle cycle : dueCycles) {
-    //         if ("PENDING".equals(cycle.getStatus()) && 
-    //             cycle.getCollectionDate().isBefore(LocalDate.now().plusDays(1))) {
+    //         if ("PENDING".equals(cycle.getStatus()) && cycle.getCollectionDate().isBefore(LocalDate.now().plusDays(1))) {
                 
     //             logger.info("Processing payments for cycle {} with recipient {}", 
     //                 cycle.getCycleId(), cycle.getRecipientUserId());
@@ -76,8 +70,7 @@ public class PaymentScheduler {
     // public void retryFailedTransactionsForCycle(GroupCycle cycle) {
     //     logger.info("Retrying failed transactions for cycle");
         
-    //     List<Transaction> failedTransactions = transactionRepository
-    //         .findByCycleIdAndStatus(cycle.getCycleId(), "FAILED");
+    //     List<Transaction> failedTransactions = transactionRepository.findByCycleIdAndStatus(cycle.getCycleId(), "FAILED");
         
     //     for (Transaction tx : failedTransactions) {
     //         if ("FAILED".equals(tx.getStatus()) && tx.getRetryCount() < 3) {

@@ -32,7 +32,7 @@ public class Transaction {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "transaction_status")
     private TransactionStatus status;
     
     @Column(name = "gateway_status")
@@ -124,6 +124,7 @@ public class Transaction {
         COMPLETED,
         FAILED,
         CANCELLED,
-        REFUNDED
+        REFUNDED,
+        PAUSED //Card is being challenged
     }
 }

@@ -3,6 +3,7 @@ package com.stockfellow.transactionservice.service;
 import com.stockfellow.transactionservice.dto.CreateTransactionDto;
 import com.stockfellow.transactionservice.dto.ProcessTransactionDto;
 import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.Transaction.TransactionStatus;
 import com.stockfellow.transactionservice.repository.*;
 import com.stockfellow.transactionservice.integration.PaystackService;
 import com.stockfellow.transactionservice.integration.dto.*;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +22,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import javax.management.RuntimeErrorException;
+
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
@@ -55,27 +60,22 @@ public class TransactionService {
     private String paystackCallbackUrl;
 
     /**
-     * Create a new transaction and initiate payment
+     * Creates a first time transaction which returns a payment link
      */
     public Transaction createTransaction(CreateTransactionDto createDto) {
         logger.info("Creating transaction for cycle: {} and user: {}", createDto.getCycleId(), createDto.getUserId());
         
-        // Validate cycle exists and is active
         GroupCycle cycle = validateCycleForTransaction(createDto.getCycleId());
         
-        // Validate user exists
         User user = userRepository.findById(createDto.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found with ID: " + createDto.getUserId()));
         
-        // Validate payer details exist and are active
         PayerDetails payerDetails = validatePayerDetails(createDto.getPayerId(), createDto.getUserId());
         
-        // Validate amount matches cycle contribution amount
         if (!createDto.getAmount().equals(cycle.getContributionAmount())) {
             throw new RuntimeException("Transaction amount must match cycle contribution amount");
         }
         
-        // Check if user already has a successful transaction for this cycle
         List<Transaction> existingTransactions = transactionRepository
             .findByCycleIdAndUserIdAndStatus(createDto.getCycleId(), createDto.getUserId(), Transaction.TransactionStatus.COMPLETED);
         if (!existingTransactions.isEmpty()) {
@@ -92,7 +92,6 @@ public class TransactionService {
         transaction.setStatus(Transaction.TransactionStatus.PENDING);
         transaction.setRetryCount(0);
         
-        // Save transaction
         transaction = transactionRepository.save(transaction);
         
         // Log activity
@@ -117,6 +116,123 @@ public class TransactionService {
         }
         
         logger.info("Transaction created successfully with ID: {}", transaction.getTransactionId());
+        
+        return transaction;
+    }
+
+    /*
+     * Creates a transaction an automatically charges it using the authorization code
+     */
+    public Transaction chargeStoredCard(CreateTransactionDto createDto){
+        
+        logger.info("Charging stored card for cycle: {} and user: {}", createDto.getCycleId(), createDto.getUserId());
+        
+        GroupCycle cycle = validateCycleForTransaction(createDto.getCycleId());
+
+        // 1. Get stored authorization code from PayerDetails
+        PayerDetails payerDetails = payerDetailsRepository.findById(createDto.getPayerId())
+            .orElseThrow(() -> new RuntimeException("Cannot find Payer Details with ID: " + createDto.getPayerId()));
+        validatePayerDetails(createDto.getPayerId(), createDto.getUserId());
+        
+        String authCode = payerDetails.getAuthCode();
+        if (authCode == null || authCode.trim().isEmpty()) {
+            throw new RuntimeException("No authorization code found for payer. Please complete initial payment first.");
+        }
+
+        User user = userRepository.findById(createDto.getUserId())
+            .orElseThrow(() -> new RuntimeException("Cannot find user with ID: " + createDto.getUserId()));
+
+        List<Transaction> existingTransactions = transactionRepository
+            .findByCycleIdAndUserIdAndStatus(createDto.getCycleId(), createDto.getUserId(), Transaction.TransactionStatus.COMPLETED);
+        if (!existingTransactions.isEmpty()) {
+            throw new RuntimeException("User has already completed a transaction for this cycle");
+        }
+
+        // 2. Create transaction record with PROCESSING status
+        Transaction transaction = new Transaction(
+            createDto.getCycleId(),
+            createDto.getUserId(),
+            createDto.getPayerId(),
+            createDto.getAmount(),
+            TransactionStatus.PROCESSING
+        );
+
+        transaction.setInitiatedAt(LocalDateTime.now());
+        transaction = transactionRepository.save(transaction);
+
+        transaction.setPaystackReference(generateTransactionReference(transaction));
+        
+
+        try {
+            // 3. Call Paystack Charge Authorization API directly
+            PaystackChargeRequest request = new PaystackChargeRequest(
+                user.getEmail(),
+                createDto.getAmount().multiply(new BigDecimal("100")).intValue(), // Convert to cents
+                authCode
+            );
+
+            // Add metadata for tracking
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("transaction_id", transaction.getTransactionId().toString());
+            metadata.put("cycle_id", cycle.getCycleId().toString());
+            metadata.put("user_id", user.getUserId().toString());
+            metadata.put("payment_type", "recurring");
+            // Note: You'll need to add metadata field to PaystackChargeRequest if not present
+
+            PaystackTransactionResponse response = paystackService.chargeTransaction(request);
+
+            // 4. Update transaction status based on immediate response
+            if (response.getStatus() && response.getData() != null) {
+                // Successful charge
+                transaction.setStatus(TransactionStatus.COMPLETED);
+                transaction.setCompletedAt(LocalDateTime.now());
+                transaction.setPaystackTransId(response.getData().getReference()); // or appropriate ID field
+                transaction.setGatewayStatus("success");
+                
+                logger.info("Stored card charged successfully for transaction: {}", transaction.getTransactionId());
+                
+                // Update payer details to mark as authenticated if not already
+                if (!payerDetails.getIsAuthenticated()) {
+                    payerDetails.setIsAuthenticated(true);
+                    payerDetailsRepository.save(payerDetails);
+                }
+                
+            } else {
+                // Failed charge
+                transaction.setStatus(TransactionStatus.FAILED);
+                transaction.setFailureReason(response.getMessage() != null ? response.getMessage() : "Charge authorization failed");
+                transaction.setGatewayStatus("failed");
+                
+                logger.error("Failed to charge stored card: {}", response.getMessage());
+            }
+
+        } catch (Exception e) {
+            // Handle any exceptions during the charge process
+            logger.error("Exception occurred while charging stored card: {}", e.getMessage(), e);
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setFailureReason("Exception during charge: " + e.getMessage());
+            transaction.setGatewayStatus("error");
+        }
+
+        // Save the final transaction state
+        transaction = transactionRepository.save(transaction);
+        
+        // Handle post-transaction actions
+        handleTransactionStatusChange(transaction, TransactionStatus.PROCESSING);
+        
+        // Log activity
+        // activityLogService.logActivity(
+        //     transaction.getUserId(), 
+        //     transaction.getCycleId(),
+        //     ActivityLog.EntityType.TRANSACTION, 
+        //     transaction.getTransactionId(),
+        //     "RECURRING_CHARGE_PROCESSED", 
+        //     null, 
+        //     null
+        // );
+
+        logger.info("Recurring charge completed for transaction: {}", transaction.getTransactionId());
+        
         return transaction;
     }
 
@@ -359,8 +475,6 @@ public class TransactionService {
         }
     }
 
-    // ===== PRIVATE HELPER METHODS =====
-
     /**
      * Validate cycle for transaction
      */
@@ -410,11 +524,10 @@ public class TransactionService {
         // Create Paystack transaction request
         PaystackTransactionRequest request = new PaystackTransactionRequest();
         request.setEmail(user.getEmail());
-        request.setAmount(transaction.getAmount().multiply(new BigDecimal("100")).intValue()); // Convert to kobo
+        request.setAmount(transaction.getAmount().multiply(new BigDecimal("100")).intValue());
         request.setReference(transaction.getPaystackReference());
         request.setCallbackUrl(paystackCallbackUrl);
         
-        // Add metadata
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("transaction_id", transaction.getTransactionId().toString());
         metadata.put("cycle_id", cycle.getCycleId().toString());
@@ -530,9 +643,9 @@ public class TransactionService {
      * Generate unique transaction reference
      */
     private String generateTransactionReference(Transaction transaction) {
-        return "TXN-" + transaction.getTransactionId().toString().replace("-", "").substring(0, 12).toUpperCase();
+        // Use timestamp + random string instead of transaction ID
+        return "REC-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
-
     // ===== INNER CLASSES =====
 
     /**

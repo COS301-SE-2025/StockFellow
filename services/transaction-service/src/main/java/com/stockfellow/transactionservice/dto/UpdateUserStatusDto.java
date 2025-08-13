@@ -1,7 +1,7 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-import jakarta.validation.constraints.*;
+import com.stockfellow.transactionservice.model.User;
+import jakarta.validation.constraints.NotNull;
 
 public class UpdateUserStatusDto {
     

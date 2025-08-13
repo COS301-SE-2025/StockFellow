@@ -1,6 +1,5 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
 import jakarta.validation.constraints.*;
 import java.util.UUID;
 

@@ -10,7 +10,6 @@ import com.stockfellow.transactionservice.integration.dto.PaystackAuthorization;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionRequest;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionResponse;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransactionVerificationResponse;
-import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipient;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientRequest;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransferRecipientResponse;
 import com.stockfellow.transactionservice.repository.UserRepository;
@@ -440,15 +439,15 @@ public class PaymentDetailsService {
         return activeCardCount == 0;
     }
 
-    private void deactivateOtherCards(UUID userId, UUID currentPayerId) {
-        List<PayerDetails> userCards = payerDetailsRepository.findByUserIdAndIsActiveTrue(userId);
-        userCards.stream()
-            .filter(card -> !card.getPayerId().equals(currentPayerId))
-            .forEach(card -> {
-                card.setIsActive(false);
-                payerDetailsRepository.save(card);
-            });
-    }
+    // private void deactivateOtherCards(UUID userId, UUID currentPayerId) {
+    //     List<PayerDetails> userCards = payerDetailsRepository.findByUserIdAndIsActiveTrue(userId);
+    //     userCards.stream()
+    //         .filter(card -> !card.getPayerId().equals(currentPayerId))
+    //         .forEach(card -> {
+    //             card.setIsActive(false);
+    //             payerDetailsRepository.save(card);
+    //         });
+    // }
 
     private String generateAuthReference() {
         return "AUTH-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();

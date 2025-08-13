@@ -41,15 +41,27 @@ public class TransactionController {
     }
     
     // Process transaction (handle payment gateway response)
-    @PostMapping("/{transactionId}/process")
-    @Operation(summary = "Process a transaction", 
-               description = "Processes a transaction and handle payment gateway response")
+    // @PostMapping("/{transactionId}/process")
+    // @Operation(summary = "Process a transaction", 
+    //            description = "Processes a transaction and handle payment gateway response")
 
-    public ResponseEntity<TransactionResponseDto> processTransaction(
-            @PathVariable UUID transactionId,
-            @RequestBody ProcessTransactionDto processDto) {
-        Transaction transaction = transactionService.processTransaction(transactionId, processDto);
-        return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
+    // public ResponseEntity<TransactionResponseDto> processTransaction(
+    //         @PathVariable UUID transactionId,
+    //         @RequestBody ProcessTransactionDto processDto) {
+    //     Transaction transaction = transactionService.processTransaction(transactionId, processDto);
+    //     return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
+    // }
+
+    @PostMapping("/charge-card")
+    @Operation(summary = "Charge existing authorization", 
+                description = "Creates a new transaction for a group cycle using an existing payment authorization. Use in group cycle for recurring payments")
+    public ResponseEntity<TransactionResponseDto> chargeTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
+        Transaction transaction = transactionService.chargeStoredCard(createDto);
+        // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
+        //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
+        //                              "TRANSACTION_CREATED", null, null);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                           .body(TransactionResponseDto.fromEntity(transaction));
     }
     
     // Get transaction details
