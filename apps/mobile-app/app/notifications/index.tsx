@@ -1,75 +1,14 @@
-// Update the notifications.tsx page
-import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+// app/notifications/index.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import TopBar from '../../src/components/TopBar';
 import NotificationItem from '../../src/components/NotificationItem';
+import NotificationService, { Notification } from '../../src/services/notificationService';
 
-// Mock data based on your schema
-const mockNotifications = [
-  {
-    id: '1',
-    notificationId: 'notif-001',
-    userId: 'user-123',
-    groupId: 'group-456',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'You have received R250.00 from John Doe',
-    status: 'DELIVERED',
-    channel: 'APP',
-    priority: 'NORMAL',
-    readStatus: false,
-    createdAt: new Date(Date.now() - 30000), // 30 seconds ago
-    sentAt: new Date(Date.now() - 30000),
-  },
-  {
-    id: '2',
-    notificationId: 'notif-003',
-    userId: 'user-123',
-    groupId: null,
-    type: 'alert',
-    title: 'System Maintenance',
-    message: 'There will be scheduled maintenance tonight at 2AM',
-    status: 'DELIVERED',
-    channel: 'APP',
-    priority: 'NORMAL',
-    readStatus: true,
-    createdAt: new Date(Date.now() - 86400000), // 1 day ago
-    sentAt: new Date(Date.now() - 86400000),
-  },
-  {
-    id: '3',
-    notificationId: 'notif-004',
-    userId: 'user-123',
-    groupId: 'group-789',
-    type: 'reminder',
-    title: 'Contribution Due',
-    message: 'Your monthly contribution of R200 is due tomorrow',
-    status: 'DELIVERED',
-    channel: 'APP',
-    priority: 'NORMAL',
-    readStatus: true,
-    createdAt: new Date(Date.now() - 172800000), // 2 days ago
-    sentAt: new Date(Date.now() - 172800000),
-  },
-  {
-    id: '4',
-    notificationId: 'notif-005',
-    userId: 'user-123',
-    groupId: null,
-    type: 'payment',
-    title: 'Withdrawal Processed',
-    message: 'Your withdrawal of R500 has been processed',
-    status: 'DELIVERED',
-    channel: 'APP',
-    priority: 'NORMAL',
-    readStatus: true,
-    createdAt: new Date(Date.now() - 604800000), // 1 week ago
-    sentAt: new Date(Date.now() - 604800000),
-  },
-];
-
-const formatTimeAgo = (date: Date) => {
+const formatTimeAgo = (dateString: string) => {
+  const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
@@ -81,7 +20,7 @@ const formatTimeAgo = (date: Date) => {
   return `${Math.floor(seconds / 2592000)}mo`;
 };
 
-const groupNotificationsByTime = (notifications: typeof mockNotifications) => {
+const groupNotificationsByTime = (notifications: Notification[]) => {
   const now = new Date();
   const today = new Date(now.setHours(0, 0, 0, 0));
   const yesterday = new Date(today);
@@ -92,11 +31,11 @@ const groupNotificationsByTime = (notifications: typeof mockNotifications) => {
   last30Days.setDate(last30Days.getDate() - 30);
 
   const groups = {
-    today: [] as typeof mockNotifications,
-    yesterday: [] as typeof mockNotifications,
-    last7Days: [] as typeof mockNotifications,
-    last30Days: [] as typeof mockNotifications,
-    older: [] as typeof mockNotifications,
+    today: [] as Notification[],
+    yesterday: [] as Notification[],
+    last7Days: [] as Notification[],
+    last30Days: [] as Notification[],
+    older: [] as Notification[],
   };
 
   notifications.forEach(notification => {
@@ -119,107 +58,252 @@ const groupNotificationsByTime = (notifications: typeof mockNotifications) => {
 };
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const groupedNotifications = groupNotificationsByTime(notifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, readStatus: true } : notif
-      )
-    );
+  // Load notifications from API
+  const loadNotifications = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      setError(null);
+      
+      const response = await NotificationService.getUserNotifications();
+      setNotifications(response.notifications);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load notifications');
+      Alert.alert('Error', 'Failed to load notifications. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
+
+  // Load notifications when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadNotifications();
+    }, [])
+  );
+
+  // Pull-to-refresh handler
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadNotifications(false);
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await NotificationService.markAsRead(notificationId);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.notificationId === notificationId 
+            ? { ...notif, readStatus: true, readAt: new Date().toISOString() } 
+            : notif
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      Alert.alert('Error', 'Failed to mark notification as read');
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      await NotificationService.markAllAsRead();
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notif => ({ 
+          ...notif, 
+          readStatus: true, 
+          readAt: notif.readAt || new Date().toISOString() 
+        }))
+      );
+      
+      Alert.alert('Success', 'All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      Alert.alert('Error', 'Failed to mark all notifications as read');
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <TopBar title="Notifications" showBackButton />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0066CC" />
+          <Text className="mt-4 text-gray-600 font-['PlusJakartaSans-Regular']">
+            Loading notifications...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && notifications.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <TopBar title="Notifications" showBackButton />
+        <View className="flex-1 justify-center items-center px-8">
+          <Text className="text-red-500 text-center font-['PlusJakartaSans-Medium'] mb-4">
+            {error}
+          </Text>
+          <Text 
+            className="text-blue-500 font-['PlusJakartaSans-Medium']"
+            onPress={() => loadNotifications()}
+          >
+            Tap to retry
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const groupedNotifications = groupNotificationsByTime(notifications);
+  const hasNotifications = notifications.length > 0;
+  const hasUnreadNotifications = notifications.some(n => !n.readStatus);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <TopBar title="Notifications" showBackButton />
+      <TopBar 
+        title="Notifications" 
+        showBackButton 
+        rightComponent={
+          hasUnreadNotifications ? (
+            <Text 
+              className="text-blue-500 font-['PlusJakartaSans-Medium'] mr-4"
+              onPress={markAllAsRead}
+            >
+              Mark All Read
+            </Text>
+          ) : undefined
+        }
+      />
       
-      <ScrollView className="flex-1 mx-4">
-        {groupedNotifications.today.length > 0 && (
-          <View>
-            <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']">Today</Text>
-            {groupedNotifications.today.map(notification => (
-              <NotificationItem
-                key={notification.id}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                timeAgo={formatTimeAgo(new Date(notification.createdAt))}
-                readStatus={notification.readStatus}
-                onPress={() => markAsRead(notification.id)}
-              />
-            ))}
-          </View>
-        )}
+      {!hasNotifications ? (
+        <View className="flex-1 justify-center items-center px-8">
+          <Text className="text-gray-500 text-center font-['PlusJakartaSans-Medium'] text-lg mb-2">
+            No notifications yet
+          </Text>
+          <Text className="text-gray-400 text-center font-['PlusJakartaSans-Regular']">
+            You'll see your notifications here when you receive them
+          </Text>
+        </View>
+      ) : (
+        <ScrollView 
+          className="flex-1 mx-4"
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={['#0066CC']}
+            />
+          }
+        >
+          {groupedNotifications.today.length > 0 && (
+            <View>
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+                Today
+              </Text>
+              {groupedNotifications.today.map(notification => (
+                <NotificationItem
+                  key={notification.notificationId}
+                  type={notification.type}
+                  title={notification.title}
+                  message={notification.message}
+                  timeAgo={formatTimeAgo(notification.createdAt)}
+                  readStatus={notification.readStatus}
+                  onPress={() => markAsRead(notification.notificationId)}
+                />
+              ))}
+            </View>
+          )}
 
-        {groupedNotifications.yesterday.length > 0 && (
-          <View>
-            <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']">Yesterday</Text>
-            {groupedNotifications.yesterday.map(notification => (
-              <NotificationItem
-                key={notification.id}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                timeAgo={formatTimeAgo(new Date(notification.createdAt))}
-                readStatus={notification.readStatus}
-                onPress={() => markAsRead(notification.id)}
-              />
-            ))}
-          </View>
-        )}
+          {groupedNotifications.yesterday.length > 0 && (
+            <View>
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+                Yesterday
+              </Text>
+              {groupedNotifications.yesterday.map(notification => (
+                <NotificationItem
+                  key={notification.notificationId}
+                  type={notification.type}
+                  title={notification.title}
+                  message={notification.message}
+                  timeAgo={formatTimeAgo(notification.createdAt)}
+                  readStatus={notification.readStatus}
+                  onPress={() => markAsRead(notification.notificationId)}
+                />
+              ))}
+            </View>
+          )}
 
-        {groupedNotifications.last7Days.length > 0 && (
-          <View>
-            <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']">Last 7 Days</Text>
-            {groupedNotifications.last7Days.map(notification => (
-              <NotificationItem
-                key={notification.id}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                timeAgo={formatTimeAgo(new Date(notification.createdAt))}
-                readStatus={notification.readStatus}
-                onPress={() => markAsRead(notification.id)}
-              />
-            ))}
-          </View>
-        )}
+          {groupedNotifications.last7Days.length > 0 && (
+            <View>
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+                Last 7 Days
+              </Text>
+              {groupedNotifications.last7Days.map(notification => (
+                <NotificationItem
+                  key={notification.notificationId}
+                  type={notification.type}
+                  title={notification.title}
+                  message={notification.message}
+                  timeAgo={formatTimeAgo(notification.createdAt)}
+                  readStatus={notification.readStatus}
+                  onPress={() => markAsRead(notification.notificationId)}
+                />
+              ))}
+            </View>
+          )}
 
-        {groupedNotifications.last30Days.length > 0 && (
-          <View>
-            <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']">Last 30 Days</Text>
-            {groupedNotifications.last30Days.map(notification => (
-              <NotificationItem
-                key={notification.id}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                timeAgo={formatTimeAgo(new Date(notification.createdAt))}
-                readStatus={notification.readStatus}
-                onPress={() => markAsRead(notification.id)}
-              />
-            ))}
-          </View>
-        )}
+          {groupedNotifications.last30Days.length > 0 && (
+            <View>
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+                Last 30 Days
+              </Text>
+              {groupedNotifications.last30Days.map(notification => (
+                <NotificationItem
+                  key={notification.notificationId}
+                  type={notification.type}
+                  title={notification.title}
+                  message={notification.message}
+                  timeAgo={formatTimeAgo(notification.createdAt)}
+                  readStatus={notification.readStatus}
+                  onPress={() => markAsRead(notification.notificationId)}
+                />
+              ))}
+            </View>
+          )}
 
-        {groupedNotifications.older.length > 0 && (
-          <View>
-            <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']">Older Notifications</Text>
-            {groupedNotifications.older.map(notification => (
-              <NotificationItem
-                key={notification.id}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                timeAgo={formatTimeAgo(new Date(notification.createdAt))}
-                readStatus={notification.readStatus}
-                onPress={() => markAsRead(notification.id)}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
+          {groupedNotifications.older.length > 0 && (
+            <View>
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+                Older Notifications
+              </Text>
+              {groupedNotifications.older.map(notification => (
+                <NotificationItem
+                  key={notification.notificationId}
+                  type={notification.type}
+                  title={notification.title}
+                  message={notification.message}
+                  timeAgo={formatTimeAgo(notification.createdAt)}
+                  readStatus={notification.readStatus}
+                  onPress={() => markAsRead(notification.notificationId)}
+                />
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };

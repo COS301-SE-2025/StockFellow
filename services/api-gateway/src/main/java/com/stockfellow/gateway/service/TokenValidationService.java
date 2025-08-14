@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockfellow.gateway.model.TokenInfo;
 import com.stockfellow.gateway.model.TokenValidationResult;
 import com.stockfellow.gateway.service.TokenValidationService;
-import com.stockfellow.gateway.service.KeycloakService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;

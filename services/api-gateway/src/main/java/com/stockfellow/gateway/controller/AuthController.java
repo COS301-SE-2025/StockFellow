@@ -4,7 +4,6 @@ package com.stockfellow.gateway.controller;
 import com.stockfellow.gateway.service.KeycloakService;
 import com.stockfellow.gateway.service.TokenValidationService;
 import com.stockfellow.gateway.model.RefreshTokenResponse;
-import com.stockfellow.gateway.model.RefreshTokenRequest;
 import com.stockfellow.gateway.model.TokenValidationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,15 +12,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.apache.commons.codec.digest.DigestUtils;
+// import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.Duration;
+// import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -227,11 +224,10 @@ public class AuthController {
         }
     }
 	
-	private void blacklistToken(String token) {
-        // Add to Redis blacklist with expiration
-        String key = "blacklisted_token:" + DigestUtils.sha256Hex(token);
-        redisTemplate.opsForValue().set(key, "true", Duration.ofHours(24));
-    }
+	// private void blacklistToken(String token) {
+    //     String key = "blacklisted_token:" + DigestUtils.sha256Hex(token);
+    //     redisTemplate.opsForValue().set(key, "true", Duration.ofHours(24));
+    // }
 
     // DTOs
     public static class LoginRequest {
