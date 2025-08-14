@@ -31,6 +31,10 @@ public interface TransferRepository extends JpaRepository<Transfer, UUID> {
      */
     List<Transfer> findByPayoutDetailId(UUID payoutDetailId);
     
+    /*
+     * Check if user has already recieved a payout this cycle
+     */
+    List<Transfer> findByCycleIdAndUserIdAndStatus(UUID cycleId, UUID userId, Transfer.TransferStatus status);
     /**
      * Find transfers by status
      */

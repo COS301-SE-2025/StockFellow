@@ -6,10 +6,21 @@ import com.stockfellow.transactionservice.repository.UserRepository;
 // import com.stockfellow.transactionservice.model.ActivityLog;
 import com.stockfellow.transactionservice.model.User;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.client.RestTemplate;
+
 
 import java.util.List;
 import java.util.ArrayList;
@@ -21,9 +32,13 @@ public class UserService {
     
     @Autowired
     private UserRepository userRepository;
+    private final RestTemplate restTemplate;
+    private static final String GROUP_SERVICE_BASE_URL = "http://api.paystack.co";
 
-    public UserService(UserRepository userRepository) {
+
+    public UserService(RestTemplate restTemplate, UserRepository userRepository) {
         this.userRepository = userRepository;
+        this.restTemplate = restTemplate;
     }
 
     public User syncUser(SyncUserDto syncDto){
@@ -80,5 +95,31 @@ public class UserService {
         }
 
         return userList;
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
+
+
+    public List<User> fetchUsers(UUID groupId) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<?> entity = new HttpEntity<>(headers);
+            
+            ResponseEntity<List<User>> response = restTemplate.exchange(
+                GROUP_SERVICE_BASE_URL + "/transfer/" + groupId,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<List<User>>() {}
+            );
+            
+            return response.getBody();
+        } catch (Exception e) {
+            logger.error("Error fetching users: ", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch users");
+        }
     }
 }

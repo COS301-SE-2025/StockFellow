@@ -35,77 +35,41 @@ public class PaystackTransferResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class PaystackTransferData {
         
-        @JsonProperty("integration")
-        private Long integration;
+        @JsonProperty("id")
+        private Long id;
+
+        @JsonProperty("reference")
+        private String reference; // Your reference for tracking
         
-        @JsonProperty("domain")
-        private String domain;
+        @JsonProperty("transfer_code")
+        private String transferCode; // Important for verification/tracking
         
         @JsonProperty("amount")
-        private Integer amount;
-        
-        @JsonProperty("currency")
-        private String currency;
-        
-        @JsonProperty("source")
-        private String source;
-        
-        @JsonProperty("reason")
-        private String reason;
-        
-        @JsonProperty("recipient")
-        private Long recipient;
+        private Integer amount; 
         
         @JsonProperty("status")
         private String status; // "pending", "success", "failed"
         
-        @JsonProperty("transfer_code")
-        private String transferCode;
+        @JsonProperty("recipient")
+        private Long recipient;
         
-        @JsonProperty("id")
-        private Long id;
-        
-        @JsonProperty("createdAt")
-        private String createdAt;
-        
-        @JsonProperty("updatedAt")
-        private String updatedAt;
-
         // Getters and Setters
-        public Long getIntegration() { return integration; }
-        public void setIntegration(Long integration) { this.integration = integration; }
-        
-        public String getDomain() { return domain; }
-        public void setDomain(String domain) { this.domain = domain; }
-        
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public String getReference() { return reference; }
+        public void setId(String reference) { this.reference = reference; }
+
+        public String getTransferCode() { return transferCode; }
+        public void setTransferCode(String transferCode) { this.transferCode = transferCode; }
+
         public Integer getAmount() { return amount; }
         public void setAmount(Integer amount) { this.amount = amount; }
         
-        public String getCurrency() { return currency; }
-        public void setCurrency(String currency) { this.currency = currency; }
-        
-        public String getSource() { return source; }
-        public void setSource(String source) { this.source = source; }
-        
-        public String getReason() { return reason; }
-        public void setReason(String reason) { this.reason = reason; }
-        
-        public Long getRecipient() { return recipient; }
-        public void setRecipient(Long recipient) { this.recipient = recipient; }
-        
         public String getStatus() { return status; }
         public void setStatus(String status) { this.status = status; }
-        
-        public String getTransferCode() { return transferCode; }
-        public void setTransferCode(String transferCode) { this.transferCode = transferCode; }
-        
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-        
-        public String getCreatedAt() { return createdAt; }
-        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
-        
-        public String getUpdatedAt() { return updatedAt; }
-        public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+        public Long getRecipient() { return recipient; }
+        public void setRecipient(Long recipient) { this.recipient = recipient; }        
     }
 }

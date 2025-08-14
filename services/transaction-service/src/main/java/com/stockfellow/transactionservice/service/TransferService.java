@@ -3,6 +3,7 @@ package com.stockfellow.transactionservice.service;
 import com.stockfellow.transactionservice.dto.CreateTransferDto;
 import com.stockfellow.transactionservice.dto.ProcessTransferDto;
 import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.Transfer.TransferStatus;
 import com.stockfellow.transactionservice.repository.*;
 import com.stockfellow.transactionservice.integration.PaystackService;
 import com.stockfellow.transactionservice.integration.dto.PaystackTransferRequest;
@@ -22,6 +23,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -65,11 +68,22 @@ public class TransferService {
         // Validate user exists
         User user = userRepository.findById(createDto.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found with ID: " + createDto.getUserId()));
-        
+        validatePayoutDetails(createDto.getPayoutDetailId(), createDto.getUserId());
+
         // Validate payout details exist and are verified
         PayoutDetails payoutDetails = validatePayoutDetails(createDto.getPayoutDetailId(), createDto.getUserId());
         
-        // Create transfer entity
+        String recipientCode = payoutDetails.getRecipientCode();
+        if (recipientCode == null || recipientCode.trim().isEmpty()) {
+            throw new RuntimeException("No transfer recipient code found for payer. Please register as transfer recipient first.");
+        }
+
+        List<Transfer> existingTransfers = transferRepository
+            .findByCycleIdAndUserIdAndStatus(createDto.getCycleId(), createDto.getUserId(), Transfer.TransferStatus.COMPLETED);
+        if (!existingTransfers.isEmpty()) {
+            throw new RuntimeException("User has already completed received a transfer (payout) for this cycle");
+        }
+
         Transfer transfer = new Transfer();
         transfer.setCycleId(createDto.getCycleId());
         transfer.setUserId(createDto.getUserId());
@@ -79,9 +93,55 @@ public class TransferService {
         transfer.setStatus(Transfer.TransferStatus.PENDING);
         transfer.setRetryCount(0);
         
-        // Save transfer
         transfer = transferRepository.save(transfer);
         
+        try {
+            PaystackTransferRequest request = new PaystackTransferRequest(
+                createDto.getAmount().multiply(new BigDecimal("100")).intValue(),
+                recipientCode,
+                createDto.getReason()
+            );
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("transaction_id", transfer.getTransferId().toString());
+            metadata.put("cycle_id", cycle.getCycleId().toString());
+            metadata.put("user_id", user.getUserId().toString());
+            metadata.put("payment_type", "recurring");
+            // TODO: Might need to add metadata field to PaystackChargeRequest if not present
+
+            PaystackTransferResponse response = paystackService.initiateTransfer(request);
+
+            if (response.getStatus() && response.getData() != null) {
+                transfer.setStatus(TransferStatus.COMPLETED);
+                transfer.setCompletedAt(LocalDateTime.now());
+                transfer.setPaystackTransferCode(response.getData().getReference()); 
+                transfer.setGatewayStatus("success");
+                
+                logger.info("Successfully made payout for transfer: {}", transfer.getTransferId());
+                
+                if (!payoutDetails.getIsVerified()) {
+                    payoutDetails.setIsVerified(true);
+                    payoutDetailsRepository.save(payoutDetails);
+                }
+                
+            } else {
+                // Failed payout
+                transfer.setStatus(TransferStatus.FAILED);
+                transfer.setFailureReason(response.getMessage() != null ? response.getMessage() : "Payout transfer failed");
+                transfer.setGatewayStatus("failed");
+                
+                logger.error("Failed to payout transfer: {}", response.getMessage());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Exception occurred while paying out transfer: {}", e.getMessage(), e);
+            transfer.setStatus(TransferStatus.FAILED);
+            transfer.setFailureReason("Exception during transfer: " + e.getMessage());
+            transfer.setGatewayStatus("error");
+        }
+        
+        logger.info("Transfer created successfully with ID: {}", transfer.getTransferId());
+        return transfer;
         // Log activity
         // activityLogService.logActivity(
         //     createDto.getUserId(), 
@@ -94,17 +154,6 @@ public class TransferService {
         // );
         
         // Initiate transfer with payment gateway
-        try {
-            initiatePaystackTransfer(transfer, payoutDetails);
-        } catch (Exception e) {
-            logger.error("Failed to initiate transfer: {}", e.getMessage());
-            transfer.setStatus(Transfer.TransferStatus.FAILED);
-            transfer.setFailureReason("Failed to initiate with payment gateway: " + e.getMessage());
-            transfer = transferRepository.save(transfer);
-        }
-        
-        logger.info("Transfer created successfully with ID: {}", transfer.getTransferId());
-        return transfer;
     }
 
     /**
@@ -151,55 +200,56 @@ public class TransferService {
     /**
      * Retry a failed transfer
      */
-    public Transfer retryTransfer(UUID transferId) {
-        logger.info("Retrying transfer: {}", transferId);
+    // TODO implement
+    // public Transfer retryTransfer(UUID transferId) {
+    //     logger.info("Retrying transfer: {}", transferId);
         
-        Transfer transfer = findById(transferId);
+    //     Transfer transfer = findById(transferId);
         
-        // Validate transfer can be retried
-        if (transfer.getStatus() != Transfer.TransferStatus.FAILED) {
-            throw new RuntimeException("Transfer is not in FAILED status");
-        }
+    //     // Validate transfer can be retried
+    //     if (transfer.getStatus() != Transfer.TransferStatus.FAILED) {
+    //         throw new RuntimeException("Transfer is not in FAILED status");
+    //     }
         
-        if (transfer.getRetryCount() >= maxRetryCount) {
-            throw new RuntimeException("Maximum retry count exceeded for transfer: " + transferId);
-        }
+    //     if (transfer.getRetryCount() >= maxRetryCount) {
+    //         throw new RuntimeException("Maximum retry count exceeded for transfer: " + transferId);
+    //     }
         
-        // Increment retry count
-        transfer.setRetryCount(transfer.getRetryCount() + 1);
-        transfer.setStatus(Transfer.TransferStatus.PENDING);
-        transfer.setFailureReason(null);
-        transfer.setGatewayStatus(null);
+    //     // Increment retry count
+    //     transfer.setRetryCount(transfer.getRetryCount() + 1);
+    //     transfer.setStatus(Transfer.TransferStatus.PENDING);
+    //     transfer.setFailureReason(null);
+    //     transfer.setGatewayStatus(null);
         
-        transfer = transferRepository.save(transfer);
+    //     transfer = transferRepository.save(transfer);
         
-        // Get payout details and retry
-        PayoutDetails payoutDetails = payoutDetailsRepository.findById(transfer.getPayoutDetailId())
-            .orElseThrow(() -> new RuntimeException("Payout details not found"));
+    //     // Get payout details and retry
+    //     PayoutDetails payoutDetails = payoutDetailsRepository.findById(transfer.getPayoutDetailId())
+    //         .orElseThrow(() -> new RuntimeException("Payout details not found"));
         
-        try {
-            initiatePaystackTransfer(transfer, payoutDetails);
-        } catch (Exception e) {
-            logger.error("Failed to retry transfer: {}", e.getMessage());
-            transfer.setStatus(Transfer.TransferStatus.FAILED);
-            transfer.setFailureReason("Retry failed: " + e.getMessage());
-            transfer = transferRepository.save(transfer);
-        }
+    //     try {
+    //         initiatePaystackTransfer(transfer, payoutDetails);
+    //     } catch (Exception e) {
+    //         logger.error("Failed to retry transfer: {}", e.getMessage());
+    //         transfer.setStatus(Transfer.TransferStatus.FAILED);
+    //         transfer.setFailureReason("Retry failed: " + e.getMessage());
+    //         transfer = transferRepository.save(transfer);
+    //     }
         
-        // Log activity
-        // activityLogService.logActivity(
-        //     transfer.getUserId(), 
-        //     transfer.getCycleId(),
-        //     ActivityLog.EntityType.TRANSFER, 
-        //     transfer.getTransferId(),
-        //     "TRANSFER_RETRIED", 
-        //     null, 
-        //     null
-        // );
+    //     // Log activity
+    //     // activityLogService.logActivity(
+    //     //     transfer.getUserId(), 
+    //     //     transfer.getCycleId(),
+    //     //     ActivityLog.EntityType.TRANSFER, 
+    //     //     transfer.getTransferId(),
+    //     //     "TRANSFER_RETRIED", 
+    //     //     null, 
+    //     //     null
+    //     // );
         
-        logger.info("Transfer retry initiated: {}", transferId);
-        return transfer;
-    }
+    //     logger.info("Transfer retry initiated: {}", transferId);
+    //     return transfer;
+    // }
 
     /**
      * Find transfer by ID
@@ -246,39 +296,41 @@ public class TransferService {
     /**
      * Process automatic transfers for completed cycles
      */
-    @Transactional
-    public void processAutomaticTransfers() {
-        logger.info("Processing automatic transfers for completed cycles");
+    // TODO: Do I need this?
+    // @Transactional
+    // public void processAutomaticTransfers() {
+    //     logger.info("Processing automatic transfers for completed cycles");
         
-        // Find cycles that are collection complete but haven't been transferred
-        List<GroupCycle> completedCycles = groupCycleRepository.findByStatus("collection_complete");
+    //     // Find cycles that are collection complete but haven't been transferred
+    //     List<GroupCycle> completedCycles = groupCycleRepository.findByStatus("collection_complete");
         
-        for (GroupCycle cycle : completedCycles) {
-            try {
-                processAutomaticTransferForCycle(cycle);
-            } catch (Exception e) {
-                logger.error("Failed to process automatic transfer for cycle: {}", cycle.getCycleId(), e);
-            }
-        }
-    }
+    //     for (GroupCycle cycle : completedCycles) {
+    //         try {
+    //             processAutomaticTransferForCycle(cycle);
+    //         } catch (Exception e) {
+    //             logger.error("Failed to process automatic transfer for cycle: {}", cycle.getCycleId(), e);
+    //         }
+    //     }
+    // }
 
     /**
      * Find and retry failed transfers
      */
-    @Transactional
-    public void retryFailedTransfers() {
-        logger.info("Retrying failed transfers");
+    // TODO: implement this
+    // @Transactional
+    // public void retryFailedTransfers() {
+    //     logger.info("Retrying failed transfers");
         
-        List<Transfer> retryableTransfers = transferRepository.findRetryableTransfers(maxRetryCount);
+    //     List<Transfer> retryableTransfers = transferRepository.findRetryableTransfers(maxRetryCount);
         
-        for (Transfer transfer : retryableTransfers) {
-            try {
-                retryTransfer(transfer.getTransferId());
-            } catch (Exception e) {
-                logger.error("Failed to retry transfer: {}", transfer.getTransferId(), e);
-            }
-        }
-    }
+    //     for (Transfer transfer : retryableTransfers) {
+    //         try {
+    //             retryTransfer(transfer.getTransferId());
+    //         } catch (Exception e) {
+    //             logger.error("Failed to retry transfer: {}", transfer.getTransferId(), e);
+    //         }
+    //     }
+    // }
 
     /**
      * Cancel a pending transfer
@@ -415,38 +467,39 @@ public class TransferService {
     /**
      * Process automatic transfer for a completed cycle
      */
-    private void processAutomaticTransferForCycle(GroupCycle cycle) {
-        logger.info("Processing automatic transfer for cycle: {}", cycle.getCycleId());
+    //TODO: Do I need this
+    // private void processAutomaticTransferForCycle(GroupCycle cycle) {
+    //     logger.info("Processing automatic transfer for cycle: {}", cycle.getCycleId());
         
-        // Check if transfer already exists
-        List<Transfer> existingTransfers = transferRepository.findByCycleId(cycle.getCycleId());
-        if (!existingTransfers.isEmpty()) {
-            logger.info("Transfer already exists for cycle: {}", cycle.getCycleId());
-            return;
-        }
+    //     // Check if transfer already exists
+    //     List<Transfer> existingTransfers = transferRepository.findByCycleId(cycle.getCycleId());
+    //     if (!existingTransfers.isEmpty()) {
+    //         logger.info("Transfer already exists for cycle: {}", cycle.getCycleId());
+    //         return;
+    //     }
         
-        // Get default payout method for recipient
-        Optional<PayoutDetails> defaultPayoutOpt = payoutDetailsRepository
-            .findByUserIdAndIsDefaultTrue(cycle.getRecipientUserId());
+    //     // Get default payout method for recipient
+    //     Optional<PayoutDetails> defaultPayoutOpt = payoutDetailsRepository
+    //         .findByUserIdAndIsDefaultTrue(cycle.getRecipientUserId());
         
-        if (!defaultPayoutOpt.isPresent()) {
-            logger.warn("No default payout method found for user: {}", cycle.getRecipientUserId());
-            return;
-        }
+    //     if (!defaultPayoutOpt.isPresent()) {
+    //         logger.warn("No default payout method found for user: {}", cycle.getRecipientUserId());
+    //         return;
+    //     }
         
-        PayoutDetails payoutDetails = defaultPayoutOpt.get();
+    //     PayoutDetails payoutDetails = defaultPayoutOpt.get();
         
-        // Create transfer DTO
-        CreateTransferDto createDto = new CreateTransferDto();
-        createDto.setCycleId(cycle.getCycleId());
-        createDto.setUserId(cycle.getRecipientUserId());
-        createDto.setPayoutDetailId(payoutDetails.getPayoutId());
-        createDto.setAmount(cycle.getCurrentTotal());
-        createDto.setCurrency(defaultCurrency);
+    //     // Create transfer DTO
+    //     CreateTransferDto createDto = new CreateTransferDto();
+    //     createDto.setCycleId(cycle.getCycleId());
+    //     createDto.setUserId(cycle.getRecipientUserId());
+    //     createDto.setPayoutDetailId(payoutDetails.getPayoutId());
+    //     createDto.setAmount(cycle.getCurrentTotal());
+    //     createDto.setCurrency(defaultCurrency);
         
-        // Create transfer
-        createTransfer(createDto);
-    }
+    //     // Create transfer
+    //     createTransfer(createDto);
+    // }
 
     /**
      * Generate unique transfer reference

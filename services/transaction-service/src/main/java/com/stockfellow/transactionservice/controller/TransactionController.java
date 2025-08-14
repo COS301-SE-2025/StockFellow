@@ -28,6 +28,7 @@ public class TransactionController {
     // private ActivityLogService activityLogService;
 
     // Create transaction (called when user contributes to cycle)
+    //TODO: Remove this endpoint and replace with charge if possible
     @PostMapping
     @Operation(summary = "Create a new transaction", 
                 description = "Creates a new transaction for a group cycle with specified parameters")

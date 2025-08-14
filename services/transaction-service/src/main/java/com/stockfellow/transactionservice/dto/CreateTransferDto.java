@@ -20,8 +20,10 @@ public class CreateTransferDto {
     @Digits(integer = 17, fraction = 2, message = "Invalid amount format")
     private BigDecimal amount;
     
-    @Size(max = 3, message = "Currency code must not exceed 3 characters")
-    private String currency;
+    private String currency = "ZAR";
+
+    @NotEmpty(message = "Reason for payment is required")
+    private String reason; 
 
     // Constructors
     public CreateTransferDto() {}
@@ -39,6 +41,9 @@ public class CreateTransferDto {
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+
+    public String getCurrency(){ return currency; }
+    //No set needed
 }

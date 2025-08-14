@@ -129,7 +129,6 @@ public class TransactionService {
         
         GroupCycle cycle = validateCycleForTransaction(createDto.getCycleId());
 
-        // 1. Get stored authorization code from PayerDetails
         PayerDetails payerDetails = payerDetailsRepository.findById(createDto.getPayerId())
             .orElseThrow(() -> new RuntimeException("Cannot find Payer Details with ID: " + createDto.getPayerId()));
         validatePayerDetails(createDto.getPayerId(), createDto.getUserId());
@@ -148,7 +147,6 @@ public class TransactionService {
             throw new RuntimeException("User has already completed a transaction for this cycle");
         }
 
-        // 2. Create transaction record with PROCESSING status
         Transaction transaction = new Transaction(
             createDto.getCycleId(),
             createDto.getUserId(),
@@ -164,26 +162,22 @@ public class TransactionService {
         
 
         try {
-            // 3. Call Paystack Charge Authorization API directly
             PaystackChargeRequest request = new PaystackChargeRequest(
                 user.getEmail(),
                 createDto.getAmount().multiply(new BigDecimal("100")).intValue(), // Convert to cents
                 authCode
             );
 
-            // Add metadata for tracking
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("transaction_id", transaction.getTransactionId().toString());
             metadata.put("cycle_id", cycle.getCycleId().toString());
             metadata.put("user_id", user.getUserId().toString());
             metadata.put("payment_type", "recurring");
-            // Note: You'll need to add metadata field to PaystackChargeRequest if not present
+            // TODO: Might need to add metadata field to PaystackChargeRequest if not present
 
             PaystackTransactionResponse response = paystackService.chargeTransaction(request);
 
-            // 4. Update transaction status based on immediate response
             if (response.getStatus() && response.getData() != null) {
-                // Successful charge
                 transaction.setStatus(TransactionStatus.COMPLETED);
                 transaction.setCompletedAt(LocalDateTime.now());
                 transaction.setPaystackTransId(response.getData().getReference()); // or appropriate ID field
@@ -191,7 +185,6 @@ public class TransactionService {
                 
                 logger.info("Stored card charged successfully for transaction: {}", transaction.getTransactionId());
                 
-                // Update payer details to mark as authenticated if not already
                 if (!payerDetails.getIsAuthenticated()) {
                     payerDetails.setIsAuthenticated(true);
                     payerDetailsRepository.save(payerDetails);
@@ -207,17 +200,13 @@ public class TransactionService {
             }
 
         } catch (Exception e) {
-            // Handle any exceptions during the charge process
             logger.error("Exception occurred while charging stored card: {}", e.getMessage(), e);
             transaction.setStatus(TransactionStatus.FAILED);
             transaction.setFailureReason("Exception during charge: " + e.getMessage());
             transaction.setGatewayStatus("error");
         }
 
-        // Save the final transaction state
         transaction = transactionRepository.save(transaction);
-        
-        // Handle post-transaction actions
         handleTransactionStatusChange(transaction, TransactionStatus.PROCESSING);
         
         // Log activity

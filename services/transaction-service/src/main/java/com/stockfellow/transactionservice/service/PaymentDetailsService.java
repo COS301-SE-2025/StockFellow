@@ -379,6 +379,7 @@ public class PaymentDetailsService {
         pd.setBankCode(createDto.getBankCode());
         pd.setBankName(createDto.getBankName());
         pd.setRecipientCode(response.getData().getRecipientCode());
+        pd.setIsVerified(true);
         //is default
         //is verified
 

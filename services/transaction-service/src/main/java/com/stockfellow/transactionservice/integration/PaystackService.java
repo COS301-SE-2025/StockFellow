@@ -46,22 +46,42 @@ public class PaystackService {
     }
 
     public PaystackTransferResponse initiateTransfer(PaystackTransferRequest request) {
-        try {
-            HttpHeaders headers = createHeaders();
-            HttpEntity<PaystackTransferRequest> entity = new HttpEntity<>(request, headers);
+        // try {
+        //     HttpHeaders headers = createHeaders();
+        //     HttpEntity<PaystackTransferRequest> entity = new HttpEntity<>(request, headers);
             
-            ResponseEntity<PaystackTransferResponse> response = restTemplate.exchange(
-                PAYSTACK_BASE_URL + "/transfer",
-                HttpMethod.POST,
-                entity,
-                PaystackTransferResponse.class
-            );
+        //     ResponseEntity<PaystackTransferResponse> response = restTemplate.exchange(
+        //         PAYSTACK_BASE_URL + "/transfer",
+        //         HttpMethod.POST,
+        //         entity,
+        //         PaystackTransferResponse.class
+        //     );
             
-            return response.getBody();
-        } catch (Exception e) {
-            logger.error("Error initiating transfer: ", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initiate transfer");
+        //     return response.getBody();
+        // } catch (Exception e) {
+        //     logger.error("Error initiating transfer: ", e);
+        //     throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initiate transfer");
+        // }
+        PaystackTransferResponse.PaystackTransferData data = new PaystackTransferResponse.PaystackTransferData();
+        data.setAmount(null);
+        data.setId(PAYSTACK_BASE_URL);
+        data.setRecipient(null);
+        data.setStatus(PAYSTACK_BASE_URL);
+        data.setTransferCode(PAYSTACK_BASE_URL);
+        
+
+        PaystackTransferResponse response = new PaystackTransferResponse();
+        if (!data.getStatus().equals("success")) {
+            response.setStatus(true);
+            response.setMessage("Transfer has been queued");
+        } else {
+            response.setStatus(false);
+            response.setMessage("");
+
         }
+        response.setData(data);
+
+        return response;
     }
 
     public PaystackTransactionResponse initializeTransaction(PaystackTransactionRequest request) {
@@ -147,5 +167,5 @@ public class PaystackService {
             logger.error("Error creating transfer recipient: ", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create transfer recipient");
         }
-    }
+    } 
 }

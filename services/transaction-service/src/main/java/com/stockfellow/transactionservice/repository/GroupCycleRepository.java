@@ -44,6 +44,11 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
      * 
      */
     Optional<GroupCycle> findFirstByGroupIdOrderByCollectionStartDateAsc(UUID groupId);
+
+    /*
+     * Find current group cycles to charge transactions
+     */
+    List<GroupCycle> findByStatusAndCollectionStartDateLessThanEqual(String status, LocalDate date);
     /*
      * 
      */

@@ -17,10 +17,15 @@ import java.util.UUID;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     
     /**
-     * Find transactions by cycle ID
+     * Find transactions by cycle ID and return as Page
      */
     Page<Transaction> findByCycleId(UUID cycleId, Pageable pageable);
     
+    /**
+     * Find transactions by cycle ID and return full list
+     */
+    List<Transaction> findByCycleId(UUID cycleId);
+
     /**
      * Find transactions by user ID
      */
