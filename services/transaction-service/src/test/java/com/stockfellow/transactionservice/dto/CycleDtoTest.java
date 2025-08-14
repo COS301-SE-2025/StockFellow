@@ -1,3 +1,4 @@
+package com.stockfellow.transactionservice.dto;
 // package com.stockfellow.transactionservice.dto;
 
 // import com.stockfellow.transactionservice.model.Transaction;
