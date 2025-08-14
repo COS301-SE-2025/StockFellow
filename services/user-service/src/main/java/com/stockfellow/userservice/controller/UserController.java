@@ -458,17 +458,17 @@ public class UserController {
                 idValidationService.extractIdInfo(extractedIdNumber);
             
             // Store document in Alfresco
-            String documentId;
-            try {
-                documentId = alfrescoService.uploadDocument(file, userId, "ID_VERIFICATION");
-                logger.info("Document uploaded to Alfresco with ID: {} for user: {}", documentId, userId);
-            } catch (Exception e) {
-                logger.error("Error uploading document to Alfresco for user: {}", userId, e);
-                return ResponseEntity.status(500).body(Map.of(
-                    "error", "Document storage failed",
-                    "message", "ID verification successful but document storage failed"
-                ));
-            }
+            String documentId = "Test";
+            // try {
+            //     documentId = alfrescoService.uploadDocument(file, userId, "ID_VERIFICATION");
+            //     logger.info("Document uploaded to Alfresco with ID: {} for user: {}", documentId, userId);
+            // } catch (Exception e) {
+            //     logger.error("Error uploading document to Alfresco for user: {}", userId, e);
+            //     return ResponseEntity.status(500).body(Map.of(
+            //         "error", "Document storage failed",
+            //         "message", "ID verification successful but document storage failed"
+            //     ));
+            // }
             
             // Update user record with verification status
             User updatedUser = userService.updateIdVerificationStatus(userId, extractedIdNumber, documentId, idInfo);
