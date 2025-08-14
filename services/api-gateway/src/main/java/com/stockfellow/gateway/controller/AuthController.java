@@ -15,12 +15,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-// import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.tomcat.jni.User;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-// import java.time.Duration;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
