@@ -25,6 +25,7 @@ public class TokenValidationService {
     // Endpoints that don't require authentication
     private final Set<String> PUBLIC_ENDPOINTS = Set.of(
         "/api/auth/login",
+        "/api/auth/verify-mfa",
         "/api/auth/register",
         "/api/auth/refresh",
         "/api/health",

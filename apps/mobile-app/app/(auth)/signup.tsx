@@ -3,12 +3,12 @@ import React, { useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
-// import PDFUpload from '../../src/components/pdfUpload';
+import PDFUpload from '../../src/components/pdfUpload';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
 import authService from '../../src/services/authService';
-// import * as DocumentPicker from 'expo-document-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -34,8 +34,8 @@ const SignUp = () => {
   });
 
   // Commented out PDF-related states
-  // const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  // const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
@@ -175,25 +175,42 @@ const SignUp = () => {
 
         if (registrationResult.success) {
           console.log('Registration successful');
-          
+
           // Automatically login after successful registration
-          const loginResult = await authService.login(form.username, form.password);
-          
-          if (loginResult.success) {
-            console.log('Auto-login successful');
-            router.push('/(tabs)/home');
+          const result = await authService.login(form.username, form.password);
+
+          if (result.success) {
+            if (result.mfaRequired) {
+              // MFA is required - navigate to MFA verification
+              console.log('MFA required, navigating to verification');
+              router.push({
+                pathname: '/mfaVerification',
+                params: {
+                  email: result.email,
+                  tempSession: result.tempSession,
+                  message: result.message,
+                },
+              });
+            } else {
+              // No MFA required - login successful
+              console.log('Login successful, navigating to home');
+              router.replace('/(tabs)/home');
+            }
           } else {
-            // Registration successful but auto-login failed
-            console.log('Registration successful, redirecting to login');
-            router.push('/login');
+            // Handle login failure
+            console.error('Login failed:', result.error);
+            setErrors({
+              ...errors,
+              username: result.error,
+            });
           }
         } else {
           // Handle registration failure
           console.error('Registration failed:', registrationResult.error);
-          
+
           // Show error on appropriate field
-          if (registrationResult.error.includes('already exists') || 
-              registrationResult.error.includes('User already exists')) {
+          if (registrationResult.error.includes('already exists') ||
+            registrationResult.error.includes('User already exists')) {
             setErrors({
               ...errors,
               username: 'Username or email already exists',
@@ -316,16 +333,16 @@ const SignUp = () => {
                   error={errors.confirmPassword}
                 />
                 {/* 3 Month Bank Statement Upload */}
-                {/* <PDFUpload 
+                <PDFUpload
                   heading="3 Month Bank Statement"
                   onDocumentSelect={(doc) => setBankStatement(doc)}
-                /> */}
+                />
 
                 {/* Payslip Upload */}
-                {/* <PDFUpload 
+                <PDFUpload
                   heading="Latest Payslip"
                   onDocumentSelect={(doc) => setPayslip(doc)}
-                /> */}
+                />
 
                 <CustomButton
                   title="Sign Up"
