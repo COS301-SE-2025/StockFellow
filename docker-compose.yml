@@ -52,7 +52,7 @@ services:
       POSTGRES_PASSWORD: userservice_pass
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
     ports:
-      - "5433:5432"
+      - "5431:5432"
     networks:
       - stockfellow-net
     healthcheck:
@@ -131,7 +131,7 @@ services:
     container_name: alfresco-search
     environment:
       SOLR_ALFRESCO_HOST: alfresco-content-repository
-      SOLR_ALFRESCO_PORT: 8080
+      SOLR_ALFRESCO_PORT: 8081
       SOLR_SOLR_HOST: alfresco-search
       SOLR_SOLR_PORT: 8983
       SOLR_CREATE_ALFRESCO_DEFAULTS: alfresco,archive

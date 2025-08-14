@@ -27,7 +27,7 @@ public class AlfrescoService {
     
     private final RestTemplate restTemplate;
     
-    @Value("${alfresco.base-url:http://localhost:8080/alfresco}")
+    @Value("${alfresco.base-url:http://localhost:8081/alfresco}")
     private String alfrescoBaseUrl;
     
     @Value("${alfresco.username:admin}")
