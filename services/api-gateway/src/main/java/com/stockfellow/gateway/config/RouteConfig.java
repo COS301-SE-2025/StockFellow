@@ -52,7 +52,7 @@ public class RouteConfig {
 
             // Notification service route
             new Route(
-                "/api/notification/**",
+                "/api/notifications/**",
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(notificationServiceUrl, true)

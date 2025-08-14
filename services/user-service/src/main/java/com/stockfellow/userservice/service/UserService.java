@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Date;
 import java.util.Optional;
 
 @Service
@@ -230,6 +231,23 @@ public class UserService {
         if (userOpt.isPresent()) {
             userRepository.delete(userOpt.get());
             logger.info("Deleted user: {}", userId);
+        }
+    }
+
+    /**
+     * Update user's affordability tier information
+     * @param userId The user ID
+     * @param tier The affordability tier (1-6)
+     * @param confidence The confidence score (0.0-1.0)
+     */
+    public void updateUserAffordabilityTier(String userId, int tier, double confidence) {
+        User user = getUserByUserId(userId);
+        if (user != null) {
+            user.setAffordabilityTier(tier);
+            user.setAffordabilityConfidence(confidence);
+            user.setAffordabilityAnalyzedAt(new Date());
+            
+            userRepository.save(user);
         }
     }
 }

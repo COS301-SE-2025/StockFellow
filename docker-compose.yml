@@ -305,7 +305,7 @@ services:
   user-service:
     build:
       context: ./services/user-service
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: user-service
     depends_on:
       - user-service-postgres

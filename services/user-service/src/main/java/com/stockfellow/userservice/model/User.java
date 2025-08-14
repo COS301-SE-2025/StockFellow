@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "users")
@@ -67,6 +68,11 @@ public class User {
     
     @Column(name = "citizenship")
     private String citizenship;
+
+
+    private Integer affordabilityTier;
+    private Double affordabilityConfidence;
+    private Date affordabilityAnalyzedAt;
     
     // Constructors
     public User() {
@@ -224,5 +230,29 @@ public class User {
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 '}';
+    }
+
+     public Integer getAffordabilityTier() { 
+        return affordabilityTier; 
+    }
+    
+    public void setAffordabilityTier(Integer affordabilityTier) { 
+        this.affordabilityTier = affordabilityTier; 
+    }
+    
+    public Double getAffordabilityConfidence() { 
+        return affordabilityConfidence; 
+    }
+    
+    public void setAffordabilityConfidence(Double affordabilityConfidence) { 
+        this.affordabilityConfidence = affordabilityConfidence; 
+    }
+    
+    public Date getAffordabilityAnalyzedAt() { 
+        return affordabilityAnalyzedAt; 
+    }
+    
+    public void setAffordabilityAnalyzedAt(Date affordabilityAnalyzedAt) { 
+        this.affordabilityAnalyzedAt = affordabilityAnalyzedAt; 
     }
 }
