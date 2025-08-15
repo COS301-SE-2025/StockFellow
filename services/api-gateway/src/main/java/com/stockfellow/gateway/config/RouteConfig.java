@@ -22,6 +22,9 @@ public class RouteConfig {
 
     @Value("${services.notification-service.url:http://notification-service:4050}")
     private String notificationServiceUrl;
+
+    @Value("${services.mfa-service.url:http://mfa-service:8087}")
+    private String mfaServiceUrl;
     
     @Bean
     public List<Route> routes() {
@@ -56,6 +59,14 @@ public class RouteConfig {
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(notificationServiceUrl, true)
+            ),
+
+            // MFA routes
+            new Route(
+                "/api/mfa/**",
+                false,
+                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.Proxy(mfaServiceUrl, true)
             ),
             
             // Default api route
