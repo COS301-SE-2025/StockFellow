@@ -145,7 +145,7 @@ const Transactions = () => {
               ) : (
                 <TouchableOpacity
                   className="w-full h-[200px] border-2 border-dashed border-[#1DA1FA] rounded-2xl flex items-center justify-center"
-                  onPress={() => router.push('/transactions/cardform')}
+                  onPress={() => router.push('/transactions/cards')}
                 >
                   <View className="items-center">
                     <Image source={icons.plus} className="w-12 h-12 mb-2" tintColor={"#1DA1FA"} />
@@ -178,7 +178,7 @@ const Transactions = () => {
           <View className="absolute bottom-5 left-0 right-0 px-6">
             <TouchableOpacity
               className="bg-blue-500 p-4 rounded-lg items-center"
-              onPress={() => router.push('/transactions/cardform')}
+              onPress={() => router.push('/transactions/cards')}
             >
               <Text className="text-white font-bold">Add Card</Text>
             </TouchableOpacity>

@@ -388,7 +388,7 @@ services:
     depends_on:
       - group-service
       - user-service
-    #   - ngrok
+      - ngrok
     ports:
       - "${TRANSACTION_SERVICE_PORT}:4080"
     environment:

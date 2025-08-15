@@ -256,7 +256,7 @@ const Cards = () => {
                 Add your first card to start making payments
               </Text>
               <TouchableOpacity
-                onPress={addNewCard}
+                onPress={() => router.push('/transactions/cardform')}
                 disabled={addingNewCard}
                 className="bg-[#0C0C0F] px-6 py-3 rounded-3xl"
               >

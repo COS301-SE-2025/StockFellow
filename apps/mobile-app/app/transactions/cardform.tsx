@@ -34,7 +34,7 @@ const CardForm = () => {
                             text: 'Continue',
                             onPress: () => {
                                 // Navigate back to cards list
-                                router.push('/transactions/cards');
+                                router.back();
                             }
                         }
                     ]
