@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Document(collection = "groups")
 public class Group {
@@ -34,6 +35,21 @@ public class Group {
     private Integer currentPayoutPosition;   
     private Date lastPayoutDate;           
     private String lastPayoutRecipient;
+
+    public static final Map<Integer, Double[]> TIER_RANGES = Map.of(
+        1, new Double[]{50.0, 199.0},
+        2, new Double[]{200.0, 499.0},
+        3, new Double[]{500.0, 999.0},
+        4, new Double[]{1000.0, 2499.0},
+        5, new Double[]{2500.0, 4999.0},
+        6, new Double[]{5000.0, Double.MAX_VALUE}
+    );
+
+    private Integer tier;
+
+     public Integer getTier() { return tier; }
+    public void setTier(Integer tier) { this.tier = tier; }
+    
 
     public Group() {
         this.members = new ArrayList<>();
@@ -113,6 +129,8 @@ public class Group {
 
     public String getLastPayoutRecipient() { return lastPayoutRecipient; }
     public void setLastPayoutRecipient(String lastPayoutRecipient) { this.lastPayoutRecipient = lastPayoutRecipient; }
+
+   
 
     // Methods for manipulating pay order array
     public String getNextPayoutRecipient() {

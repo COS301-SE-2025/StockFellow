@@ -76,7 +76,7 @@ This service manages investment groups (stokvels) for the StockFellow fintech pl
 
 3. **Build & Run Service**  
 4. **Access API Docs**  
-Visit [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+Visit [http://localhost:4040/swagger-ui.html](http://localhost:8081/swagger-ui.html)
 
 ## Configuration
 

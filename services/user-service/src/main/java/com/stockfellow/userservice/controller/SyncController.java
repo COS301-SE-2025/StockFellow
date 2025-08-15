@@ -1,103 +1,119 @@
 package com.stockfellow.userservice.controller;
 
 import com.stockfellow.userservice.dto.UserSyncRequest;
-import com.stockfellow.userservice.model.Event;
 import com.stockfellow.userservice.model.User;
-import com.stockfellow.userservice.service.EventStoreService;
-import com.stockfellow.userservice.service.ReadModelService;
+import com.stockfellow.userservice.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
+import jakarta.validation.Valid;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/sync")
+@Validated
 public class SyncController {
+    
     private static final Logger logger = LoggerFactory.getLogger(SyncController.class);
 
     @Autowired
-    private EventStoreService eventStoreService;
-
-    @Autowired
-    private ReadModelService readModelService;
+    private UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> syncUser(@RequestBody UserSyncRequest request) {
+    public ResponseEntity<?> syncUser(@Valid @RequestBody UserSyncRequest request) {
         logger.info("Keycloak sync request: {}", request);
-        System.out.println("=== KEYCLOAK SYNC REQUEST ===");
-        System.out.println("Body: " + request);
-
+        
         try {
-            if (request.getKeycloakId() == null || request.getUsername() == null || request.getEmail() == null ||
-                request.getFirstName() == null || request.getLastName() == null || request.getIdNumber() == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
+            // Validate required fields
+            if (request.getKeycloakId() == null || request.getKeycloakId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Keycloak ID is required"));
+            }
+            
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
             }
 
-            User existingUser = readModelService.getUser(request.getKeycloakId());
-            Event event;
-            String eventType;
-            String message;
-
-            if (existingUser != null) {
-                logger.info("Updating existing user: {}", request.getKeycloakId());
-                eventType = "UserUpdated";
-                Map<String, Object> eventData = new HashMap<>();
-                eventData.put("userId", request.getKeycloakId());
-                eventData.put("username", request.getUsername() != null ? request.getUsername() : existingUser.getUsername());
-                eventData.put("email", request.getEmail() != null ? request.getEmail() : existingUser.getEmail());
-                eventData.put("firstName", request.getFirstName() != null ? request.getFirstName() : existingUser.getFirstName());
-                eventData.put("lastName", request.getLastName() != null ? request.getLastName() : existingUser.getLastName());
-                eventData.put("emailVerified", request.getEmailVerified() != null ? request.getEmailVerified() : existingUser.isEmailVerified());
-                eventData.put("contactNumber", request.getPhoneNumber() != null ? request.getPhoneNumber() : existingUser.getContactNumber());
-                eventData.put("updatedAt", new Date());
-                event = eventStoreService.appendEvent(eventType, eventData);
-                message = "User updated successfully";
-                logger.info("User {} updated successfully", request.getKeycloakId());
-            } else {
-                logger.info("Creating new user: {}", request.getKeycloakId());
-                eventType = "UserRegistered";
-                Map<String, Object> eventData = new HashMap<>();
-                eventData.put("userId", request.getKeycloakId());
-                eventData.put("username", request.getUsername() != null ? request.getUsername() : "");
-                eventData.put("email", request.getEmail());
-                eventData.put("firstName", request.getFirstName() != null ? request.getFirstName() : "");
-                eventData.put("lastName", request.getLastName() != null ? request.getLastName() : "");
-                eventData.put("emailVerified", request.getEmailVerified() != null ? request.getEmailVerified() : false);
-                eventData.put("contactNumber", request.getPhoneNumber() != null ? request.getPhoneNumber() : "");
-                eventData.put("idNumber", request.getIdNumber() != null ? request.getIdNumber() : "");
-                eventData.put("createdAt", new Date());
-                eventData.put("updatedAt", new Date());
-                event = eventStoreService.appendEvent(eventType, eventData);
-                message = "User registered successfully";
-                logger.info("User {} registered successfully", request.getKeycloakId());
-            }
-
-            readModelService.rebuildState(request.getKeycloakId());
-            System.out.println("User sync successful for: " + request.getEmail());
+            // Create or update user
+            User user = userService.createOrUpdateUser(request);
+            boolean isNewUser = user.getCreatedAt().equals(user.getUpdatedAt());
+            
+            String message = isNewUser ? "User created successfully" : "User updated successfully";
+            
+            logger.info("User sync successful for: {} ({})", request.getEmail(), 
+                       isNewUser ? "new" : "updated");
+            
+           Map<String, Object> userData = new HashMap<>();
+            userData.put("id", user.getId());
+            userData.put("userId", user.getUserId());
+            userData.put("email", user.getEmail());
+            userData.put("username", user.getUsername());
+            userData.put("firstName", user.getFirstName() != null ? user.getFirstName() : "");
+            userData.put("lastName", user.getLastName() != null ? user.getLastName() : "");
+            userData.put("emailVerified", user.isEmailVerified());
+            userData.put("idVerified", user.isIdVerified());
+            userData.put("contactNumber", user.getContactNumber() != null ? user.getContactNumber() : "");
+            userData.put("createdAt", user.getCreatedAt());
+            userData.put("updatedAt", user.getUpdatedAt());
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", message,
                 "userId", request.getKeycloakId(),
-                "eventId", event.getId(),
-                "eventType", eventType
+                "user", userData
             ));
+            
         } catch (Exception e) {
-            logger.error("User sync failed: {}", e.getMessage(), e);
-            System.out.println("User sync error: " + e.getMessage());
+            logger.error("User sync failed for request: {}, Error: {}", request, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", "Failed to sync user",
                 "details", e.getMessage()
             ));
         }
+    }
+    
+    @GetMapping("/status/{userId}")
+    public ResponseEntity<?> getSyncStatus(@PathVariable String userId) {
+        try {
+            User user = userService.getUserByUserId(userId);
+            
+            if (user == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "error", "User not found",
+                    "userId", userId
+                ));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "userId", userId,
+                "syncStatus", Map.of(
+                    "exists", true,
+                    "emailVerified", user.isEmailVerified(),
+                    "idVerified", user.isIdVerified(),
+                    "profileComplete", isProfileComplete(user),
+                    "lastUpdated", user.getUpdatedAt()
+                )
+            ));
+            
+        } catch (Exception e) {
+            logger.error("Error getting sync status for user: {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Failed to get sync status",
+                "userId", userId
+            ));
+        }
+    }
+    
+    private boolean isProfileComplete(User user) {
+        return user.getFirstName() != null && !user.getFirstName().trim().isEmpty() &&
+               user.getLastName() != null && !user.getLastName().trim().isEmpty() &&
+               user.getContactNumber() != null && !user.getContactNumber().trim().isEmpty();
     }
 }

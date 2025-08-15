@@ -3,6 +3,7 @@ package com.stockfellow.gateway.controller;
 
 import com.stockfellow.gateway.service.KeycloakService;
 import com.stockfellow.gateway.service.TokenValidationService;
+import com.stockfellow.gateway.service.UserServiceClient;
 import com.stockfellow.gateway.model.RefreshTokenResponse;
 import com.stockfellow.gateway.model.TokenValidationResult;
 import org.slf4j.Logger;
@@ -10,13 +11,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-// import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.tomcat.jni.User;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-// import java.time.Duration;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,7 +32,8 @@ public class AuthController {
     
     private final KeycloakService keycloakService;
     private final TokenValidationService tokenValidationService;
-	private final RedisTemplate<String, String> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final UserServiceClient userServiceClient;
 
     @Value("${keycloak.auth-server-url}")
     private String keycloakServerUrl;
@@ -39,10 +44,11 @@ public class AuthController {
     @Value("${app.keycloak.frontend.client-id}")
     private String frontendClientId;
 
-    public AuthController(KeycloakService keycloakService, TokenValidationService tokenValidationService, RedisTemplate<String, String> redisTemplate) {
+    public AuthController(KeycloakService keycloakService, TokenValidationService tokenValidationService, RedisTemplate<String, String> redisTemplate, UserServiceClient userServiceClient) {
         this.keycloakService = keycloakService;
         this.tokenValidationService = tokenValidationService;
 		this.redisTemplate = redisTemplate;
+        this.userServiceClient = userServiceClient;
     }
     
     // Redirects to KC login page where there is forgot password and aditional features
@@ -224,10 +230,64 @@ public class AuthController {
         }
     }
 	
-	// private void blacklistToken(String token) {
-    //     String key = "blacklisted_token:" + DigestUtils.sha256Hex(token);
-    //     redisTemplate.opsForValue().set(key, "true", Duration.ofHours(24));
-    // }
+
+    /**
+     * Endpoint to handle ID verification - forwards the PDF to user service
+     */
+    @PostMapping(value = "/verify-id", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> verifyUserID(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String authHeader) {
+        
+        try {
+            // Validate token and extract user info
+            TokenValidationResult validation = tokenValidationService.validateRequest("/api/auth/verify-id", authHeader);
+            
+            if (!validation.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "unauthorized", "message", validation.getMessage()));
+            }
+            
+            String userId = validation.getTokenInfo().getUserId();
+            String username = validation.getTokenInfo().getUsername();
+            
+            logger.info("ID verification request from user: {} (ID: {})", username, userId);
+            
+            // Forward the PDF to user service for processing
+            try {
+                Map<String, Object> verificationResult = userServiceClient.verifyUserID(file, userId, authHeader);
+                
+                if (verificationResult.containsKey("error")) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(verificationResult);
+                }
+                
+                logger.info("ID verification completed successfully for user: {}", username);
+                return ResponseEntity.ok(verificationResult);
+                
+            } catch (Exception e) {
+                logger.error("Error communicating with user service for ID verification", e);
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "error", "service_unavailable",
+                        "message", "User service is currently unavailable"
+                    ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("Unexpected error during ID verification", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "error", "server_error",
+                    "message", "An unexpected error occurred"
+                ));
+        }
+    }   
+
+	private void blacklistToken(String token) {
+        // Add to Redis blacklist with expiration
+        String key = "blacklisted_token:" + DigestUtils.sha256Hex(token);
+        redisTemplate.opsForValue().set(key, "true", Duration.ofHours(24));
+    }
 
     // DTOs
     public static class LoginRequest {

@@ -43,18 +43,65 @@ const Login = () => {
     return valid;
   };
 
+  // const handleLogin = async () => {
+  //   if (validateForm()) {
+  //     setIsSubmitting(true);
+  //     try {
+  //       console.log('Attempting login...');
+
+  //       // Auth service instead of direct KC call
+  //       const result = await authService.login(form.username, form.password);
+
+  //       if (result.success) {
+  //         console.log('Login successful');
+  //         router.push('/(tabs)/home');
+  //       } else {
+  //         // Handle login failure
+  //         console.error('Login failed:', result.error);
+  //         setErrors({
+  //           ...errors,
+  //           username: result.error,
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Login error:', error);
+  //       setErrors({
+  //         ...errors,
+  //         username: error instanceof Error ?
+  //           error.message :
+  //           'Network error. Please check your connection.',
+  //       });
+  //     } finally {
+  //       setIsSubmitting(false);
+  //     }
+  //   }
+  // };
+
   const handleLogin = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
         console.log('Attempting login...');
 
-        // Auth service instead of direct KC call
         const result = await authService.login(form.username, form.password);
 
         if (result.success) {
-          console.log('Login successful');
-          router.push('/(tabs)/home');
+          if (result.mfaRequired) {
+            // MFA is required - navigate to MFA verification
+            console.log('MFA required, navigating to verification');
+            router.push({
+              pathname: '/mfaVerification',
+              params: {
+                email: result.email,
+                tempSession: result.tempSession,
+                message: result.message,
+              },
+            });
+          } else {
+            // No MFA required - login successful
+            console.log('Login successful, navigating to home');
+            router.replace('/(tabs)/home');
+          }
         } else {
           // Handle login failure
           console.error('Login failed:', result.error);
@@ -76,6 +123,7 @@ const Login = () => {
       }
     }
   };
+
 
   return (
     <GestureHandlerRootView className='flex-1'>
@@ -117,7 +165,7 @@ const Login = () => {
                 </Link>
 
 
-                <Link
+                {/* <Link
                   href={{
                     pathname: "/mfaVerification",
                     params: { email: form.username } // Pass the username/email as param
@@ -125,7 +173,7 @@ const Login = () => {
                   className="text-[#1DA1FA] font-medium self-start mt-4 mb-4 text-sm"
                 >
                   MFA Verification
-                </Link>
+                </Link> */}
 
                 <CustomButton
                   title="Login"

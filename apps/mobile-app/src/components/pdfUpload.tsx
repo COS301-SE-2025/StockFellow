@@ -57,7 +57,7 @@ const PDFUpload: React.FC<PDFUploadProps> = ({ heading, onDocumentSelect }) => {
               source={uploadedDocument ? icons.uploaded : icons.pdf}
               className="w-15 h-15"
               resizeMode="contain"
-              tintColor={'#1DA1FA'}
+              //tintColor={'#1DA1FA'}
             />
             <Text className="text-center">
               {uploadedDocument ? (
