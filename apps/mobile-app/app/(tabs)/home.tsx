@@ -7,6 +7,7 @@ import SavingsCard from '../../src/components/SavingsCard';
 import QuickActions from '../../src/components/QuickActions';
 import ActivityItem from '../../src/components/ActivityItem';
 import TopBar from '../../src/components/TopBar';
+import GreetingCard from '../../src/components/GreetingCard';
 
 const Home = () => {
   const { colors } = useTheme();
@@ -39,8 +40,13 @@ const Home = () => {
       <TopBar title="Home" />
 
       <ScrollView className="flex-1 px-6">
-        {/* Savings Card */}
+        {/* Greeting */}
         <View className="mt-6">
+          <GreetingCard userName="Son Goku" groupCount={3} />
+        </View>
+
+        {/* Savings Card */}
+        <View>
           <SavingsCard balance="7,785.00" />
         </View>
 
