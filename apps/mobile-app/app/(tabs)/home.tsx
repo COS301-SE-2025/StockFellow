@@ -42,7 +42,7 @@ const Home = () => {
       <ScrollView className="flex-1 px-6">
         {/* Greeting */}
         <View className="mt-6">
-          <GreetingCard userName="Son Goku" groupCount={3} />
+          <GreetingCard userName="Son Goku" />
         </View>
 
         {/* Savings Card */}
