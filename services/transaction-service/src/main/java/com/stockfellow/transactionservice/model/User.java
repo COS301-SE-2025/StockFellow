@@ -93,9 +93,14 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
+        // Only generate UUID if userId is actually null
         if (userId == null) {
             userId = UUID.randomUUID();
+            System.out.println("Generated new UUID: " + userId); // Debug log
+        } else {
+            System.out.println("Using existing UUID: " + userId); // Debug log
         }
+        
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

@@ -2,133 +2,198 @@
 
 import authService from './authService';
 
-//const API_BASE_URL = process.env.API_BASE_URL || '';
-
-// interface BankDetails {
-//   id: string;
-//   userId: string;
-//   bank: string;
-//   last4Digits: string;
-//   cardHolder: string;
-//   expiryMonth: number;
-//   expiryYear: number;
-//   cardType: string;
-//   isActive: boolean;
-//   createdAt: string;
-//   updatedAt: string;
-// }
-
-interface CreateBankDetailsRequest {
-  bank: string;
-  cardNumber: string;
-  cardHolder: string;
-  expiryMonth: number;
-  expiryYear: number;
-  cardType: string;
+interface InitializeCardAuthRequest {
+  userId: string;
+  email: string;
+  type: string; // e.g., "DEBIT_CARD"
 }
 
-interface BankDetailResponse {
-  id: string;
-  bank: string;
-  last4Digits: string; // Might want to mask this in the UI
-  cardHolder: string;
-  expiryMonth: number;
-  expiryYear: number;
-  cardType: string;
+interface InitializeCardAuthResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  };
+}
+
+interface PayerDetailsResponse {
+  payerId: string;
+  userId: string;
+  type: string;
+  email: string;
+  authCode?: string;
+  cardType?: string;
+  last4?: string;
+  expMonth?: number;
+  expYear?: number;
+  bin?: string;
+  bank?: string;
+  signature?: string;
   isActive: boolean;
+  isAuthenticated: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+// Frontend card format for UI
+interface FormattedCard {
+  id: string;
+  bank: string;
+  last4Digits: string;
+  cardHolder: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cardType: 'mastercard' | 'visa';
+  isActive: boolean;
+}
+
 const cardService = {
   /**
-   * Add new bank details for the authenticated user
+   * Initialize card authorization with Paystack
+   * This replaces the old addBankDetails method
    */
-  async addBankDetails(data: CreateBankDetailsRequest): Promise<BankDetailResponse> {
+  async initializeCardAuthorization(userId: string, email: string): Promise<InitializeCardAuthResponse> {
     try {
-      const response = await authService.apiRequest('/transaction/bank-details', {
+      const requestData: InitializeCardAuthRequest = {
+        userId,
+        email,
+        type: "DEBIT_CARD"
+      };
+
+      const response = await authService.apiRequest('/transaction/payment-methods/payer/initialize', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add bank details');
+        throw new Error(errorData.message || 'Failed to initialize card authorization');
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Error adding bank details:', error);
+      console.error('Error initializing card authorization:', error);
       throw error;
     }
   },
 
   /**
-   * Get all bank details for the authenticated user
+   * Get all saved cards for the authenticated user
    */
-  async getUserBankDetails(): Promise<BankDetailResponse[]> {
+  async getUserBankDetails(): Promise<FormattedCard[]> {
     try {
-      const response = await authService.apiRequest('/transaction/bank-details/user');
+        console.log('=== FETCHING USER BANK DETAILS ===');
+        
+        // No need to get user ID - backend extracts it from headers
+        const response = await authService.apiRequest(`/transaction/payment-methods/payer/user`);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch bank details');
-      }
+        console.log('Response status:', response.status);
+        console.log('Response status text:', response.statusText);
+        console.log('Response headers:');
+        for (let [key, value] of response.headers.entries()) {
+        console.log(`  ${key}: ${value}`);
+        }
 
-      return await response.json();
+        // Get the raw response text first
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        console.log('Raw response length:', responseText.length);
+        console.log('Raw response type:', typeof responseText);
+
+        if (!response.ok) {
+        console.log('Response not OK, status:', response.status);
+        
+        let errorData;
+        try {
+            errorData = responseText ? JSON.parse(responseText) : { message: 'Empty error response' };
+        } catch (parseError) {
+            console.error('Failed to parse error response as JSON:', parseError);
+            errorData = { message: `Server returned: ${responseText}` };
+        }
+        
+        console.log('Error data:', errorData);
+        throw new Error(errorData.message || `Failed to fetch user cards (${response.status})`);
+        }
+
+        // Try to parse the JSON
+        let payerDetails;
+        try {
+        if (!responseText || responseText.trim() === '') {
+            console.log('Empty response body, returning empty array');
+            return [];
+        }
+        
+        payerDetails = JSON.parse(responseText);
+        console.log('Parsed JSON successfully:', payerDetails);
+        console.log('Parsed data type:', typeof payerDetails);
+        console.log('Is array:', Array.isArray(payerDetails));
+        
+        if (Array.isArray(payerDetails)) {
+            console.log('Array length:', payerDetails.length);
+            if (payerDetails.length > 0) {
+            console.log('First item structure:', payerDetails[0]);
+            console.log('First item keys:', Object.keys(payerDetails[0]));
+            }
+        }
+        
+        } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Failed to parse response text:', responseText);
+        throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 200)}`);
+        }
+
+        // Ensure it's an array
+        if (!Array.isArray(payerDetails)) {
+        console.error('Response is not an array:', payerDetails);
+        throw new Error('Server returned invalid data format (expected array)');
+        }
+
+        console.log(`Found ${payerDetails.length} payer details from server`);
+
+        // Filter and log
+        const authenticatedCards = payerDetails.filter(card => {
+        console.log(`Card ${card.payerId || card.id}: isAuthenticated=${card.isAuthenticated}, hasAuthCode=${!!card.authCode}`);
+        return card.isAuthenticated && card.authCode;
+        });
+        
+        console.log(`${authenticatedCards.length} authenticated cards found`);
+
+        // Format for UI
+        const formattedCards = authenticatedCards.map((card, index) => {
+        console.log(`Formatting card ${index}:`, card);
+        try {
+            const formatted = this.formatCardForUI(card);
+            console.log(`Formatted card ${index}:`, formatted);
+            return formatted;
+        } catch (formatError) {
+            console.error(`Error formatting card ${index}:`, formatError);
+            console.error('Card data that failed:', card);
+            throw formatError;
+        }
+        });
+
+        console.log('Final formatted cards:', formattedCards);
+        return formattedCards;
+        
     } catch (error) {
-      console.error('Error fetching user bank details:', error);
-      throw error;
+        console.error('=== ERROR IN getUserBankDetails ===');
+        console.error('Error type:', typeof error);
+        console.error('Error message:', error instanceof Error ? error.message : error);
+        console.error('Full error:', error);
+        throw error;
     }
-  },
+    },
 
   /**
-   * Get the active bank details for the authenticated user
+   * Activate/Set a card as the active payment method
    */
-  async getActiveBankDetails(): Promise<BankDetailResponse> {
+  async activateBankDetails(payerId: string): Promise<PayerDetailsResponse> {
     try {
-      const response = await authService.apiRequest('/transaction/bank-details/user/active');
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch active bank details');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching active bank details:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get specific bank details by ID
-   */
-  async getBankDetailsById(bankDetailsId: string): Promise<BankDetailResponse> {
-    try {
+      // Note: You'll need to add this endpoint to your backend
       const response = await authService.apiRequest(
-        `/transaction/bank-details/${bankDetailsId}`
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch bank details');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching bank details by ID:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Activate a specific bank details record
-   */
-  async activateBankDetails(bankDetailsId: string): Promise<BankDetailResponse> {
-    try {
-      const response = await authService.apiRequest(
-        `/transaction/bank-details/${bankDetailsId}/activate`,
+        `/transaction/payment-methods/payer/${payerId}/activate`,
         {
           method: 'PUT',
         }
@@ -136,23 +201,23 @@ const cardService = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to activate bank details');
+        throw new Error(errorData.message || 'Failed to activate card');
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Error activating bank details:', error);
+      console.error('Error activating card:', error);
       throw error;
     }
   },
 
   /**
-   * Deactivate a specific bank details record
+   * Deactivate a card (soft delete)
    */
-  async deactivateBankDetails(bankDetailsId: string): Promise<void> {
+  async deleteBankDetails(payerId: string): Promise<void> {
     try {
       const response = await authService.apiRequest(
-        `/transaction/bank-details/${bankDetailsId}/deactivate`,
+        `/transaction/payment-methods/payer/${payerId}/deactivate`,
         {
           method: 'PUT',
         }
@@ -160,56 +225,109 @@ const cardService = {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to deactivate bank details');
+        throw new Error(errorData.message || 'Failed to deactivate card');
       }
     } catch (error) {
-      console.error('Error deactivating bank details:', error);
+      console.error('Error deactivating card:', error);
       throw error;
     }
   },
 
   /**
-   * Delete a specific bank details record
+   * Get the active card for the authenticated user
    */
-  async deleteBankDetails(bankDetailsId: string): Promise<void> {
+  async getActiveBankDetails(): Promise<FormattedCard | null> {
     try {
-      const response = await authService.apiRequest(
-        `/transaction/bank-details/${bankDetailsId}`,
-        {
-          method: 'DELETE',
+      const cards = await this.getUserBankDetails();
+      return cards.find(card => card.isActive) || null;
+    } catch (error) {
+      console.error('Error fetching active card:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Format backend PayerDetails to frontend card format
+   */
+  formatCardForUI(payerDetail: PayerDetailsResponse): FormattedCard {
+    // Helper function to safely format year
+    const formatYear = (year: any): string => {
+      const numYear = Number(year);
+      if (isNaN(numYear) || numYear <= 0) return '**';
+      return (numYear % 100).toString().padStart(2, '0');
+    };
+
+    // Helper function to safely format month
+    const formatMonth = (month: any): string => {
+      const numMonth = Number(month);
+      if (isNaN(numMonth) || numMonth <= 0 || numMonth > 12) return '**';
+      return numMonth.toString().padStart(2, '0');
+    };
+
+    return {
+      id: payerDetail.payerId,
+      bank: payerDetail.bank || 'Unknown Bank',
+      last4Digits: payerDetail.last4 || '****',
+      cardHolder: payerDetail.email, // Using email as cardholder for now
+      expiryMonth: formatMonth(payerDetail.expMonth),
+      expiryYear: formatYear(payerDetail.expYear),
+      cardType: (payerDetail.cardType?.toLowerCase() as 'mastercard' | 'visa') || 'mastercard',
+      isActive: payerDetail.isActive
+    };
+  },
+
+  /**
+   * Open Paystack authorization URL in browser/webview
+   */
+  async openPaystackAuthorization(): Promise<string> {
+    try {
+      // Get user info from JWT token - no API call needed!
+      const userInfo = await authService.getCurrentUser();
+      
+      const response = await this.initializeCardAuthorization(userInfo.id, userInfo.email);
+      console.log("==============UserID is: " + userInfo.id);
+      console.log("==============User email is: " + userInfo.email);
+      if (response.status && response.data?.authorization_url) {
+        return response.data.authorization_url;
+      } else {
+        throw new Error(response.message || 'Failed to get authorization URL');
+      }
+    } catch (error) {
+      console.error('Error opening Paystack authorization:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Poll for card updates after Paystack callback
+   * Call this after user returns from Paystack
+   */
+  async checkForNewCard(maxAttempts: number = 10, intervalMs: number = 2000): Promise<boolean> {
+    let attempts = 0;
+    
+    const checkCards = async (): Promise<boolean> => {
+      try {
+        const cards = await this.getUserBankDetails();
+        // Check if we have more cards than before or if any card status changed
+        return cards.length > 0; // Adjust this logic based on your needs
+      } catch (error) {
+        console.error('Error checking for new cards:', error);
+        return false;
+      }
+    };
+
+    return new Promise((resolve) => {
+      const interval = setInterval(async () => {
+        attempts++;
+        const hasNewCard = await checkCards();
+        
+        if (hasNewCard || attempts >= maxAttempts) {
+          clearInterval(interval);
+          resolve(hasNewCard);
         }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete bank details');
-      }
-    } catch (error) {
-      console.error('Error deleting bank details:', error);
-      throw error;
-    }
+      }, intervalMs);
+    });
   },
-
-  /**
-   * Get count of bank details for the authenticated user
-   */
-  async getBankDetailsCount(): Promise<number> {
-    try {
-      const response = await authService.apiRequest('/transaction/bank-details/user/count');
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get bank details count');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting bank details count:', error);
-      throw error;
-    }
-  },
-
-  
 
   /**
    * Format expiry date for display

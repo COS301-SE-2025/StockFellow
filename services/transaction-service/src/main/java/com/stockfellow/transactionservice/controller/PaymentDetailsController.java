@@ -8,10 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
@@ -19,19 +19,9 @@ import java.util.Map;
 import io.swagger.v3.oas.annotations.tags.*;
 import io.swagger.v3.oas.annotations.Operation;
 
-/*TODO:
- * ? - /payer/callback
- * 0 - /payer/webhook
- * 0 - /payer/initialize
- * 0 - /payer/user/{userId} 
- * 0 - /payer/{payerId}/deactivate
- * X - /payout
- * X - /payout/user/{userId}
- */
-
 @RestController
 @Tag(name = "Payment Details", description = "Operations related to payment details (card and account info)")
-@RequestMapping("/api/payment-methods")
+@RequestMapping("/api/transaction/payment-methods")
 @CrossOrigin(origins = "*")
 public class PaymentDetailsController {
     
@@ -43,7 +33,28 @@ public class PaymentDetailsController {
     // @Autowired
     // private ActivityLogService activityLogService;
 
-    
+    /**
+     * Helper method to extract and validate user ID from headers
+     */
+    private ResponseEntity<?> extractUserIdFromHeaders(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        
+        if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+            logger.warn("Missing X-User-Id header in request");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "User ID not found in request headers"));
+        }
+        
+        try {
+            UUID userId = UUID.fromString(userIdHeader);
+            return ResponseEntity.ok(userId);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+        }
+    }
+
     /**
      * ===================================================
      * |   Callback (Redirect from Paystack pay page)    |
@@ -53,37 +64,8 @@ public class PaymentDetailsController {
     @Operation(summary = "Handle Paystack callback", 
                description = "Process callback from Paystack after user completes card authorization")
     public ResponseEntity<Map<String, Object>> handlePaystackCallback(@RequestParam String reference) {
-        
-        return  ResponseEntity.ok(paymentDetailsService.processPaystackCallback(reference));
+        return ResponseEntity.ok(paymentDetailsService.processPaystackCallback(reference));
     }   
-
-    /**
-     * ===================================================
-     * |      Webhook (Events from Paystack via ngrok)   |
-     * ===================================================
-     *  Moved to own Controller
-     */ 
-    // @PostMapping("/payer/webhook")
-    // @Operation(summary = "Handle Paystack webhook", 
-    //         description = "Process webhook notifications from Paystack")
-    // public ResponseEntity<String> handlePaystackWebhook(
-    //         @RequestBody String payload,
-    //         @RequestHeader("x-paystack-signature") String signature) {
-        
-    //     try {
-    //         if (!paymentDetailsService.verifyWebhookSignature(payload, signature)) {
-    //             logger.warn("Invalid webhook signature");
-    //             return ResponseEntity.status(400).body("Invalid signature");
-    //         }
-            
-    //         paymentDetailsService.processPaystackWebhook(payload);
-    //         return ResponseEntity.ok("OK");
-            
-    //     } catch (Exception e) {
-    //         logger.error("Failed to process webhook", e);
-    //         return ResponseEntity.status(500).body("Error processing webhook");
-    //     }
-    // }
 
     /**
      * ===================================================
@@ -93,50 +75,84 @@ public class PaymentDetailsController {
     @PostMapping("/payer/initialize")
     @Operation(summary = "Initialize card authorization", 
                description = "Initialize Paystack payment to capture and save user's card details")
-    public ResponseEntity<Map<String, Object>> initializeCardAuthorization(@Valid @RequestBody InitializeCardAuthDto initializeDto) {
-        
-        return  ResponseEntity.ok(paymentDetailsService.initializeCardAuth(initializeDto));
+    public ResponseEntity<?> initializeCardAuthorization(
+            @Valid @RequestBody InitializeCardAuthDto initializeDto, 
+            HttpServletRequest httpRequest) {
+        try {
+            // Extract user ID from headers
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(httpRequest);
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return userIdResponse;
+            }
+            
+            UUID userId = (UUID) userIdResponse.getBody();
+            logger.info("Initializing payer details for user: {}", userId);
+            
+            initializeDto.setUserId(userId);
+            return ResponseEntity.ok(paymentDetailsService.initializeCardAuth(initializeDto));
+            
+        } catch (Exception e) {
+            logger.error("Error initializing card details for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
+        }
     }
     
-    
-    // @PostMapping("/payer")
-    // @Operation(summary = "Add a new card", 
-    //             description = "Add new card for contributions")
-    // public ResponseEntity<PayerDetailsResponseDto> addPayerDetails(@Valid @RequestBody CreatePayerDetailsDto createDto) {
-        
-    //     PayerDetails created = paymentDetailsService.addPayerDetails(createDto);
-    //     return ResponseEntity.status(HttpStatus.CREATED)
-    //                        .body(PayerDetailsResponseDto.fromEntity(created));
-    // }
-    
-    @GetMapping("/payer/user/{userId}")
+    @GetMapping("/payer/user")
     @Operation(summary = "Get card details", 
-                description = "Get card details by user ID")
-    public ResponseEntity<List<PayerDetailsResponseDto>> getPayerDetailsByUser(@PathVariable UUID userId) {
-        
-        List<PayerDetails> payerDetails = paymentDetailsService.findPayerDetailsByUserId(userId);
-        return ResponseEntity.ok(payerDetails.stream()
-                               .map(PayerDetailsResponseDto::fromEntity)
-                               .toList());
+                description = "Get card details for authenticated user (user ID from gateway headers)")
+    public ResponseEntity<?> getPayerDetailsByUser(HttpServletRequest httpRequest) {
+        try {
+            // Extract user ID from headers
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(httpRequest);
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return userIdResponse;
+            }
+            
+            UUID userId = (UUID) userIdResponse.getBody();
+            logger.info("Retrieving payer details for user: {}", userId);
+            
+            List<PayerDetails> payerDetails = paymentDetailsService.findPayerDetailsByUserId(userId);
+            List<PayerDetailsResponseDto> response = payerDetails.stream()
+                    .map(PayerDetailsResponseDto::fromEntity)
+                    .toList();
+                    
+            logger.info("Found {} payer details for user: {}", response.size(), userId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving card details for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
+        }
     }
-
-    //TODO: How to handle this with paystack?    
-    // @PutMapping("/payer/{payerId}")
-    // public ResponseEntity<PayerDetailsResponseDto> updatePayerDetails(
-    //         @PathVariable UUID payerId,
-    //         @Valid @RequestBody UpdatePayerDetailsDto updateDto) {
-    //     PayerDetails payerDetails = paymentDetailsService.updatePayerDetails(payerId, updateDto);
-    //     return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(payerDetails));
-    // }
     
     // Deactivate card (instead of delete)
     @PutMapping("/payer/{payerId}/deactivate")
     @Operation(summary = "Deactivate card", 
                 description = "Sets isActive of PayerDetails to false")
-    public ResponseEntity<PayerDetailsResponseDto> deactivateCard(@PathVariable UUID payerId) {
-        
-        PayerDetails deactivated = paymentDetailsService.deactivateCard(payerId);
-        return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(deactivated));
+    public ResponseEntity<?> deactivateCard(
+            @PathVariable UUID payerId, 
+            HttpServletRequest httpRequest) {
+        try {
+            // Extract user ID from headers
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(httpRequest);
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return userIdResponse;
+            }
+            
+            UUID userId = (UUID) userIdResponse.getBody();
+            logger.info("Deactivating card {} for user: {}", payerId, userId);
+            
+            // You might want to verify that the payer belongs to this user
+            PayerDetails deactivated = paymentDetailsService.deactivateCard(payerId);
+            return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(deactivated));
+            
+        } catch (Exception e) {
+            logger.error("Error deactivating card for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
+        }
     }
     
     /**
@@ -147,26 +163,73 @@ public class PaymentDetailsController {
     @PostMapping("/payout")
     @Operation(summary = "Add new payout details (bank account)", 
                 description = "Add new payout details (bank account)")
-    public ResponseEntity<PayoutDetailsResponseDto> addPayoutDetails(@Valid @RequestBody CreatePayoutDetailsDto createDto) {
-        
-        PayoutDetails payoutDetails = paymentDetailsService.addPayoutDetails(createDto);
-        // activityLogService.logActivity(payoutDetails.getUserId(), null, 
-        //                              ActivityLog.EntityType.PAYOUT_DETAILS, payoutDetails.getPayoutId(), 
-        //                              "PAYOUT_DETAILS_ADDED", null, null);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                           .body(PayoutDetailsResponseDto.fromEntity(payoutDetails));
+    public ResponseEntity<?> addPayoutDetails(
+            @Valid @RequestBody CreatePayoutDetailsDto createDto, 
+            HttpServletRequest httpRequest) {
+        try {
+            // Extract user ID from headers
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(httpRequest);
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return userIdResponse;
+            }
+            
+            UUID userId = (UUID) userIdResponse.getBody();
+            logger.info("Adding payout details for user: {}", userId);
+            
+            // Set the user ID in the DTO
+            createDto.setUserId(userId);
+            
+            PayoutDetails payoutDetails = paymentDetailsService.addPayoutDetails(createDto);
+            // activityLogService.logActivity(payoutDetails.getUserId(), null, 
+            //                              ActivityLog.EntityType.PAYOUT_DETAILS, payoutDetails.getPayoutId(), 
+            //                              "PAYOUT_DETAILS_ADDED", null, null);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                               .body(PayoutDetailsResponseDto.fromEntity(payoutDetails));
+                               
+        } catch (Exception e) {
+            logger.error("Error adding payout details for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
+        }
     }
     
-    @GetMapping("/payout/user/{userId}")
+    @GetMapping("/payout/user")
     @Operation(summary = "Get Payout Details (bank details)", 
-                description = "Get Payout details by user ID")
-    public ResponseEntity<List<PayoutDetailsResponseDto>> getPayoutDetailsByUser(@PathVariable UUID userId) {
-        
-        List<PayoutDetails> payoutDetails = paymentDetailsService.findPayoutDetailsByUserId(userId);
-        return ResponseEntity.ok(payoutDetails.stream()
-                               .map(PayoutDetailsResponseDto::fromEntity)
-                               .toList());
+                description = "Get Payout details for authenticated user (user ID from gateway headers)")
+    public ResponseEntity<?> getPayoutDetailsByUser(HttpServletRequest httpRequest) {
+        try {
+            // Extract user ID from headers
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(httpRequest);
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return userIdResponse;
+            }
+            
+            UUID userId = (UUID) userIdResponse.getBody();
+            logger.info("Retrieving payout details for user: {}", userId);
+            
+            List<PayoutDetails> payoutDetails = paymentDetailsService.findPayoutDetailsByUserId(userId);
+            List<PayoutDetailsResponseDto> response = payoutDetails.stream()
+                                   .map(PayoutDetailsResponseDto::fromEntity)
+                                   .toList();
+                                   
+            logger.info("Found {} payout details for user: {}", response.size(), userId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving payout details for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error", "message", e.getMessage()));
+        }
     }
+
+    //TODO: How to handle this with paystack?    
+    // @PutMapping("/payer/{payerId}")
+    // public ResponseEntity<PayerDetailsResponseDto> updatePayerDetails(
+    //         @PathVariable UUID payerId,
+    //         @Valid @RequestBody UpdatePayerDetailsDto updateDto) {
+    //     PayerDetails payerDetails = paymentDetailsService.updatePayerDetails(payerId, updateDto);
+    //     return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(payerDetails));
+    // }
 
     //TODO: How to handle this with paystack?    
     // @PutMapping("/payout/{payoutId}")

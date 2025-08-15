@@ -41,16 +41,33 @@ public class UserService {
         this.restTemplate = restTemplate;
     }
 
-    public User syncUser(SyncUserDto syncDto){
+    public User syncUser(SyncUserDto syncDto) {
         logger.info("Syncing user: {}", syncDto.getUserId());
 
-        User user = new User();
-        user.setUserId(syncDto.getUserId());
-        user.setEmail(syncDto.getEmail());
-        user.setFirstName(syncDto.getFirstName());
-        user.setLastName(syncDto.getLastName());
-        user.setPhone(syncDto.getPhone());
-        user.setStatus(User.UserStatus.pending);
+        // Check if user already exists
+        User user = userRepository.findById(syncDto.getUserId()).orElse(null);
+        
+        if (user != null) {
+            // Update existing user
+            logger.info("Updating existing user: {}", syncDto.getUserId());
+            user.setEmail(syncDto.getEmail());
+            user.setFirstName(syncDto.getFirstName());
+            user.setLastName(syncDto.getLastName());
+            user.setPhone(syncDto.getPhone());
+            if (syncDto.getStatus() != null) {
+                user.setStatus(syncDto.getStatus());
+            }
+        } else {
+            // Create new user with the provided Keycloak ID
+            logger.info("Creating new user with ID: {}", syncDto.getUserId());
+            user = new User();
+            user.setUserId(syncDto.getUserId()); // Use Keycloak ID
+            user.setEmail(syncDto.getEmail());
+            user.setFirstName(syncDto.getFirstName());
+            user.setLastName(syncDto.getLastName());
+            user.setPhone(syncDto.getPhone());
+            user.setStatus(syncDto.getStatus() != null ? syncDto.getStatus() : User.UserStatus.active);
+        }
 
         user = userRepository.save(user);
 
@@ -58,14 +75,13 @@ public class UserService {
         //     syncDto.getUserId(), 
         //     ActivityLog.EntityType.USER,
         //     user.getUserId(),
-        //     "USER_SYNCED", 
+        //     user == null ? "USER_CREATED" : "USER_UPDATED", 
         //     null, 
         //     null
         // );
 
         logger.info("User synced successfully with ID: {}", user.getUserId());
         return user;
-
     }
 
     public User findById(UUID userId){
