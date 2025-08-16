@@ -2,9 +2,9 @@ spring:
   application:
     name: transaction-service
   datasource:
-    url: jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0&preparedStatementCacheQueries=0&preparedStatementCacheSizeMiB=0
-    username: postgres.lcrdisuesrfbohqvudus
-    password: DevOpps123@
+    url: ${TRANSACTIONDB_URI}
+    username: ${TRANSACTIONDB_USER}
+    password: ${TRANSACTIONDB_PASS}
     driver-class-name: org.postgresql.Driver
 
     # Connection pool settings
@@ -44,6 +44,7 @@ server:
 logging:
   level:
     com.stockfellow: DEBUG
+    org.springframework.boot.context.config: DEBUG
 
 management:
   endpoints:

@@ -63,31 +63,34 @@ public class PaymentDetailsService {
      */
     public Map<String, Object> processPaystackCallback(String reference) {
         try {
-            // Just verify the transaction succeeded for user feedback
             PaystackTransactionVerificationResponse verification = paystackService.verifyTransaction(reference);
             
             if (verification.getStatus() && "success".equals(verification.getData().getStatus())) {
                 return Map.of(
-                    "status", true,
+                    "success", true,  // Use "success" consistently
+                    "status", "success",
                     "message", "Payment completed successfully! We're processing your card details...",
+                    "reference", reference,
                     "data", Map.of(
-                        "reference", reference,
                         "next_step", "card_processing"
                     )
                 );
             } else {
                 return Map.of(
-                    "status", false,
+                    "success", false,
+                    "status", "failed", 
                     "message", "Payment failed. Please try again.",
                     "reference", reference
                 );
             }
         } catch (Exception e) {
-            logger.error("Error processing callback", e);
+            logger.error("Error processing callback for reference: {}", reference, e);
             return Map.of(
-                "status", false,
+                "success", false,
+                "status", "error",
                 "message", "An error occurred. Please contact support.",
-                "reference", reference
+                "reference", reference,
+                "error", e.getMessage()
             );
         }
     }
@@ -296,7 +299,7 @@ public class PaymentDetailsService {
             request.setEmail(initDto.getEmail());
             request.setAmount(100); 
             request.setReference(tempRef);
-            request.setCallbackUrl(callbackBaseUrl+"/api/payment-methods/payer/callback");
+            request.setCallbackUrl(callbackBaseUrl+"/api/transaction/payment-methods/payer/callback");
             
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("purpose", "card_authorization");

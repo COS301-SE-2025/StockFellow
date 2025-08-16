@@ -1,4 +1,5 @@
 // apps/mobile-app/app/transactions/cards.tsx
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,6 +44,59 @@ const Cards = () => {
     }, [loading])
   );
 
+	// Handle deep link when returning from Paystack
+	useEffect(() => {
+		const handleDeepLink = (url: string) => {
+			console.log('Deep link received:', url);
+			
+			// Simple check - if URL contains our callback path, refresh cards
+			if (url.includes('cards/callback')) {
+				console.log('Paystack callback received, refreshing cards...');
+				
+				// Check for success/failure in the URL string
+				if (url.includes('status=success')) {
+					Alert.alert(
+						'Card Added Successfully!',
+						'Your card has been added and will be available shortly.',
+						[
+							{
+								text: 'OK',
+								onPress: () => {
+									setLoading(true);
+									fetchCards();
+								}
+							}
+						]
+					);
+				} else if (url.includes('status=cancelled')) {
+					Alert.alert('Card Addition Cancelled', 'You cancelled the card addition process.');
+				} else if (url.includes('status=failed')) {
+					Alert.alert('Card Addition Failed', 'There was an error adding your card. Please try again.');
+				} else {
+					// Generic callback - just refresh
+					setLoading(true);
+					fetchCards();
+				}
+			}
+		};
+
+		// Listen for deep links when app is already open
+		const subscription = Linking.addEventListener('url', ({ url }) => {
+			handleDeepLink(url);
+		});
+
+		// Check if app was opened via deep link
+		Linking.getInitialURL().then((url) => {
+			if (url) {
+				handleDeepLink(url);
+			}
+		});
+
+		return () => {
+			subscription?.remove();
+		};
+	}, []);
+	
   const setActiveCard = async (cardId: string) => {
     try {
       setActivatingCardId(cardId);
@@ -93,56 +147,37 @@ const Cards = () => {
   };
 
   const addNewCard = async () => {
-    try {
-      setAddingNewCard(true);
-      
-      // Get Paystack authorization URL (user info extracted from token)
-      const authUrl = await cardService.openPaystackAuthorization();
-      
-      // Open Paystack in browser
-      const canOpen = await Linking.canOpenURL(authUrl);
-      if (canOpen) {
-        await Linking.openURL(authUrl);
-        
-        // Show loading alert while user is on Paystack
-        Alert.alert(
-          'Adding Card',
-          'Please complete the card authorization on Paystack. When you return, your card will be automatically added.',
-          [
-            {
-              text: 'I\'ve completed the process',
-              onPress: async () => {
-                // Check for new cards
-                setLoading(true);
-                try {
-                  // Wait a moment for webhook to process
-                  await new Promise(resolve => setTimeout(resolve, 3000));
-                  await fetchCards();
-                  Alert.alert('Success', 'Card added successfully!');
-                } catch (error) {
-                  Alert.alert('Info', 'Please refresh the page to see your new card');
-                }
-              }
-            },
-            {
-              text: 'Refresh Now',
-              onPress: () => {
-                setLoading(true);
-                fetchCards();
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert('Error', 'Cannot open Paystack authorization page');
-      }
-    } catch (error) {
-      console.error('Error adding new card:', error);
-      Alert.alert('Error', 'Failed to initialize card addition');
-    } finally {
-      setAddingNewCard(false);
-    }
-  };
+		try {
+			setAddingNewCard(true);
+			
+			// Get Paystack authorization URL (user info extracted from token)
+			const authUrl = await cardService.openPaystackAuthorization();
+			
+			// Open Paystack in browser
+			const canOpen = await Linking.canOpenURL(authUrl);
+			if (canOpen) {
+				await Linking.openURL(authUrl);
+				
+				// Show a simple message that the user will be redirected back
+				Alert.alert(
+					'Redirecting to Paystack',
+					'Complete your card authorization. You\'ll be automatically redirected back to the app when done.',
+					[
+						{
+							text: 'OK'
+						}
+					]
+				);
+			} else {
+				Alert.alert('Error', 'Cannot open Paystack authorization page');
+			}
+		} catch (error) {
+			console.error('Error adding new card:', error);
+			Alert.alert('Error', 'Failed to initialize card addition');
+		} finally {
+			setAddingNewCard(false);
+		}
+	};
 
   if (loading) {
     return (

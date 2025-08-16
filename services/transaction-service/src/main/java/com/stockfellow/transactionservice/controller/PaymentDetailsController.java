@@ -63,9 +63,30 @@ public class PaymentDetailsController {
     @GetMapping("/payer/callback")
     @Operation(summary = "Handle Paystack callback", 
                description = "Process callback from Paystack after user completes card authorization")
-    public ResponseEntity<Map<String, Object>> handlePaystackCallback(@RequestParam String reference) {
-        return ResponseEntity.ok(paymentDetailsService.processPaystackCallback(reference));
-    }   
+    public ResponseEntity<?> handlePaystackCallback(@RequestParam String reference) {
+        try {
+            Map<String, Object> result = paymentDetailsService.processPaystackCallback(reference);
+            
+            // Get the success status from the consistent field
+            boolean success = (Boolean) result.getOrDefault("success", false);
+            String status = success ? "success" : "failed";
+            
+            String redirectUrl = String.format("stockfellow://cards/callback?reference=%s&status=%s", 
+                                            reference, status);
+            
+            return ResponseEntity.status(HttpStatus.FOUND)
+                            .header("Location", redirectUrl)
+                            .build();
+                            
+        } catch (Exception e) {
+            logger.error("Error processing callback", e);
+            String redirectUrl = String.format("stockfellow://cards/callback?reference=%s&status=failed&error=%s", 
+                                            reference, e.getMessage());
+            return ResponseEntity.status(HttpStatus.FOUND)
+                            .header("Location", redirectUrl)
+                            .build();
+        }
+    }
 
     /**
      * ===================================================
