@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
+import { images } from '../constants';
 
 interface GreetingCardProps {
   userName: string;
@@ -11,18 +12,11 @@ const GreetingCard: React.FC<GreetingCardProps> = ({ userName, profileImage }) =
     <View className="rounded-2xl p-4 mb-4 flex-row items-center bg-blue-50 shadow-sm">
       {/* Profile Picture */}
       <View className="mr-3">
-        {profileImage ? (
-          <Image 
-            source={{ uri: profileImage }}
-            className="w-12 h-12 rounded-full"
-          />
-        ) : (
-          <View className="w-12 h-12 rounded-full items-center justify-center bg-blue-500">
-            <Text className="text-white text-lg font-['PlusJakartaSans-Bold']">
-              {userName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <Image 
+          source={images.songoku}
+          className="w-12 h-12 rounded-full"
+          resizeMode="cover"
+        />
       </View>
 
       {/* Greeting Text */}
@@ -31,7 +25,7 @@ const GreetingCard: React.FC<GreetingCardProps> = ({ userName, profileImage }) =
           Welcome back, {userName}!
         </Text>
         <Text className="text-sm font-['PlusJakartaSans-Medium'] opacity-70 text-gray-700">
-          Let’s check your stokvel progress.
+          Let's check your stokvel progress.
         </Text>
       </View>
     </View>

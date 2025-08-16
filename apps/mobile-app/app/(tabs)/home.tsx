@@ -25,12 +25,6 @@ const Home = () => {
       amount: '5570,00',
       type: 'credit' as const 
     },
-    { 
-      title: 'Rick & Mortgage',
-      subtitle: 'Morty Smith',
-      amount: '1500,00',
-      type: 'debit' as const 
-    },
   ];
 
   return (
@@ -56,7 +50,11 @@ const Home = () => {
         </View>
 
         {/* Quick Actions */}
-        <QuickActions />
+        <QuickActions 
+          contributionsLeft={3}
+          totalContributions={12}
+          daysUntilPayout={45}
+        />
 
         {/* Recent Activity */}
         <View>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { useTheme } from '../../app/_layout';
+import { icons } from '../constants';
 
 interface SavingsCardProps {
   userTier: string;
@@ -18,23 +19,33 @@ const SavingsCard: React.FC<SavingsCardProps> = ({
   const { colors } = useTheme();
 
   return (
-    <View className="bg-blue-400 rounded-2xl p-6 mb-6 shadow-sm">
-      {/* User Tier Badge */}
-      <View className="bg-white/30 self-start px-3 py-1 rounded-full mb-4">
-        <Text className="text-white text-sm font-['PlusJakartaSans-SemiBold']">
-          {userTier} Member
-        </Text>
+    <View className="bg-blue-300 rounded-2xl p-6 mb-6 shadow-sm">
+      {/* Header with Tier Badge and Money Icon */}
+      <View className="flex-row justify-between items-start mb-4">
+        {/* User Tier Badge */}
+        {/* <View className="bg-white/50 px-4 py-2 rounded-2xl"> */}
+          <Text className="text-black text-2xl font-['PlusJakartaSans-Bold']">
+            {userTier} Member
+          </Text>
+        {/* </View> */}
+
+        {/* Money Icon */}
+        <Image 
+          source={icons.money}
+          className="w-8 h-8"
+          resizeMode="contain"
+        />
       </View>
 
       {/* Main Content */}
       <View className="space-y-4">
         {/* Next Contribution */}
         <View>
-          <Text className="text-white/90 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+          <Text className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1">
             Next Contribution
           </Text>
           <View className="flex-row justify-between items-center">
-            <Text className="text-white text-base font-['PlusJakartaSans-SemiBold']">
+            <Text className="text-white text-lg font-['PlusJakartaSans-SemiBold']">
               {nextContributionDate}
             </Text>
             <Text className="text-white text-xl font-['PlusJakartaSans-Bold']">
@@ -48,10 +59,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({
 
         {/* Next Payout */}
         <View>
-          <Text className="text-white/90 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+          <Text className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1">
             Next Payout
           </Text>
-          <Text className="text-white text-base font-['PlusJakartaSans-SemiBold']">
+          <Text className="text-white text-lg font-['PlusJakartaSans-SemiBold']">
             {nextPayoutDate}
           </Text>
         </View>

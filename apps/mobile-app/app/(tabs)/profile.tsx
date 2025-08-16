@@ -2,7 +2,7 @@ import { Text, View, Image, TouchableOpacity, ScrollView, Modal, TextInput, Aler
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBar from '../../src/components/TopBar';
-import { icons } from '../../src/constants';
+import { icons, images } from '../../src/constants';
 import { useTheme } from '../../app/_layout';
 import { useTutorial } from '../../src/components/help/TutorialContext';
 import { useRouter } from 'expo-router';
@@ -108,7 +108,7 @@ const profile = () => {
               ) : (
                 <Image 
                   className='w-full h-full'
-                  source={icons.profile}
+                  source={images.songoku}
                   resizeMode="cover"
                 />
               )}
@@ -134,6 +134,7 @@ const profile = () => {
           </View>
         </View>
 
+        {/* ...existing code... */}
         {/* Badges and Rank*/}
         <View className="mb-6">
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Badges</Text>
@@ -285,7 +286,7 @@ const profile = () => {
                       />
                     ) : (
                       <Image 
-                        source={icons.profile}
+                        source={images.songoku}
                         className="w-full h-full"
                         resizeMode="cover"
                       />
@@ -410,7 +411,6 @@ const profile = () => {
                 className="flex-row items-center py-3"
                 onPress={() => {
                   setSettingsVisible(false);
-                  // Same functionality as TopBar - show HelpMenu with all help options
                   setHelpMenuVisible(true);
                 }}
               >
@@ -435,7 +435,6 @@ const profile = () => {
                 className="flex-row items-center py-3"
                 onPress={() => {
                   setSettingsVisible(false);
-                  // Same functionality as TopBar - navigate to notifications
                   router.push('/notifications');
                 }}
               >
