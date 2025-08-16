@@ -47,7 +47,12 @@ const Home = () => {
 
         {/* Savings Card */}
         <View>
-          <SavingsCard balance="7,785.00" />
+          <SavingsCard 
+            userTier="Tier 2"
+            nextContributionDate="15 Sep 2025"
+            contributionAmount="500.00"
+            nextPayoutDate="30 Dec 2025"
+          />
         </View>
 
         {/* Quick Actions */}

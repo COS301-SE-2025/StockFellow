@@ -1,34 +1,61 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 import { useTheme } from '../../app/_layout';
-import { icons } from '../constants';
 
 interface SavingsCardProps {
-  balance: string;
+  userTier: string;
+  nextContributionDate: string;
+  contributionAmount: string;
+  nextPayoutDate: string;
 }
 
-const SavingsCard: React.FC<SavingsCardProps> = ({ balance }) => {
+const SavingsCard: React.FC<SavingsCardProps> = ({
+  userTier,
+  nextContributionDate,
+  contributionAmount,
+  nextPayoutDate
+}) => {
   const { colors } = useTheme();
 
   return (
-    <View className="bg-[#1da2fa96] rounded-2xl p-6 w-full mt-4 mb-4 h-48">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-black text-2xl font-['PlusJakartaSans-SemiBold']">
-          Stockfellow Savings
+    <View className="bg-blue-400 rounded-2xl p-6 mb-6 shadow-sm">
+      {/* User Tier Badge */}
+      <View className="bg-white/30 self-start px-3 py-1 rounded-full mb-4">
+        <Text className="text-white text-sm font-['PlusJakartaSans-SemiBold']">
+          {userTier} Member
         </Text>
-        <Image 
-          source={icons.money}
-          className="w-10 h-10 mr-2"
-          style={{ tintColor: '#000000' }}
-          resizeMode="contain"
-        />
       </View>
-      <Text className="text-white text-3xl font-extrabold mt-4">
-        R {balance}
-      </Text>
-      <Text className="text-black text-sm font-['PlusJakartaSans-Regular'] mt-1 mb-2">
-        Total Balance
-      </Text>
+
+      {/* Main Content */}
+      <View className="space-y-4">
+        {/* Next Contribution */}
+        <View>
+          <Text className="text-white/90 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+            Next Contribution
+          </Text>
+          <View className="flex-row justify-between items-center">
+            <Text className="text-white text-base font-['PlusJakartaSans-SemiBold']">
+              {nextContributionDate}
+            </Text>
+            <Text className="text-white text-xl font-['PlusJakartaSans-Bold']">
+              R{contributionAmount}
+            </Text>
+          </View>
+        </View>
+
+        {/* Divider */}
+        <View className="h-px bg-white/30" />
+
+        {/* Next Payout */}
+        <View>
+          <Text className="text-white/90 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+            Next Payout
+          </Text>
+          <Text className="text-white text-base font-['PlusJakartaSans-SemiBold']">
+            {nextPayoutDate}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 };
