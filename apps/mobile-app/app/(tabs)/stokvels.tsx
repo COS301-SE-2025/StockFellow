@@ -49,32 +49,46 @@ const Stokvels = () => {
         // If user has no groups, check their tier and auto-join/create
         if (data.length === 0) {
           try {
-            // Get user's affordability tier
-            const profileTier = await userService.getUserAffordabilityTier();
-            console.debug("GET USER AFFORDABILITY:", JSON.stringify(profileTier, null, 2));
-            const tier = profileTier.tier;
-            console.debug("USER TIER:", tier);
+            // Try to get user's affordability tier from backend
+            let tier;
+            try {
+              const profileResponse = await userService.getProfile();
+              tier = profileResponse.affordability?.tier;
+              console.debug("Retrieved user tier from backend:", tier);
+            } catch (error) {
+              console.warn("Could not fetch user tier, generating random tier:", error);
+            }
 
-            if (tier) {
-              // Auto-create/join group based on tier
-              console.debug("ATTEMPTING TO JOIN/CREATE STOKVEL FOR TIER:", tier);
-              const joinResult = await groupService.joinOrCreateStokvel(tier);
-              console.debug("JOIN/CREATE RESULT:", JSON.stringify(joinResult, null, 2));
+            // If tier not available from backend, generate random tier (1-6)
+            if (!tier) {
+              tier = Math.floor(Math.random() * 6) + 1; // Random number between 1-6
+              console.debug("Using randomly generated tier:", tier);
+            }
 
-              // After joining, refetch user's groups
-              const newResponse = await authService.apiRequest('/groups/user', {
-                method: 'GET'
-              });
+            // Auto-create/join group based on tier
+            console.debug("Attempting to join/create stokvel for tier:", tier);
+            const joinResult = await groupService.joinOrCreateStokvel(tier);
 
-              if (newResponse.ok) {
-                data = await newResponse.json();
-                //Alert.alert('Success', `You've been added to a ${profileResponse.affordability?.tierName} stokvel`);
-              }
-            } else {
-              console.debug("NO TIER FOUND IN PROFILE RESPONSE");
+            // After joining, refetch user's groups
+            const newResponse = await authService.apiRequest('/groups/user', {
+              method: 'GET'
+            });
+
+            if (newResponse.ok) {
+              data = await newResponse.json();
+              const tierName = [
+                "Essential Savers",
+                "Steady Builders",
+                "Balanced Savers",
+                "Growth Investors",
+                "Premium Accumulators",
+                "Elite Circle"
+              ][tier - 1];
+
+              Alert.alert('Success', `You've been added to a ${tierName} stokvel`);
             }
           } catch (tierError) {
-            console.error('Error joining stokvel by tier:', JSON.stringify(tierError, null, 2));
+            console.error('Error joining stokvel:', tierError);
             Alert.alert('Info', 'Could not automatically join a stokvel. Please create one manually.');
           }
         }

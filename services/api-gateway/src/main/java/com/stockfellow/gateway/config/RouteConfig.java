@@ -33,7 +33,7 @@ public class RouteConfig {
              new Route(
                 "/api/users/register", // Registration endpoint (internal use by gateway)
                 false, // No auth required as it's called internally
-                new Route.RateLimit(15 * 60 * 1000L, 5), // More restrictive for registration
+                new Route.RateLimit(15 * 60 * 1000L, 50), // More restrictive for registration
                 new Route.Proxy(userServiceUrl, true)
             ),
 
@@ -41,7 +41,7 @@ public class RouteConfig {
             new Route(
                 "/api/users/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             ),
             
@@ -49,7 +49,7 @@ public class RouteConfig {
             new Route(
                 "/api/groups/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(groupServiceUrl, true)
             ),
             
@@ -57,7 +57,7 @@ public class RouteConfig {
             new Route(
                 "/api/transaction/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(transactionServiceUrl, true)
             ),
 
@@ -65,7 +65,7 @@ public class RouteConfig {
             new Route(
                 "/api/notifications/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(notificationServiceUrl, true)
             ),
 
@@ -73,7 +73,7 @@ public class RouteConfig {
             new Route(
                 "/api/mfa/**",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(mfaServiceUrl, true)
             ),
             
@@ -81,7 +81,7 @@ public class RouteConfig {
             new Route(
                 "/api",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             )
         );

@@ -60,9 +60,14 @@ interface GroupWithDates extends Omit<Group, 'contributionDate' | 'payoutDate'> 
 }
 
 const EditStokvelForm: React.FC = () => {
-    const { groupId } = useLocalSearchParams();
+    const params = useLocalSearchParams();
+    const groupId = params.id || params.groupId;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    console.log('EditStokvelForm received params:', params);
+    console.log('Using groupId:', groupId);
+    
     const [form, setForm] = useState<FormData>({
         name: "",
         minContribution: "",
