@@ -32,7 +32,7 @@ public class RouteConfig {
             // User service route
             new Route(
                 "/api/users/**",
-                false,
+                true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(userServiceUrl, true)
             ),
@@ -40,7 +40,7 @@ public class RouteConfig {
             // Group service route
             new Route(
                 "/api/groups/**",
-                false,
+                true,
                 new Route.RateLimit(15 * 60 * 1000L, 10),
                 new Route.Proxy(groupServiceUrl, true)
             ),

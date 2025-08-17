@@ -52,7 +52,7 @@ public class User {
     private boolean idVerified = false;
     
     @Column(name = "alfresco_document_id")
-    private String alfrescoDocumentId;
+    private String alfrescoDocumentId = "none";
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -70,9 +70,14 @@ public class User {
     private String citizenship;
 
 
-    private Integer affordabilityTier;
-    private Double affordabilityConfidence;
-    private Date affordabilityAnalyzedAt;
+    @Column(name = "affordability_tier")
+    private Integer affordabilityTier = 0;
+
+    @Column(name = "affordability_confidence")
+    private Double affordabilityConfidence = 0.0;
+
+    @Column(name = "affordability_analyzed_at")
+    private Date affordabilityAnalyzedAt = null;
     
     // Constructors
     public User() {

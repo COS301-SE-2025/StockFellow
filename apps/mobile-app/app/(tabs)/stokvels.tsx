@@ -8,6 +8,8 @@ import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
+import userService from '../../src/services/userService';
+import groupService from '../../src/services/groupService';
 
 interface Stokvel {
   id: string;
@@ -28,9 +30,11 @@ const Stokvels = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const { colors } = useTheme();
 
+  // Fetch user groups, else create/auto join by system based on tier
   useEffect(() => {
     const fetchStokvels = async () => {
       try {
+        // First try to fetch user's existing groups
         const response = await authService.apiRequest('/groups/user', {
           method: 'GET'
         });
@@ -39,11 +43,45 @@ const Stokvels = () => {
           throw new Error('Failed to fetch stokvels');
         }
 
-        const data = await response.json();
+        let data = await response.json();
+
+        console.debug("FIRST CHECK, user groups: " + data);
+        // If user has no groups, check their tier and auto-join/create
+        if (data.length === 0) {
+          try {
+            // Get user's affordability tier
+            const profileTier = await userService.getUserAffordabilityTier();
+            console.debug("GET USER AFFORDABILITY:", JSON.stringify(profileTier, null, 2));
+            const tier = profileTier.tier;
+            console.debug("USER TIER:", tier);
+
+            if (tier) {
+              // Auto-create/join group based on tier
+              console.debug("ATTEMPTING TO JOIN/CREATE STOKVEL FOR TIER:", tier);
+              const joinResult = await groupService.joinOrCreateStokvel(tier);
+              console.debug("JOIN/CREATE RESULT:", JSON.stringify(joinResult, null, 2));
+
+              // After joining, refetch user's groups
+              const newResponse = await authService.apiRequest('/groups/user', {
+                method: 'GET'
+              });
+
+              if (newResponse.ok) {
+                data = await newResponse.json();
+                //Alert.alert('Success', `You've been added to a ${profileResponse.affordability?.tierName} stokvel`);
+              }
+            } else {
+              console.debug("NO TIER FOUND IN PROFILE RESPONSE");
+            }
+          } catch (tierError) {
+            console.error('Error joining stokvel by tier:', JSON.stringify(tierError, null, 2));
+            Alert.alert('Info', 'Could not automatically join a stokvel. Please create one manually.');
+          }
+        }
 
         const transformedStokvels = data.map((group: any) => ({
-          id: group._id || group.id,     // MongoDB _id for React keys
-          groupId: group.groupId,        // Custom groupId for API calls
+          id: group._id || group.id,
+          groupId: group.groupId,
           name: group.name,
           memberCount: group.members?.length || 0,
           balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
@@ -141,7 +179,7 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-      
+
       <View className="px-6 pt-4">
         <SearchBar
           nativeID="search-bar"
@@ -229,12 +267,12 @@ const Stokvels = () => {
                     balance={stokvel.balance || "R 0.00"}
                     profileImage={stokvel.profileImage}
                     onPress={() => {
-                        // Use groupId consistently for navigation
-                        router.push({
-                          pathname: '/stokvels/[id]',
-                          params: { id: stokvel.groupId }
-                        });
-                      }}
+                      // Use groupId consistently for navigation
+                      router.push({
+                        pathname: '/stokvels/[id]',
+                        params: { id: stokvel.groupId }
+                      });
+                    }}
                   />
                 ))
               ) : (
