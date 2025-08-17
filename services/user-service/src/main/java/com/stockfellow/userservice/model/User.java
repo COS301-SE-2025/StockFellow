@@ -52,7 +52,7 @@ public class User {
     private boolean idVerified = false;
     
     @Column(name = "alfresco_document_id")
-    private String alfrescoDocumentId;
+    private String alfrescoDocumentId = null;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -70,10 +70,15 @@ public class User {
     private String citizenship;
 
 
+    @Column(name = "affordability_tier")
     private Integer affordabilityTier;
+
+    @Column(name = "affordability_confidence")
     private Double affordabilityConfidence;
+
+    @Column(name = "affordability_analyzed_at")
     private Date affordabilityAnalyzedAt;
-    
+        
     // Constructors
     public User() {
         this.createdAt = LocalDateTime.now();

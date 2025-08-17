@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -85,20 +87,24 @@ public class UserController {
                 logger.warn("Username from token: {} differs from DB: {}", username, user.getUsername());
             }
             
+            logger.info("fetching profile reponse for user: {}", userId);
             // Include affordability information in profile response
-            Map<String, Object> profileResponse = Map.of(
-                "user", user,
-                "affordability", Map.of(
-                    "tier", user.getAffordabilityTier(),
-                    "tierName", getTierName(user.getAffordabilityTier()),
-                    "contributionRange", getContributionRange(user.getAffordabilityTier()),
-                    "confidence", user.getAffordabilityConfidence(),
-                    "lastAnalyzed", user.getAffordabilityAnalyzedAt(),
-                    "needsReanalysis", isReanalysisNeeded(user.getAffordabilityAnalyzedAt())
-                )
-            );
+            Map<String, Object> affordabilityMap = new HashMap<>();
+            affordabilityMap.put("tier", user.getAffordabilityTier());
+            affordabilityMap.put("tierName", getTierName(user.getAffordabilityTier()));
+            affordabilityMap.put("contributionRange", getContributionRange(user.getAffordabilityTier()));
+            affordabilityMap.put("confidence", user.getAffordabilityConfidence());
+            //affordabilityMap.put("lastAnalyzed", user.getAffordabilityAnalyzedAt());
+            //affordabilityMap.put("needsReanalysis", isReanalysisNeeded(user.getAffordabilityAnalyzedAt()));
+
+            Map<String, Object> profileResponse = new HashMap<>();
+            profileResponse.put("user", user);
+            profileResponse.put("affordability", affordabilityMap);
+
+            logger.info("User profile fetched successfully for user: {}", profileResponse);
             
             return ResponseEntity.ok(profileResponse);
+
         } catch (Exception e) {
             logger.error("Error getting user profile", e);
             return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
