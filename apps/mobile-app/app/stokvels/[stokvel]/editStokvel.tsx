@@ -182,7 +182,8 @@ const EditStokvelForm: React.FC = () => {
             const updatedGroup = await groupService.updateGroup(groupId as string, payload);
 
             Alert.alert("Success", "Stokvel updated successfully!");
-            router.push(`/stokvels/${groupId}`);
+            // router.push(`/stokvels/${groupId}`);
+            router.push(`/stokvels`);
         } catch (error) {
             let errorMessage = "Failed to update stokvel";
             if (error instanceof Error) {

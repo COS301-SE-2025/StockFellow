@@ -1,5 +1,5 @@
 import { Text, View, Alert } from 'react-native';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
@@ -40,6 +40,46 @@ const SignUp = () => {
   // const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
   const passwordRef = useRef<string>('');
+
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    digit: false,
+    symbol: false
+  });
+
+  // Dynamic password validation
+  useEffect(() => {
+    const newRequirements = {
+      length: form.password.length >= 6,
+      uppercase: /[A-Z]/.test(form.password),
+      digit: /\d/.test(form.password),
+      symbol: /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
+    };
+    setPasswordRequirements(newRequirements);
+
+    // Clear error when all requirements are met
+    if (newRequirements.length && newRequirements.uppercase &&
+      newRequirements.digit && newRequirements.symbol) {
+      setErrors({ ...errors, password: '' });
+    }
+  }, [form.password]);
+
+  const getPasswordError = () => {
+    if (!form.password) return 'Password is required';
+
+    const requirements = [
+      { met: passwordRequirements.length, text: 'at least 6 characters' },
+      { met: passwordRequirements.uppercase, text: 'one uppercase letter' },
+      { met: passwordRequirements.digit, text: 'one digit' },
+      { met: passwordRequirements.symbol, text: 'one symbol' }
+    ];
+
+    const unmet = requirements.filter(req => !req.met);
+    if (unmet.length === 0) return '';
+
+    return `Password must contain: ${unmet.map(req => req.text).join(', ')}`;
+  };
 
   const validateForm = () => {
     let valid = true;
@@ -106,9 +146,43 @@ const SignUp = () => {
       valid = false;
     }
 
+    const passwordError = getPasswordError();
+    if (passwordError) {
+      newErrors.password = passwordError;
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
+
+  // Update the password input to show requirements
+  const renderPasswordRequirements = () => {
+    return (
+      <View className="mt-2">
+        <Text className="text-xs text-gray-900 font-['PlusJakartaSans-Regular']">Password must contain:</Text>
+        <View className="ml-2 mt-1 flex-1 flex-row justify-around">
+          <View>
+            <Text className={`text-xs ${passwordRequirements.length ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • At least 6 characters
+            </Text>
+            <Text className={`text-xs ${passwordRequirements.uppercase ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One uppercase letter
+            </Text>
+          </View>
+          <View>
+            <Text className={`text-xs ${passwordRequirements.digit ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One digit (0-9)
+            </Text>
+            <Text className={`text-xs ${passwordRequirements.symbol ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One symbol (!@#$%^&* etc.)
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
 
   // Commented out document upload handler
   // const handleDocumentUpload = async (type: 'bankStatement' | 'payslip') => {
@@ -248,8 +322,8 @@ const SignUp = () => {
               showsVerticalScrollIndicator={false}
             >
               <View className='flex-1 justify-start'>
-                <Text className="text-2xl text-left font-semibold my-3">Sign Up</Text>
-                <Text className="text-m text-left mb-3 text-[#71727A] font-light">
+                <Text className="text-xl text-left font-['PlusJakartaSans-SemiBold'] my-2">Sign Up</Text>
+                <Text className="text-sm text-left mb-3 text-[#71727A] font-['PlusJakartaSans-Light']">
                   Create an account to get started
                 </Text>
 
@@ -323,6 +397,7 @@ const SignUp = () => {
                   placeholder='Create a password'
                   error={errors.password}
                 />
+                {renderPasswordRequirements()}
 
                 <FormInput
                   title="Confirm Password"
@@ -353,19 +428,19 @@ const SignUp = () => {
                 />
 
                 <View className="flex-row justify-center gap-2 mt-1">
-                  <Text className="text-sm text-[#71727A]">Already a Member?</Text>
-                  <Link href="/login" className="text-[#1DA1FA] font-semibold text-sm">
+                  <Text className="text-sm text-[#71727A] font-['PlusJakartaSans-Regular']">Already a Member?</Text>
+                  <Link href="/login" className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold'] text-sm">
                     Login
                   </Link>
                 </View>
               </View>
 
               <View className="flex-1 px-4 text-center self-end mt-4">
-                <Text className="text-center text-sm font-light">
+                <Text className="text-center text-sm font-['PlusJakartaSans-Light']">
                   By clicking Sign Up, you have read and agreed to our
-                  <Link href='' className="text-[#1DA1FA] font-semibold"> Terms of Use </Link>
+                  <Link href='' className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold']"> Terms of Use </Link>
                   and
-                  <Link href='' className="text-[#1DA1FA] font-semibold"> Privacy Policy </Link>
+                  <Link href='' className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold']"> Privacy Policy </Link>
                 </Text>
               </View>
             </ScrollView>
