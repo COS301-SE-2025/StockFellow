@@ -7,6 +7,7 @@ import SavingsCard from '../../src/components/SavingsCard';
 import QuickActions from '../../src/components/QuickActions';
 import ActivityItem from '../../src/components/ActivityItem';
 import TopBar from '../../src/components/TopBar';
+import GreetingCard from '../../src/components/GreetingCard';
 
 const Home = () => {
   const { colors } = useTheme();
@@ -24,12 +25,6 @@ const Home = () => {
       amount: '5570,00',
       type: 'credit' as const 
     },
-    { 
-      title: 'Rick & Mortgage',
-      subtitle: 'Morty Smith',
-      amount: '1500,00',
-      type: 'debit' as const 
-    },
   ];
 
   return (
@@ -39,13 +34,27 @@ const Home = () => {
       <TopBar title="Home" />
 
       <ScrollView className="flex-1 px-6">
-        {/* Savings Card */}
+        {/* Greeting */}
         <View className="mt-6">
-          <SavingsCard balance="7,785.00" />
+          <GreetingCard userName="Son Goku" />
+        </View>
+
+        {/* Savings Card */}
+        <View>
+          <SavingsCard 
+            userTier="Tier 2"
+            nextContributionDate="15 Sep 2025"
+            contributionAmount="500.00"
+            nextPayoutDate="30 Dec 2025"
+          />
         </View>
 
         {/* Quick Actions */}
-        <QuickActions />
+        <QuickActions 
+          contributionsLeft={3}
+          totalContributions={12}
+          daysUntilPayout={45}
+        />
 
         {/* Recent Activity */}
         <View>
