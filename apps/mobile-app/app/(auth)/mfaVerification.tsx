@@ -220,7 +220,7 @@ const MfaVerification = () => {
                                         resizeMode="contain"
                                     />
                                 </TouchableOpacity>
-                                <Text className="text-2xl font-semibold my-3">Verify Your Identity</Text>
+                                <Text className="text-xl font-['PlusJakartaSans-SemiBold'] my-3">Verify Your Identity</Text>
                             </View>
 
                             <Image
@@ -229,7 +229,7 @@ const MfaVerification = () => {
                                 resizeMode="contain"
                             />
 
-                            <Text className="text-m text-left mb-3 text-[#0C0C0F] font-light">
+                            <Text className="text-m text-left mb-3 text-[#0C0C0F] ffont-['PlusJakartaSans-Light']">
                                 We've sent a 6-digit code to {email}
                             </Text>
 
@@ -247,7 +247,7 @@ const MfaVerification = () => {
                                                     inputRefs.current[index] = el;
                                                 }
                                             }}
-                                            className="text-2xl text-center w-full h-full"
+                                            className="text-2xl text-center w-full h-full font-['PlusJakartaSans-Regular']"
                                             keyboardType="number-pad"
                                             maxLength={1}
                                             value={digits[index]}
@@ -260,8 +260,8 @@ const MfaVerification = () => {
                             </View>
 
                             <View className="flex-row items-center mt-4 justify-center">
-                                <Text className="text-[#0C0C0F] text-sm">
-                                    Didn't receive a code? Please go back to login and try again.
+                                <Text className="text-[#0C0C0F] text-sm font-['PlusJakartaSans-Regular']">
+                                    Didn't receive a code? Return to login and try again.
                                 </Text>
                                 {/* <Text
                                     className={`text-sm ${countdown > 0 ? 'text-[#1DA1FA]' : 'text-[#1DA1FA] font-medium'}`}
@@ -277,12 +277,12 @@ const MfaVerification = () => {
                                 textStyles="text-white text-lg"
                                 handlePress={handleVerify}
                                 isLoading={isSubmitting}
-                            //disabled={!digits.every(d => d !== '')}
+                                disabled={isSubmitting} 
                             />
 
-                            <Text className="text-xs text-[#71727A] mt-4 text-center">
+                            <Text className="text-xs text-[#71727A]  text-center">
                                 For security reasons, this code will expire in {codeExpiryMinutes} minutes.
-                                {countdown > 0 && ` You can request a new code in ${countdown} seconds.`}
+                                {/* {countdown > 0 && ` You can request a new code in ${countdown} seconds.`} */}
                             </Text>
                         </View>
                     </View>
