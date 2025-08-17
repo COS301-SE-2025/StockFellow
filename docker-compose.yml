@@ -44,6 +44,7 @@ services:
     image: postgres:15
     container_name: user-service-postgres
     volumes:
+      - ./services/user-service/postgresql.conf:/etc/postgresql/postgresql.conf
       - user_service_postgres_data:/var/lib/postgresql/data
       - ./services/user-service/init-scripts:/docker-entrypoint-initdb.d
     environment:
@@ -51,15 +52,18 @@ services:
       POSTGRES_USER: userservice_user
       POSTGRES_PASSWORD: userservice_pass
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_CONFIG_FILE: /etc/postgresql/postgresql.conf
     ports:
       - "5431:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "userservice_user", "-d", "userservice_db"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U userservice_user -d userservice_db && psql -U userservice_user -d userservice_db -c 'SELECT 1'"]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # PostgreSQL Database for Notification Service
