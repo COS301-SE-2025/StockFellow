@@ -172,8 +172,48 @@ public class AuthController {
                 }
             }
 
+            // Extract Keycloak user ID from response
+            String keycloakUserId = (String) registrationResponse.get("userId");
+            if (keycloakUserId == null) {
+                logger.error("Keycloak registration succeeded but no userId returned for: {}", registerRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Registration partially failed - no user ID"));
+            }
+
+            logger.info("Keycloak registration successful for user: {} with ID: {}", registerRequest.getUsername(), keycloakUserId);
+
+            // Step 2: Forward user data to User Service
+            try {
+                Map<String, Object> userServiceResponse = userServiceClient.createUser(
+                    keycloakUserId,
+                    registerRequest.getUsername(),
+                    registerRequest.getEmail(),
+                    registerRequest.getFirstName(),
+                    registerRequest.getLastName()
+                );
+
+                // if (userServiceResponse.containsKey("error")) {
+                //     logger.error("User service registration failed for user: {} - {}", 
+                //                registerRequest.getUsername(), userServiceResponse.get("error"));
+                    
+                //     // TODO: Consider rolling back Keycloak user creation here
+                //     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                //             .body(Map.of(
+                //                 "error", "Registration partially failed",
+                //                 "message", "User created in identity provider but database creation failed",
+                //                 "details", userServiceResponse.get("error")
+                //             ));
+                // }
+
+            
+            } catch (Exception e) {
+                logger.error("Error creating user record in user service for user: {}", registerRequest.getUsername(), e);
+            }
+          
+
             System.out.println("User registered successfully: " + registerRequest.getUsername());
             return ResponseEntity.ok(registrationResponse);
+
 
         } catch (Exception e) {
             System.err.println("Registration error: " + e.getMessage());

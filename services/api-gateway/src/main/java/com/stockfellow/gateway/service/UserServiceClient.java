@@ -8,10 +8,14 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -64,6 +68,64 @@ public class UserServiceClient {
             throw new RuntimeException("Failed to create user record", e);
         }
     }
+
+    /**
+     * Create user in User Service database after Keycloak registration
+     * forward to user service to create user record
+     */
+    public Map<String, Object> createUser(String userId, String username, String email, 
+                                        String firstName, String lastName) {
+        try {
+            String url = userServiceUrl + "/api/users/register";
+            
+            // Prepare request body
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("userId", userId);
+            requestBody.put("username", username);
+            requestBody.put("email", email);
+            requestBody.put("firstName", firstName);
+            requestBody.put("lastName", lastName);
+
+            // Set headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-Gateway-Request", "true"); // Identify as gateway request
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            logger.info("Creating user in User Service: userId={}, username={}", userId, username);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                url, 
+                HttpMethod.POST, 
+                request, 
+                Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("User created successfully in User Service: {}", username);
+                return (Map<String, Object>) response.getBody();
+            } else {
+                logger.error("User Service returned non-success status: {} for user: {}", 
+                           response.getStatusCode(), username);
+                return Map.of("error", "User creation failed", "status", response.getStatusCode().value());
+            }
+
+        } catch (HttpClientErrorException e) {
+            logger.error("Client error creating user in User Service: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return Map.of("error", "User creation failed", "message", e.getResponseBodyAsString(), "status", e.getStatusCode().value());
+        } catch (HttpServerErrorException e) {
+            logger.error("Server error creating user in User Service: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return Map.of("error", "User service error", "message", "Internal server error in user service", "status", e.getStatusCode().value());
+        } catch (ResourceAccessException e) {
+            logger.error("Connection error to User Service", e);
+            return Map.of("error", "Service unavailable", "message", "Could not connect to user service");
+        } catch (Exception e) {
+            logger.error("Unexpected error creating user in User Service", e);
+            return Map.of("error", "Unexpected error", "message", e.getMessage());
+        }
+    }
+
     
     /**
      * Forwards the ID verification request to the user service

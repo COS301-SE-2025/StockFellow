@@ -43,7 +43,7 @@ public class UserController {
     @Autowired
     private AffordabilityTierService affordabilityTierService;
 
-    @GetMapping
+     @GetMapping
     public ResponseEntity<?> getServiceInfo() {
         try {
             return ResponseEntity.ok(Map.of(
@@ -51,6 +51,7 @@ public class UserController {
                     "version", "2.1.0",
                     "database", "PostgreSQL",
                     "endpoints", List.of(
+                            "POST /api/users/register - Register new user in database",
                             "GET /api/users/profile - Get user profile (requires auth)",
                             "POST /api/users/verifyID - Verify user ID document",
                             "POST /api/users/affordability/analyze - Analyze user affordability",
@@ -64,6 +65,136 @@ public class UserController {
             logger.error("Error getting service info", e);
             return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
         }
+    }
+
+     /**
+     * Registration endpoint - Creates user in database after Keycloak registration
+     * Called by API Gateway after successful Keycloak user creation
+     */
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody RegisterUserRequest request, HttpServletRequest httpRequest) {
+        try {
+            logger.info("User registration request received for userId: {}, username: {}", 
+                       request.getUserId(), request.getUsername());
+
+            // Validate required fields
+            if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid request",
+                    "message", "User ID is required"
+                ));
+            }
+
+            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid request", 
+                    "message", "Username is required"
+                ));
+            }
+
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid request",
+                    "message", "Email is required"
+                ));
+            }
+
+            // Check if user already exists
+            User existingUser = userService.getUserByUserId(request.getUserId());
+            if (existingUser != null) {
+                logger.warn("User already exists in database: {}", request.getUserId());
+                return ResponseEntity.status(409).body(Map.of(
+                    "error", "User already exists",
+                    "message", "User is already registered in the system",
+                    "userId", request.getUserId()
+                ));
+            }
+
+            // Check if email is already used
+            User existingEmailUser = userService.getUserByEmail(request.getEmail());
+            if (existingEmailUser != null) {
+                logger.warn("Email already in use: {}", request.getEmail());
+                return ResponseEntity.status(409).body(Map.of(
+                    "error", "Email already in use",
+                    "message", "This email address is already registered"
+                ));
+            }
+
+            // Create new user
+            User newUser = new User();
+            newUser.setUserId(request.getUserId());
+            newUser.setUsername(request.getUsername());
+            newUser.setEmail(request.getEmail());
+            newUser.setFirstName(request.getFirstName());
+            newUser.setLastName(request.getLastName());
+            
+            // Set default values
+            newUser.setEmailVerified(false); // Will be verified by Keycloak
+            newUser.setIdVerified(false);
+            newUser.setAffordabilityTier(0); // Unanalyzed
+            newUser.setAffordabilityConfidence(0.0);
+
+            // Save user to database
+            User savedUser = userService.createUser(newUser);
+
+            if (savedUser == null) {
+                logger.error("Failed to save user to database: {}", request.getUserId());
+                return ResponseEntity.status(500).body(Map.of(
+                    "error", "Database error",
+                    "message", "Failed to create user in database"
+                ));
+            }
+
+            logger.info("User successfully registered in database: userId={}, id={}", 
+                       savedUser.getUserId(), savedUser.getId());
+
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "User registered successfully in database");
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", savedUser.getId());
+            userMap.put("userId", savedUser.getUserId());
+            userMap.put("username", savedUser.getUsername());
+            userMap.put("email", savedUser.getEmail());
+            userMap.put("firstName", savedUser.getFirstName() != null ? savedUser.getFirstName() : "");
+            userMap.put("lastName", savedUser.getLastName() != null ? savedUser.getLastName() : "");
+            userMap.put("emailVerified", savedUser.isEmailVerified());
+            userMap.put("idVerified", savedUser.isIdVerified());
+            userMap.put("affordabilityTier", savedUser.getAffordabilityTier());
+            userMap.put("createdAt", savedUser.getCreatedAt());
+            userMap.put("updatedAt", savedUser.getUpdatedAt());
+            response.put("user", userMap);
+
+            // Add next steps for user
+            response.put("nextSteps", Map.of(
+                "message", "Complete your profile to access all features",
+                "steps", List.of(
+                    "1. Verify your ID document",
+                    "2. Upload bank statements for affordability analysis",
+                    "3. Complete additional profile information"
+                ),
+                "endpoints", Map.of(
+                    "idVerification", "/api/users/verifyID",
+                    "affordabilityAnalysis", "/api/users/affordability/analyze",
+                    "profile", "/api/users/profile"
+                )
+            ));
+
+            response.put("timestamp", System.currentTimeMillis());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Unexpected error during user registration for userId: {}", 
+                        request != null ? request.getUserId() : "null", e);
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Registration failed",
+                "message", "An unexpected error occurred during user registration",
+                "details", e.getMessage()
+            ));
+        }
+
     }
 
     @GetMapping("/profile")
@@ -555,4 +686,30 @@ public class UserController {
                 5, ((double) counts.get(5) / total * 100.0),
                 6, ((double) counts.get(6) / total * 100.0));
     }
+
+    // DTO for registration request
+    public static class RegisterUserRequest {
+        private String userId;        // Keycloak user ID
+        private String username;
+        private String email;
+        private String firstName;
+        private String lastName;
+
+        // Getters and setters
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
+        
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        
+        public String getFirstName() { return firstName; }
+        public void setFirstName(String firstName) { this.firstName = firstName; }
+        
+        public String getLastName() { return lastName; }
+        public void setLastName(String lastName) { this.lastName = lastName; }
+    }
+   
 }

@@ -30,6 +30,14 @@ public class RouteConfig {
     public List<Route> routes() {
         return Arrays.asList(
             // User service route
+             new Route(
+                "/api/users/register", // Registration endpoint (internal use by gateway)
+                false, // No auth required as it's called internally
+                new Route.RateLimit(15 * 60 * 1000L, 5), // More restrictive for registration
+                new Route.Proxy(userServiceUrl, true)
+            ),
+
+            
             new Route(
                 "/api/users/**",
                 true,

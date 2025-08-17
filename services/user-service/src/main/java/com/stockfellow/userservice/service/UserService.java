@@ -32,6 +32,28 @@ public class UserService {
     @Autowired
     private SouthAfricanIdValidationService idValidationService;
 
+
+    /**
+     * Create a new user in the database
+     */
+    public User createUser(User user) {
+        try {
+            if (user.getCreatedAt() == null) {
+                user.setCreatedAt(LocalDateTime.now());
+            }
+            if (user.getUpdatedAt() == null) {
+                user.setUpdatedAt(LocalDateTime.now());
+            }
+            
+            User savedUser = userRepository.save(user);
+            logger.info("User created successfully: userId={}, id={}", savedUser.getUserId(), savedUser.getId());
+            return savedUser;
+        } catch (Exception e) {
+            logger.error("Error creating user: {}", user.getUserId(), e);
+            throw new RuntimeException("Failed to create user", e);
+        }
+    }
+
     /**
      * Create or update user from Keycloak sync request
      */
@@ -125,6 +147,34 @@ public class UserService {
     public User recoverGetUser(JpaSystemException e, String userId) {
         logger.error("All retries failed for getUserByUserId({})", userId, e);
         return null; // or a default User object
+    }
+
+    /**
+     * Get user by database ID
+     */
+    public User getUserById(Long id) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            return userOpt.orElse(null);
+        } catch (Exception e) {
+            logger.error("Error finding user by ID: {}", id, e);
+            return null;
+        }
+    }
+
+    /**
+     * Update user information
+     */
+    public User updateUser(User user) {
+        try {
+            user.setUpdatedAt(LocalDateTime.now());
+            User updatedUser = userRepository.save(user);
+            logger.info("User updated successfully: userId={}", updatedUser.getUserId());
+            return updatedUser;
+        } catch (Exception e) {
+            logger.error("Error updating user: {}", user.getUserId(), e);
+            throw new RuntimeException("Failed to update user", e);
+        }
     }
 
     /**
@@ -276,5 +326,21 @@ public class UserService {
 
             userRepository.save(user);
         }
+    }
+
+    public String getFirstName(String userId) {
+        User user = getUserByUserId(userId);
+        if (user != null) {
+            return user.getFirstName();
+        }
+        return null;
+    }
+
+    public String getLastName(String userId) {
+        User user = getUserByUserId(userId);
+        if (user != null) {
+            return user.getLastName();
+        }
+        return null;
     }
 }
