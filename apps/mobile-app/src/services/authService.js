@@ -55,17 +55,30 @@ class AuthService {
       });
 
       const data = await response.json();
-
+      console.log("LOGINDATA: "+ data.mfa_required, data.access_token, data.refresh_token);
+      
       if (!response.ok) {
         throw new Error(data.error || data.details || 'Login failed');
       }
 
-      await this.saveTokens(data.access_token, data.refresh_token);
-
-      return {
-        success: true,
-        data,
-      };
+      // Check if MFA is required
+      if (data.mfa_required) {
+        return {
+          success: true,
+          mfaRequired: true,
+          email: data.email,
+          tempSession: data.temp_session,
+          message: data.message,
+        };
+      } else {
+        // MFA not required -> save tokens normally
+        await this.saveTokens(data.access_token, data.refresh_token);
+        return {
+          success: true,
+          mfaRequired: false,
+          data,
+        };
+      }
     } catch (error) {
       console.error('Login error:', error);
       return {
@@ -74,6 +87,22 @@ class AuthService {
       };
     }
   }
+
+
+      // await this.saveTokens(data.access_token, data.refresh_token);
+
+  //     return {
+  //       success: true,
+  //       data,
+  //     };
+  //   } catch (error) {
+  //     console.error('Login error:', error);
+  //     return {
+  //       success: false,
+  //       error: error.message || 'Login failed',
+  //     };
+  //   }
+  // }
 
   // Register new user
   async register(userData) {
@@ -261,42 +290,82 @@ class AuthService {
     }
   }
 
-  async verifyMfaCode(email, code) {
-  try {
-    const response = await this.apiRequest('/auth/mfa/verify', {
-      method: 'POST',
-      body: JSON.stringify({ email, code })
-    });
+//   async verifyMfaCode(email, code) {
+//   try {
+//     const response = await this.apiRequest('/auth/mfa/verify', {
+//       method: 'POST',
+//       body: JSON.stringify({ email, code })
+//     });
     
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.message };
-    }
+//     if (!response.ok) {
+//       const error = await response.json();
+//       return { success: false, error: error.message };
+//     }
+    
+//     const data = await response.json();
+//     // Store tokens or session as needed
+//     return { success: true };
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// };
+
+// async resendMfaCode(email) {
+//   try {
+//     const response = await this.apiRequest('/auth/mfa/resend', {
+//       method: 'POST',
+//       body: JSON.stringify({ email })
+//     });
+    
+//     if (!response.ok) {
+//       throw new Error('Failed to resend code');
+//     }
+    
+//     return { success: true };
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// };
+
+// verify mfa
+async verifyMfaCode(email, otpCode, tempSession) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-mfa`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email, 
+        otpCode, 
+        tempSession 
+      })
+    });
     
     const data = await response.json();
-    // Store tokens or session as needed
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-async resendMfaCode(email) {
-  try {
-    const response = await this.apiRequest('/auth/mfa/resend', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
     
     if (!response.ok) {
-      throw new Error('Failed to resend code');
+      return { 
+        success: false, 
+        error: data.error || 'MFA verification failed' 
+      };
     }
     
-    return { success: true };
+    // MFA verification successful -> save tokens
+    await this.saveTokens(data.access_token, data.refresh_token);
+    
+    return { 
+      success: true, 
+      data 
+    };
   } catch (error) {
-    return { success: false, error: error.message };
+    console.error('MFA verification error:', error);
+    return { 
+      success: false, 
+      error: error.message || 'MFA verification failed' 
+    };
   }
-};
+}
 
 }
 

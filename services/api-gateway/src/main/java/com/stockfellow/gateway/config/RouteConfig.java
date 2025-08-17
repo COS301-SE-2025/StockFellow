@@ -22,23 +22,34 @@ public class RouteConfig {
 
     @Value("${services.notification-service.url:http://notification-service:4050}")
     private String notificationServiceUrl;
+
+    @Value("${services.mfa-service.url:http://mfa-service:8087}")
+    private String mfaServiceUrl;
     
     @Bean
     public List<Route> routes() {
         return Arrays.asList(
             // User service route
+             new Route(
+                "/api/users/register", // Registration endpoint (internal use by gateway)
+                false, // No auth required as it's called internally
+                new Route.RateLimit(15 * 60 * 1000L, 50), // More restrictive for registration
+                new Route.Proxy(userServiceUrl, true)
+            ),
+
+            
             new Route(
                 "/api/users/**",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                true,
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             ),
             
             // Group service route
             new Route(
                 "/api/groups/**",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                true,
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(groupServiceUrl, true)
             ),
             
@@ -46,23 +57,31 @@ public class RouteConfig {
             new Route(
                 "/api/transaction/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(transactionServiceUrl, true)
             ),
 
             // Notification service route
             new Route(
-                "/api/notification/**",
+                "/api/notifications/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(notificationServiceUrl, true)
+            ),
+
+            // MFA routes
+            new Route(
+                "/api/mfa/**",
+                false,
+                new Route.RateLimit(15 * 60 * 1000L, 100),
+                new Route.Proxy(mfaServiceUrl, true)
             ),
             
             // Default api route
             new Route(
                 "/api",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             )
         );

@@ -31,18 +31,24 @@ app:
     gateway:
       client-id: ${KEYCLOAK_GATEWAY_CLIENT_ID:api-gateway-client}
       client-secret: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:}
-    
-    # Frontend client (public)  
+
+    # Frontend client (public)
     frontend:
       client-id: ${KEYCLOAK_FRONTEND_CLIENT_ID:public-client}
       redirect-uri: ${KEYCLOAK_FRONTEND_REDIRECT_URI:http://localhost:3000/auth/callback}
-    
+
     # Admin configuration
     admin:
       username: ${KEYCLOAK_ADMIN_USERNAME:admin}
       password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
       realm: ${KEYCLOAK_ADMIN_REALM:master}
       client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+  mfa:
+    enabled: true
+
+mfa:
+  service:
+    url: http://localhost:8087
 
 # Logging configuration (replaces morgan)
 logging:
