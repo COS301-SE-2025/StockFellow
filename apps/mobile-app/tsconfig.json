@@ -11,6 +11,8 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -19,7 +21,8 @@
     },
     "types": [
       "expo",
-      "node"
+      "node",
+      "jest"
     ],
     "noEmit": true
   },
