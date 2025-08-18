@@ -106,6 +106,34 @@ public class KeycloakService {
         }
     }
 
+    // TEST METHOD: Exact duplicate of authenticateUser for test endpoint
+    // This method will remain unchanged for testing purposes
+    public Map<String, Object> authenticateUserForTesting(String username, String password) {
+        try {
+            // Create Keycloak client for direct access grants
+            Keycloak keycloak = KeycloakBuilder.builder()
+                    .serverUrl(keycloakServerUrl)
+                    .realm(realm)
+                    .clientId(frontendClientId)
+                    .username(username)
+                    .password(password)
+                    .build();
+
+            // Get access token
+            AccessTokenResponse tokenResponse = keycloak.tokenManager().getAccessToken();
+
+            return Map.of(
+                    "access_token", tokenResponse.getToken(),
+                    "refresh_token", tokenResponse.getRefreshToken(),
+                    "expires_in", tokenResponse.getExpiresIn(),
+                    "token_type", "Bearer");
+
+        } catch (Exception e) {
+            logger.error("TEST Authentication failed for user: " + username, e);
+            return Map.of("error", "Authentication failed", "details", e.getMessage());
+        }
+    }
+
     // Register new user
     public Map<String, Object> registerUser(RegisterRequest registerRequest) {
         try {

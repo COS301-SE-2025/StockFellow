@@ -108,6 +108,39 @@ public class AuthController {
         }
     }
 
+    // TEST ENDPOINT: Same as /login but on different endpoint for testing
+    @PostMapping("/test/login")
+    public ResponseEntity<?> testLogin(@RequestBody LoginRequest loginRequest) {
+        try {
+            System.out.println("TEST Login request received for user: " + loginRequest.getUsername());
+
+            // Validate input
+            if (loginRequest.getUsername() == null || loginRequest.getPassword() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Username and password are required"));
+            }
+
+            Map<String, Object> tokenResponse = keycloakService.authenticateUserForTesting(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword());
+
+            if (tokenResponse.containsKey("error")) {
+                System.err.println("TEST Login failed for user: " + loginRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(tokenResponse);
+            }
+
+            System.out.println("TEST Login successful for user: " + loginRequest.getUsername());
+            return ResponseEntity.ok(tokenResponse);
+
+        } catch (Exception e) {
+            System.err.println("TEST Login error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Authentication service unavailable",
+                            "details", e.getMessage()));
+        }
+    }
+
     // New endpoint for MFA verification
     @PostMapping("/verify-mfa")
     public ResponseEntity<?> verifyMFA(@RequestBody MFAVerifyRequest request) {
