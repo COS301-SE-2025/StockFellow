@@ -11,7 +11,7 @@ import java.util.List;
 @Configuration
 public class RouteConfig {
     
-    @Value("${services.user-service.url:http://user-service:4000}")
+    @Value("${services.user-service.url:http://user-service:4020}")
     private String userServiceUrl;
     
     @Value("${services.group-service.url:http://group-service:4040}")
@@ -30,18 +30,26 @@ public class RouteConfig {
     public List<Route> routes() {
         return Arrays.asList(
             // User service route
+             new Route(
+                "/api/users/register", // Registration endpoint (internal use by gateway)
+                false, // No auth required as it's called internally
+                new Route.RateLimit(15 * 60 * 1000L, 50), // More restrictive for registration
+                new Route.Proxy(userServiceUrl, true)
+            ),
+
+            
             new Route(
                 "/api/users/**",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                true,
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             ),
             
             // Group service route
             new Route(
                 "/api/groups/**",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                true,
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(groupServiceUrl, true)
             ),
             
@@ -49,7 +57,7 @@ public class RouteConfig {
             new Route(
                 "/api/transaction/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(transactionServiceUrl, true)
             ),
 
@@ -57,7 +65,7 @@ public class RouteConfig {
             new Route(
                 "/api/notifications/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(notificationServiceUrl, true)
             ),
 
@@ -65,7 +73,7 @@ public class RouteConfig {
             new Route(
                 "/api/mfa/**",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(mfaServiceUrl, true)
             ),
             
@@ -73,7 +81,7 @@ public class RouteConfig {
             new Route(
                 "/api",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 10),
+                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             )
         );

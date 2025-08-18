@@ -68,7 +68,7 @@ const MfaVerification = () => {
         if (text && index < 5) {
             inputRefs.current[index + 1]?.focus();
         }
-        
+
         // Auto-focus previous input if digit deleted
         if (!text && index > 0) {
             inputRefs.current[index - 1]?.focus();
@@ -120,50 +120,50 @@ const MfaVerification = () => {
     // };
 
 
-const handleVerify = async () => {
-    const verificationCode = digits.join('');
-    if (verificationCode.length !== 6) {
-        Alert.alert('Invalid Code', 'Please enter a complete 6-digit verification code');
-        return;
-    }
+    const handleVerify = async () => {
+        const verificationCode = digits.join('');
+        if (verificationCode.length !== 6) {
+            Alert.alert('Invalid Code', 'Please enter a complete 6-digit verification code');
+            return;
+        }
 
-    setIsSubmitting(true);
-    try {
-        
-        const result = await authService.verifyMfaCode(
-            email.toString(), 
-            verificationCode,
-            params.tempSession?.toString() || ''  
-        );
+        setIsSubmitting(true);
+        try {
 
-        if (result.success) {
-            router.push('/(tabs)/home');
-        } else {
-            let errorMessage = 'Verification failed. Please try again.';
-            if (result.error?.includes('expired')) {
-                errorMessage = 'This code has expired. Please request a new one.';
-            } else if (result.error?.includes('invalid')) {
-                errorMessage = 'Invalid verification code. Please try again.';
+            const result = await authService.verifyMfaCode(
+                email.toString(),
+                verificationCode,
+                params.tempSession?.toString() || ''
+            );
+
+            if (result.success) {
+                router.push('/(tabs)/home');
+            } else {
+                let errorMessage = 'Verification failed. Please try again.';
+                if (result.error?.includes('expired')) {
+                    errorMessage = 'This code has expired. Please request a new one.';
+                } else if (result.error?.includes('invalid')) {
+                    errorMessage = 'Invalid verification code. Please try again.';
+                }
+                Alert.alert('Verification Error', errorMessage);
+                setDigits(Array(6).fill(''));
+                inputRefs.current[0]?.focus();
             }
-            Alert.alert('Verification Error', errorMessage);
+        } catch (error) {
+            let errorMessage = 'Unable to verify code. Please try again.';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+            Alert.alert('Network Error', errorMessage);
+            console.error('MFA verification error:', error);
             setDigits(Array(6).fill(''));
             inputRefs.current[0]?.focus();
+        } finally {
+            setIsSubmitting(false);
         }
-    } catch (error) {
-        let errorMessage = 'Unable to verify code. Please try again.';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
-        Alert.alert('Network Error', errorMessage);
-        console.error('MFA verification error:', error);
-        setDigits(Array(6).fill(''));
-        inputRefs.current[0]?.focus();
-    } finally {
-        setIsSubmitting(false);
-    }
-};
+    };
 
-  // resend endpoint not implemented in backend 
+    // resend endpoint not implemented in backend 
 
     // const handleResendCode = async () => {
     //     if (countdown > 0) {
@@ -220,24 +220,24 @@ const handleVerify = async () => {
                                         resizeMode="contain"
                                     />
                                 </TouchableOpacity>
-                                <Text className="text-2xl font-semibold my-3">Verify Your Identity</Text>
+                                <Text className="text-xl font-['PlusJakartaSans-SemiBold'] my-3">Verify Your Identity</Text>
                             </View>
-                            
+
                             <Image
                                 source={icons.email}
                                 className="w-40 h-40 self-center"
                                 resizeMode="contain"
                             />
-                            
-                            <Text className="text-m text-left mb-3 text-[#0C0C0F] font-light">
+
+                            <Text className="text-m text-left mb-3 text-[#0C0C0F] ffont-['PlusJakartaSans-Light']">
                                 We've sent a 6-digit code to {email}
                             </Text>
 
                             {/* 6-Digit Input Boxes */}
                             <View className="flex-row justify-between my-6">
                                 {Array.from({ length: 6 }).map((_, index) => (
-                                    <View 
-                                        key={index} 
+                                    <View
+                                        key={index}
                                         className={`w-12 h-16 border rounded-xl flex items-center justify-center 
                                             ${digits[index] ? 'border-[#1DA1FA]' : 'border-gray-300'}`}
                                     >
@@ -247,7 +247,7 @@ const handleVerify = async () => {
                                                     inputRefs.current[index] = el;
                                                 }
                                             }}
-                                            className="text-2xl text-center w-full h-full"
+                                            className="text-2xl text-center w-full h-full font-['PlusJakartaSans-Regular']"
                                             keyboardType="number-pad"
                                             maxLength={1}
                                             value={digits[index]}
@@ -260,8 +260,8 @@ const handleVerify = async () => {
                             </View>
 
                             <View className="flex-row items-center mt-4 justify-center">
-                                <Text className="text-[#0C0C0F] text-sm">
-                                    Didn't receive a code? Please go back to login and try again.
+                                <Text className="text-[#0C0C0F] text-sm font-['PlusJakartaSans-Regular']">
+                                    Didn't receive a code? Return to login and try again.
                                 </Text>
                                 {/* <Text
                                     className={`text-sm ${countdown > 0 ? 'text-[#1DA1FA]' : 'text-[#1DA1FA] font-medium'}`}
@@ -277,12 +277,12 @@ const handleVerify = async () => {
                                 textStyles="text-white text-lg"
                                 handlePress={handleVerify}
                                 isLoading={isSubmitting}
-                                //disabled={!digits.every(d => d !== '')}
+                                disabled={isSubmitting} 
                             />
 
-                            <Text className="text-xs text-[#71727A] mt-4 text-center">
+                            <Text className="text-xs text-[#71727A]  text-center">
                                 For security reasons, this code will expire in {codeExpiryMinutes} minutes.
-                                {countdown > 0 && ` You can request a new code in ${countdown} seconds.`}
+                                {/* {countdown > 0 && ` You can request a new code in ${countdown} seconds.`} */}
                             </Text>
                         </View>
                     </View>
