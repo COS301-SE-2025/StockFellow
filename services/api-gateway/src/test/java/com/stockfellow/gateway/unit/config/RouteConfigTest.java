@@ -17,7 +17,7 @@ class RouteConfigTest {
     @BeforeEach
     void setUp() {
         routeConfig = new RouteConfig();
-        ReflectionTestUtils.setField(routeConfig, "userServiceUrl", "http://user-service:4000");
+        ReflectionTestUtils.setField(routeConfig, "userServiceUrl", "http://user-service:4020");
         ReflectionTestUtils.setField(routeConfig, "groupServiceUrl", "http://group-service:4040");
         // ReflectionTestUtils.setField(routeConfig, "transactionServiceUrl", "http://transaction-service:4080");
     }
@@ -41,7 +41,7 @@ class RouteConfigTest {
                 .orElseThrow();
         
         assertFalse(userRoute.isAuth());
-        assertEquals("http://user-service:4000", userRoute.getProxy().getTarget());
+        assertEquals("http://user-service:4020", userRoute.getProxy().getTarget());
         assertNotNull(userRoute.getRateLimit());
         assertEquals(10, userRoute.getRateLimit().getMax());
     }

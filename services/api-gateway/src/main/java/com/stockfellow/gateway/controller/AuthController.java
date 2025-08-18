@@ -192,18 +192,18 @@ public class AuthController {
                     registerRequest.getLastName()
                 );
 
-                // if (userServiceResponse.containsKey("error")) {
-                //     logger.error("User service registration failed for user: {} - {}", 
-                //                registerRequest.getUsername(), userServiceResponse.get("error"));
+                if (userServiceResponse.containsKey("error")) {
+                    logger.error("User service registration failed for user: {} - {}", 
+                               registerRequest.getUsername(), userServiceResponse.get("error"));
                     
-                //     // TODO: Consider rolling back Keycloak user creation here
-                //     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                //             .body(Map.of(
-                //                 "error", "Registration partially failed",
-                //                 "message", "User created in identity provider but database creation failed",
-                //                 "details", userServiceResponse.get("error")
-                //             ));
-                // }
+                    // TODO: Consider rolling back Keycloak user creation here
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of(
+                                "error", "Registration partially failed",
+                                "message", "User created in identity provider but database creation failed",
+                                "details", userServiceResponse.get("error")
+                            ));
+                }
 
             
             } catch (Exception e) {
