@@ -55,7 +55,8 @@ class AuthService {
       });
 
       const data = await response.json();
-
+      console.log("LOGINDATA: "+ data.mfa_required, data.access_token, data.refresh_token);
+      
       if (!response.ok) {
         throw new Error(data.error || data.details || 'Login failed');
       }

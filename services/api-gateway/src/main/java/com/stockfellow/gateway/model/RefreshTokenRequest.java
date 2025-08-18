@@ -1,7 +1,6 @@
 package com.stockfellow.gateway.model;
 
 import java.util.Map;
-import java.util.Set;
 
 public class RefreshTokenRequest {
     private String refreshToken;

@@ -41,7 +41,7 @@ class RateLimitFilterTest {
         testRoutes = Arrays.asList(
             new Route("/api/user", false, 
                 new Route.RateLimit(1000L, 2), // 2 requests per second for testing
-                new Route.Proxy("http://user-service:4000", true))
+                new Route.Proxy("http://user-service:4020", true))
             // new Route("/api/transaction", true,
             //     new Route.RateLimit(1000L, 1), // 1 request per second for testing
             //     new Route.Proxy("http://transaction-service:4080", true))

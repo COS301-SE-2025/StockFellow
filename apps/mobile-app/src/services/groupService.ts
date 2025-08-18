@@ -77,7 +77,7 @@ interface NextPayeeResult {
 }
 
 class GroupService {
-  private baseUrl = '/api/groups';
+  private baseUrl = '/groups';
 
   async getServiceInfo(): Promise<any> {
     try {

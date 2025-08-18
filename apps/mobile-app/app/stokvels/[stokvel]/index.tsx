@@ -163,13 +163,17 @@ const Stokvel = () => {
 
     try {
       if (stokvel.userPermissions.isAdmin) {
-        // Admin/Founder - navigate to edit page
-        router.push(`/stokvels/${id}/editStokvel`);
+        // Pass both id and groupId as params
+        router.push({
+          pathname: `/stokvels/${id}/editStokvel`,
+          params: {
+            id: id,
+            groupId: id // Make sure we're passing the correct ID
+          }
+        });
       } else if (stokvel.userPermissions.isMember) {
-        // Member - leave group (disabled for now)
         Alert.alert('Info', 'Leave functionality coming soon');
       } else {
-        // Not a member - show mandate modal
         setShowMandateModal(true);
       }
     } catch (error) {

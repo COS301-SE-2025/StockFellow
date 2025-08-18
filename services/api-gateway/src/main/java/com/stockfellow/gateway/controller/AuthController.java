@@ -2,11 +2,16 @@ package com.stockfellow.gateway.controller;
 
 import com.stockfellow.gateway.service.KeycloakService;
 import com.stockfellow.gateway.service.TokenValidationService;
+import com.stockfellow.gateway.service.UserServiceClient;
+import com.stockfellow.gateway.service.UserServiceClient;
 import com.stockfellow.gateway.model.RefreshTokenResponse;
 import com.stockfellow.gateway.model.RefreshTokenRequest;
+import com.stockfellow.gateway.service.UserServiceClient;
+import org.springframework.http.MediaType;
 import com.stockfellow.gateway.model.TokenValidationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -21,6 +26,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.tomcat.jni.User;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,6 +37,7 @@ public class AuthController {
     private final KeycloakService keycloakService;
     private final TokenValidationService tokenValidationService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final UserServiceClient userServiceClient;
 
     @Value("${keycloak.auth-server-url}")
     private String keycloakServerUrl;
@@ -41,11 +48,12 @@ public class AuthController {
     @Value("${app.keycloak.frontend.client-id}")
     private String frontendClientId;
 
-    public AuthController(KeycloakService keycloakService, TokenValidationService tokenValidationService,
-            RedisTemplate<String, String> redisTemplate) {
+    public AuthController(KeycloakService keycloakService, TokenValidationService tokenValidationService, RedisTemplate<String, 
+    String> redisTemplate, UserServiceClient userServiceClient) {
         this.keycloakService = keycloakService;
         this.tokenValidationService = tokenValidationService;
         this.redisTemplate = redisTemplate;
+        this.userServiceClient = userServiceClient;
     }
 
     // Redirects to KC login page where there is forgot password and aditional
@@ -92,6 +100,7 @@ public class AuthController {
             Map<String, Object> tokenResponse = keycloakService.authenticateUserWithMFA(
                     loginRequest.getUsername(),
                     loginRequest.getPassword());
+
 
             if (tokenResponse.containsKey("error")) {
                 System.err.println("Login failed for user: " + loginRequest.getUsername());
@@ -196,8 +205,48 @@ public class AuthController {
                 }
             }
 
+            // Extract Keycloak user ID from response
+            String keycloakUserId = (String) registrationResponse.get("userId");
+            if (keycloakUserId == null) {
+                logger.error("Keycloak registration succeeded but no userId returned for: {}", registerRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Registration partially failed - no user ID"));
+            }
+
+            logger.info("Keycloak registration successful for user: {} with ID: {}", registerRequest.getUsername(), keycloakUserId);
+
+            // Step 2: Forward user data to User Service
+            try {
+                Map<String, Object> userServiceResponse = userServiceClient.createUser(
+                    keycloakUserId,
+                    registerRequest.getUsername(),
+                    registerRequest.getEmail(),
+                    registerRequest.getFirstName(),
+                    registerRequest.getLastName()
+                );
+
+                if (userServiceResponse.containsKey("error")) {
+                    logger.error("User service registration failed for user: {} - {}", 
+                               registerRequest.getUsername(), userServiceResponse.get("error"));
+                    
+                    // TODO: Consider rolling back Keycloak user creation here
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of(
+                                "error", "Registration partially failed",
+                                "message", "User created in identity provider but database creation failed",
+                                "details", userServiceResponse.get("error")
+                            ));
+                }
+
+            
+            } catch (Exception e) {
+                logger.error("Error creating user record in user service for user: {}", registerRequest.getUsername(), e);
+            }
+          
+
             System.out.println("User registered successfully: " + registerRequest.getUsername());
             return ResponseEntity.ok(registrationResponse);
+
 
         } catch (Exception e) {
             System.err.println("Registration error: " + e.getMessage());
@@ -205,6 +254,7 @@ public class AuthController {
                     .body(Map.of(
                             "error", "Registration service unavailable",
                             "details", e.getMessage()));
+
         }
     }
 
@@ -259,6 +309,7 @@ public class AuthController {
                         "user_id", result.getTokenInfo().getUserId(),
                         "username", result.getTokenInfo().getUsername(),
                         "roles", result.getTokenInfo().getRoles()));
+
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("valid", false, "message", result.getMessage()));
@@ -286,6 +337,58 @@ public class AuthController {
             logger.error("Logout failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "logout_failed", "message", "Logout failed"));
+        }
+    }
+
+    /**
+     * Endpoint to handle ID verification - forwards the PDF to user service
+     */
+    @PostMapping(value = "/verify-id", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> verifyUserID(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String authHeader) {
+        
+        try {
+            // Validate token and extract user info
+            TokenValidationResult validation = tokenValidationService.validateRequest("/api/auth/verify-id", authHeader);
+            
+            if (!validation.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "unauthorized", "message", validation.getMessage()));
+            }
+            
+            String userId = validation.getTokenInfo().getUserId();
+            String username = validation.getTokenInfo().getUsername();
+            
+            logger.info("ID verification request from user: {} (ID: {})", username, userId);
+            
+            // Forward the PDF to user service for processing
+            try {
+                Map<String, Object> verificationResult = userServiceClient.verifyUserID(file, userId, authHeader);
+                
+                if (verificationResult.containsKey("error")) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(verificationResult);
+                }
+                
+                logger.info("ID verification completed successfully for user: {}", username);
+                return ResponseEntity.ok(verificationResult);
+                
+            } catch (Exception e) {
+                logger.error("Error communicating with user service for ID verification", e);
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of(
+                        "error", "service_unavailable",
+                        "message", "User service is currently unavailable"
+                    ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("Unexpected error during ID verification", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "error", "server_error",
+                    "message", "An unexpected error occurred"
+                ));
         }
     }
 
