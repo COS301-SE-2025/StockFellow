@@ -7,12 +7,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test:integration": "dotenv -e .env.test jest --config jest.integration.config.js",
-    "test:integration:watch": "dotenv -e .env.test jest --config jest.integration.config.js --watch",
-    "test:integration:coverage": "dotenv -e .env.test jest --config jest.integration.config.js --coverage"
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:integration:watch": "jest --config jest.integration.config.js --watch",
+    "test:integration:coverage": "jest --config jest.integration.config.js --coverage"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.1.4",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.3.0",
     "@react-native-vector-icons/material-design-icons": "^12.0.0",
     "@react-navigation/native": "^7.1.9",
@@ -37,9 +38,15 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.0.10",
+    "babel-jest": "^30.0.5",
+    "dotenv": "^17.2.1",
+    "identity-obj-proxy": "^3.0.0",
     "jest": "^30.0.5",
     "jest-environment-node": "^30.0.5",
     "ts-jest": "^29.4.1",
