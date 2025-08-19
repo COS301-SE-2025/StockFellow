@@ -69,3 +69,4 @@ services:
     url: http://transaction-service:4080
   notification:
     url: http://notification-service:4050
+   
