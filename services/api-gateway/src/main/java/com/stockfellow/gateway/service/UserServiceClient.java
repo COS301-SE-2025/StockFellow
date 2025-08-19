@@ -73,8 +73,8 @@ public class UserServiceClient {
      * Create user in User Service database after Keycloak registration
      * forward to user service to create user record
      */
-    public Map<String, Object> createUser(String userId, String username, String email, 
-                                        String firstName, String lastName) {
+   public Map<String, Object> createUser(String userId, String username, String email, String firstName, String lastName) {
+    
         try {
             String url = userServiceUrl + "/api/users/register";
             
@@ -90,6 +90,9 @@ public class UserServiceClient {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("X-Gateway-Request", "true"); // Identify as gateway request
+            headers.set("X-Service-Auth", "gateway-service"); // Add service authentication
+            // Alternative: Use a shared secret or service token
+            // headers.set("X-Service-Token", serviceToken);
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
@@ -107,7 +110,7 @@ public class UserServiceClient {
                 return (Map<String, Object>) response.getBody();
             } else {
                 logger.error("User Service returned non-success status: {} for user: {}", 
-                           response.getStatusCode(), username);
+                        response.getStatusCode(), username);
                 return Map.of("error", "User creation failed", "status", response.getStatusCode().value());
             }
 
