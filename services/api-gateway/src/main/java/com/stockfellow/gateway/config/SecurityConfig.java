@@ -30,6 +30,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         super.configure(http);
         http.authorizeRequests()
+            .antMatchers("/api/users/register").permitAll()
             .antMatchers("/api/users/**").permitAll()
             .antMatchers("/api/group/**").permitAll() 
             .antMatchers("/api/auth/mfa/**").permitAll()
