@@ -10,6 +10,8 @@ import com.stockfellow.userservice.dto.AffordabilityTierResult;
 import com.stockfellow.userservice.dto.BankStatementUploadRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
@@ -74,11 +76,41 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody RegisterUserRequest request, HttpServletRequest httpRequest) {
         try {
+            logger.info("=== USER SERVICE REGISTER ENDPOINT HIT ===");
             logger.info("User registration request received for userId: {}, username: {}", 
-                       request.getUserId(), request.getUsername());
+                    request.getUserId(), request.getUsername());
+            
+            // Debug: Log all headers
+            logger.info("=== REQUEST HEADERS ===");
+            httpRequest.getHeaderNames().asIterator().forEachRemaining(headerName -> {
+                logger.info("Header: {} = {}", headerName, httpRequest.getHeader(headerName));
+            });
+            
+            // Debug: Log authentication info
+            logger.info("=== AUTHENTICATION INFO ===");
+            logger.info("Remote address: {}", httpRequest.getRemoteAddr());
+            logger.info("Request URI: {}", httpRequest.getRequestURI());
+            logger.info("Request method: {}", httpRequest.getMethod());
+            logger.info("Content type: {}", httpRequest.getContentType());
+            
+            // Check authentication context
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null) {
+                    logger.info("Authentication present: {}", authentication.getClass().getSimpleName());
+                    logger.info("Principal: {}", authentication.getPrincipal());
+                    logger.info("Authorities: {}", authentication.getAuthorities());
+                    logger.info("Is authenticated: {}", authentication.isAuthenticated());
+                } else {
+                    logger.info("No authentication found in SecurityContext");
+                }
+            } catch (Exception e) {
+                logger.error("Error getting authentication context", e);
+            }
 
             // Validate required fields
             if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+                logger.error("Registration failed: User ID is missing");
                 return ResponseEntity.status(400).body(Map.of(
                     "error", "Invalid request",
                     "message", "User ID is required"
@@ -86,6 +118,7 @@ public class UserController {
             }
 
             if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+                logger.error("Registration failed: Username is missing");
                 return ResponseEntity.status(400).body(Map.of(
                     "error", "Invalid request", 
                     "message", "Username is required"
@@ -93,11 +126,14 @@ public class UserController {
             }
 
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                logger.error("Registration failed: Email is missing");
                 return ResponseEntity.status(400).body(Map.of(
                     "error", "Invalid request",
                     "message", "Email is required"
                 ));
             }
+
+            logger.info("=== PROCEEDING WITH USER CREATION ===");
 
             // Check if user already exists
             User existingUser = userService.getUserByUserId(request.getUserId());
@@ -145,8 +181,9 @@ public class UserController {
                 ));
             }
 
+            logger.info("=== USER SUCCESSFULLY CREATED ===");
             logger.info("User successfully registered in database: userId={}, id={}", 
-                       savedUser.getUserId(), savedUser.getId());
+                    savedUser.getUserId(), savedUser.getId());
 
             // Prepare response
             Map<String, Object> response = new HashMap<>();
@@ -183,9 +220,11 @@ public class UserController {
 
             response.put("timestamp", System.currentTimeMillis());
 
+            logger.info("=== RETURNING SUCCESS RESPONSE ===");
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            logger.error("=== UNEXPECTED ERROR IN USER REGISTRATION ===");
             logger.error("Unexpected error during user registration for userId: {}", 
                         request != null ? request.getUserId() : "null", e);
             return ResponseEntity.status(500).body(Map.of(
@@ -194,7 +233,6 @@ public class UserController {
                 "details", e.getMessage()
             ));
         }
-
     }
 
     @GetMapping("/profile")
