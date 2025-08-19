@@ -313,23 +313,18 @@ services:
     depends_on:
       - user-service-postgres
       - keycloak
-      # - alfresco-content-repository
     ports:
       - "${USER_SERVICE_PORT}:4020"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
       - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
-      - POSTGRES_HOST=user-service-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=userservice_db
-      - POSTGRES_USER=userservice_user
-      - POSTGRES_PASSWORD=userservice_pass
+      - USER_SERVICE_POSTGRES_HOST=${USER_SERVICE_POSTGRES_HOST}  # Use env var
+      - USER_SERVICE_POSTGRES_PORT=${USER_SERVICE_POSTGRES_PORT}  # Use env var
+      - USER_SERVICE_POSTGRES_DB=${USER_SERVICE_POSTGRES_DB}      # Use env var
+      - USER_SERVICE_POSTGRES_USER=${USER_SERVICE_POSTGRES_USER}  # Use env var
+      - USER_SERVICE_POSTGRES_PASSWORD=${USER_SERVICE_POSTGRES_PASSWORD}  # Use env var
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
-      # - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
-      # - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
-      # - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
-      # - ALFRESCO_SITE_NAME=${ALFRESCO_SITE_NAME:-stockfellow}
       - JVM_OPTS=${USER_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
@@ -348,7 +343,7 @@ services:
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
     restart: unless-stopped
-  
+    
   # Group Service (Spring Boot)
   group-service:
     build:
