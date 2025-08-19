@@ -1,5 +1,6 @@
 package com.stockfellow.groupservice.service;
 
+import com.stockfellow.groupservice.controller.GroupsController;
 import com.stockfellow.groupservice.dto.CreateGroupResult;
 import com.stockfellow.groupservice.dto.UpdateGroupRequest;
 import com.stockfellow.groupservice.model.Group;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,19 +21,23 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@WebMvcTest(GroupsController.class)
 public class GroupServiceTest {
 
     @Mock
     private GroupRepository groupRepository;
 
-    @Mock
-    private EventStoreService eventStoreService;
+    // @Mock
+    // private EventStoreService eventStoreService;
 
     @Mock
     private GroupMemberService groupMemberService;
 
     @InjectMocks
     private GroupService groupService;
+
+    @MockBean
+    private EventStoreService eventStoreService; // Add this line
 
     @Test
     public void updateGroup_ValidRequest_Success() {
