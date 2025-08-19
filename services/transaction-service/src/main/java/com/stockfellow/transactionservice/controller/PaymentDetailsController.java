@@ -95,7 +95,7 @@ public class PaymentDetailsController {
      */
     @PostMapping("/payer/initialize")
     @Operation(summary = "Initialize card authorization", 
-               description = "Initialize Paystack payment to capture and save user's card details")
+            description = "Initialize Paystack payment to capture and save user's card details")
     public ResponseEntity<?> initializeCardAuthorization(
             @Valid @RequestBody InitializeCardAuthDto initializeDto, 
             HttpServletRequest httpRequest) {
@@ -110,7 +110,10 @@ public class PaymentDetailsController {
             logger.info("Initializing payer details for user: {}", userId);
             
             initializeDto.setUserId(userId);
-            return ResponseEntity.ok(paymentDetailsService.initializeCardAuth(initializeDto));
+            
+            // Return 201 CREATED for resource creation
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(paymentDetailsService.initializeCardAuth(initializeDto));
             
         } catch (Exception e) {
             logger.error("Error initializing card details for user: {}", e.getMessage(), e);

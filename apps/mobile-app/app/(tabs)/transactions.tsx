@@ -1,6 +1,6 @@
 // apps/mobile-app/app/(tabs)/transactions.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DebitCard from '../../src/components/DebitCard';
@@ -12,98 +12,109 @@ import cardService from '../../src/services/cardService';
 
 const Transactions = () => {
   const router = useRouter();
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      type: 'contribution',
-      amount: 500,
-      groupName: 'Family Stokvel',
-      date: '2025-06-15',
-      profileImage: null,
-    },
-    {
-      id: '2',
-      type: 'payout',
-      amount: 1200,
-      groupName: 'Work Stokvel',
-      date: '2025-06-10',
-      profileImage: null,
-    },
-    {
-      id: '3',
-      type: 'contribution',
-      amount: 300,
-      groupName: 'Neighborhood Group',
-      date: '2025-05-28',
-      profileImage: null,
-    },
-    {
-      id: '4',
-      type: 'payout',
-      amount: 800,
-      groupName: 'Church Savings',
-      date: '2025-05-15',
-      profileImage: null,
-    },
-    {
-      id: '5',
-      type: 'contribution',
-      amount: 450,
-      groupName: 'Friends Circle',
-      date: '2025-04-30',
-      profileImage: null,
-    },
-    {
-      id: '6',
-      type: 'payout',
-      amount: 450,
-      groupName: 'Family Stokvel',
-      date: '2025-04-30',
-      profileImage: null,
-    },
-    {
-      id: '7',
-      type: 'contribution',
-      amount: 450,
-      groupName: 'Friends Circle',
-      date: '2025-04-30',
-      profileImage: null,
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<any[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMoreTransactions, setHasMoreTransactions] = useState(true);
 
+  // Fetch transactions function
+  const fetchTransactions = async (page: number = 0, append: boolean = false) => {
+    try {
+      if (!append) setTransactionsLoading(true);
+      
+      const response = await cardService.fetchTransactions(page, 20);
+      
+      // Transform backend data to your Transaction interface
+      const formattedTransactions = response.content.map(tx => ({
+        id: tx.id,
+        type: tx.type.toLowerCase(), // Assuming backend returns CONTRIBUTION/PAYOUT
+        amount: tx.amount,
+        groupName: tx.groupName || 'Unknown Group',
+        date: tx.createdAt || tx.date,
+        profileImage: tx.profileImage || null,
+      }));
+
+      if (append) {
+        setTransactions(prev => [...prev, ...formattedTransactions]);
+      } else {
+        setTransactions(formattedTransactions);
+      }
+      
+      setHasMoreTransactions(!response.last);
+      setCurrentPage(page);
+      
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      // Optionally show error toast/alert
+    } finally {
+      setTransactionsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch cards function (your existing logic)
+  const fetchCards = async () => {
+    try {
+      setCardsLoading(true);
+      const userCards = await cardService.getUserBankDetails();
+      const formattedCards = userCards.map(card => ({
+        id: card.id,
+        bank: card.bank,
+        last4Digits: card.last4Digits,
+        cardHolder: card.cardHolder,
+        expiryMonth: card.expiryMonth.toString().padStart(2, '0'),
+        expiryYear: (card.expiryYear % 100).toString().padStart(2, '0'),
+        cardType: card.cardType.toLowerCase() as 'mastercard' | 'visa',
+        isActive: card.isActive
+      }));
+      setCards(formattedCards);
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+    } finally {
+      setCardsLoading(false);
+    }
+  };
+
+  // Load more transactions (for pagination)
+  const loadMoreTransactions = () => {
+    if (!transactionsLoading && hasMoreTransactions) {
+      fetchTransactions(currentPage + 1, true);
+    }
+  };
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    Promise.all([
+      fetchTransactions(0, false),
+      fetchCards()
+    ]).finally(() => setRefreshing(false));
+  }, []);
+
+  // Initial load
   useEffect(() => {
-    const fetchCards = async () => {
+    const loadInitialData = async () => {
+      setLoading(true);
       try {
-        const userCards = await cardService.getUserBankDetails();
-        const formattedCards = userCards.map(card => ({
-          id: card.id,
-          bank: card.bank,
-          last4Digits: card.last4Digits,
-          cardHolder: card.cardHolder,
-          expiryMonth: card.expiryMonth.toString().padStart(2, '0'),
-          expiryYear: (card.expiryYear % 100).toString().padStart(2, '0'),
-          cardType: card.cardType.toLowerCase() as 'mastercard' | 'visa',
-          isActive: card.isActive
-        }));
-        setCards(formattedCards);
-        console.log(formattedCards);
-      } catch (error) {
-        console.error('Error fetching cards:', error);
+        await Promise.all([
+          fetchTransactions(0, false),
+          fetchCards()
+        ]);
       } finally {
-        setCardsLoading(false);
         setLoading(false);
       }
     };
 
-    fetchCards();
+    loadInitialData();
   }, []);
 
   const activeCard = cards.find(card => card.isActive) || null;
 
-  if (loading || cardsLoading) {
+  if (loading) {
     return (
       <GestureHandlerRootView className="flex-1">
         <SafeAreaView className="flex-1 bg-white">
@@ -125,8 +136,21 @@ const Transactions = () => {
           contentContainerStyle={{ flexGrow: 1, paddingTop: 20, paddingBottom: 80 }}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          onScroll={({ nativeEvent }) => {
+            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+            const paddingToBottom = 20;
+            if (layoutMeasurement.height + contentOffset.y >= 
+                contentSize.height - paddingToBottom) {
+              loadMoreTransactions();
+            }
+          }}
+          scrollEventThrottle={400}
         >
           <View className="w-full flex-1 justify-start items-center h-full px-6">
+            {/* Your existing card UI */}
             <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start">
               My Debit Card
             </Text>
@@ -163,7 +187,14 @@ const Transactions = () => {
               <TransactionLog transactions={transactions} />
             </View>
 
-            {transactions.length === 0 && (
+            {/* Loading indicator for pagination */}
+            {transactionsLoading && transactions.length > 0 && (
+              <View className="w-full items-center py-4">
+                <ActivityIndicator size="small" color="#0000ff" />
+              </View>
+            )}
+
+            {transactions.length === 0 && !transactionsLoading && (
               <View className="w-full items-center justify-center py-10">
                 <Text className="text-gray-500 text-center">
                   No transactions found. Your transaction history will appear here.
@@ -173,7 +204,7 @@ const Transactions = () => {
           </View>
         </ScrollView>
 
-        {/* Fixed Add Card Button (shown only when no cards exist) */}
+        {/* Your existing fixed add card button */}
         {!activeCard && (
           <View className="absolute bottom-5 left-0 right-0 px-6">
             <TouchableOpacity

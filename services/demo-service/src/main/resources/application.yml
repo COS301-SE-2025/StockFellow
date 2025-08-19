@@ -1,0 +1,71 @@
+#src/main/resources/application.yml
+server:
+  port: ${SERVER_PORT:8090}
+
+spring:
+  application:
+    name: demo-orchestrator-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  
+  websocket:
+    allowed-origins: "*"
+  
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+services:
+  gateway:
+    url: ${SERVICES_GATEWAY_URL:http://localhost:3000}
+  user:
+    url: ${SERVICES_USER_SERVICE_URL:http://localhost:4000}
+  group:
+    url: ${SERVICES_GROUP_SERVICE_URL:http://localhost:4040}
+  transaction:
+    url: ${SERVICES_TRANSACTION_SERVICE_URL:http://localhost:4080}
+  notification:
+    url: ${SERVICES_NOTIFICATION_SERVICE_URL:http://localhost:4050}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.stockfellow: ${LOGGING_LEVEL_COM_STOCKFELLOW:INFO}
+    org.springframework.web: DEBUG
+
+# WebClient configuration
+webclient:
+  timeout:
+    connection: 5000
+    read: 30000
+    write: 5000
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+
+services:
+  gateway:
+    url: http://api-gateway:3000
+  user:
+    url: http://user-service:4000
+  group:
+    url: http://group-service:4040
+  transaction:
+    url: http://transaction-service:4080
+  notification:
+    url: http://notification-service:4050

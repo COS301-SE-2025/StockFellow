@@ -8,9 +8,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import java.util.Map;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 
 import io.swagger.v3.oas.annotations.tags.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +24,6 @@ import io.swagger.v3.oas.annotations.Operation;
 @RequestMapping("/api/transactions")
 @CrossOrigin(origins = "*")
 public class TransactionController {
-    
     @Autowired
     private TransactionService transactionService;
     
@@ -84,12 +87,27 @@ public class TransactionController {
     }
     
     // Get transactions by user
-    @GetMapping("/user/{userId}")
+    @GetMapping("/user")
     public ResponseEntity<Page<TransactionResponseDto>> getTransactionsByUser(
-            @PathVariable UUID userId, 
-            Pageable pageable) {
-        Page<Transaction> transactions = transactionService.findByUserId(userId, pageable);
-        return ResponseEntity.ok(transactions.map(TransactionResponseDto::fromEntity));
+            HttpServletRequest request,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(request); // Fixed variable name
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return (ResponseEntity<Page<TransactionResponseDto>>) userIdResponse;
+            }
+
+            UUID userId = (UUID) userIdResponse.getBody();
+            
+            Page<Transaction> transactions = transactionService.findByUserId(userId, pageable);
+            Page<TransactionResponseDto> responseDto = transactions.map(TransactionResponseDto::fromEntity);
+            
+            return ResponseEntity.ok(responseDto);
+            
+        } catch (Exception e) {
+            // logger.error("Error fetching transactions for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     
     // Retry failed transaction
@@ -97,5 +115,27 @@ public class TransactionController {
     public ResponseEntity<TransactionResponseDto> retryTransaction(@PathVariable UUID transactionId) {
         Transaction transaction = transactionService.retryTransaction(transactionId);
         return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
+    }
+    
+    /**
+     * Helper method to extract and validate user ID from headers
+     */
+    private ResponseEntity<?> extractUserIdFromHeaders(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        
+        if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+            // logger.warn("Missing X-User-Id header in request");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "User ID not found in request headers"));
+        }
+        
+        try {
+            UUID userId = UUID.fromString(userIdHeader);
+            return ResponseEntity.ok(userId);
+        } catch (IllegalArgumentException e) {
+            // logger.error("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+        }
     }
 }

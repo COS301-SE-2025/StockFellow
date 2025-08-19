@@ -79,6 +79,32 @@ const cardService = {
         }
     },
 
+    // In src/services/cardService.ts
+    async fetchTransactions(page: number = 0, size: number = 20): Promise<{
+        content: any[]; // Your transaction type
+        totalElements: number;
+        totalPages: number;
+        last: boolean;
+        first: boolean;
+        numberOfElements: number;
+    }> {
+        try {
+            const response = await authService.apiRequest(
+                `/transactions/user?page=${page}&size=${size}&sort=createdAt,desc`
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to fetch transactions');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+            throw error;
+        }
+    }, 
+
     /**
      * Get all saved cards for the authenticated user
      */

@@ -32,8 +32,9 @@ public class Transaction {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20, columnDefinition = "transaction_status")
+    @Column(name = "status", nullable = false, length = 20)
     private TransactionStatus status;
+
     
     @Column(name = "gateway_status")
     private String gatewayStatus;

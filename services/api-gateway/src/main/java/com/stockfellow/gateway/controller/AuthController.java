@@ -52,6 +52,7 @@ public class AuthController {
     }
     
     // Redirects to KC login page where there is forgot password and aditional features
+    // Deprecated
     @GetMapping("/login")
     public void login(HttpServletResponse response) throws IOException {
         System.out.println("Login endpoint hit");
