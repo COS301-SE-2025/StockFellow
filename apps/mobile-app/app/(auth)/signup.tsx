@@ -425,6 +425,7 @@ const SignUp = () => {
                   textStyles="text-white text-lg"
                   handlePress={handleSignup}
                   isLoading={isSubmitting}
+                  disabled={isSubmitting}  // Add this line to prevent multiple submissions
                 />
 
                 <View className="flex-row justify-center gap-2 mt-1">

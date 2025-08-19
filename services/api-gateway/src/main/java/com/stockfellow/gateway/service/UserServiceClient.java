@@ -25,7 +25,7 @@ public class UserServiceClient {
     
     private final RestTemplate restTemplate;
     
-    @Value("${services.user-service.url:http://localhost:4000}")
+    @Value("${services.user-service.url:http://user-service:4020}")
     private String userServiceUrl;
     
     public UserServiceClient(RestTemplate restTemplate) {
