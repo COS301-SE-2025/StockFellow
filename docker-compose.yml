@@ -44,6 +44,7 @@ services:
     image: postgres:15
     container_name: user-service-postgres
     volumes:
+      - ./services/user-service/postgresql.conf:/etc/postgresql/postgresql.conf
       - user_service_postgres_data:/var/lib/postgresql/data
       - ./services/user-service/init-scripts:/docker-entrypoint-initdb.d
     environment:
@@ -51,15 +52,18 @@ services:
       POSTGRES_USER: userservice_user
       POSTGRES_PASSWORD: userservice_pass
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_CONFIG_FILE: /etc/postgresql/postgresql.conf
     ports:
       - "5431:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "userservice_user", "-d", "userservice_db"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U userservice_user -d userservice_db && psql -U userservice_user -d userservice_db -c 'SELECT 1'"]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # PostgreSQL Database for Notification Service
@@ -312,7 +316,7 @@ services:
       - keycloak
       # - alfresco-content-repository
     ports:
-      - "${USER_SERVICE_PORT}:4000"
+      - "${USER_SERVICE_PORT}:4020"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
       - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
@@ -339,7 +343,7 @@ services:
       - ./services/user-service/src:/app/src
       - ./services/user-service/pom.xml:/app/pom.xml
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4020/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
@@ -464,7 +468,7 @@ services:
       - ACTIVEMQ_USER=admin
       - ACTIVEMQ_PASSWORD=admin
       - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
-      - SERVICES_USER_SERVICE_URL=http://user-service:4000
+      - SERVICES_USER_SERVICE_URL=http://user-service:4020
       - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO

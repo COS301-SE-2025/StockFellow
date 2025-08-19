@@ -42,11 +42,11 @@ public class InMemoryOTPService {
     public boolean verifyOTP(String email, String providedOTP) {
         OTPRecord record = otpStore.get(email);
 
-        logger.info("Expected: {} and got {}", record.getOtpCode(), providedOTP);
-
         if (record == null) {
             return false; // No OTP found for email
         }
+
+        logger.info("Expected: {} and got {}", record.getOtpCode(), providedOTP);
 
         if (record.isExpired()) {
             otpStore.remove(email); // Clean up expired OTP
