@@ -10,24 +10,31 @@ const TEST_USER = {
 declare global {
   var testAuthToken: string;
   var testUserId: string;
+  var testLoginMethod: 'regular' | 'test';
 }
 
 beforeAll(async () => {
   try {
-    const result = await authService.login(TEST_USER.username, TEST_USER.password);
-    
+
+    global.testLoginMethod = 'regular';
+    const result = await authService.testLogin(TEST_USER.username, TEST_USER.password);
+    global.testLoginMethod = 'test';
+
     if (!result.success) {
-      throw new Error('Test user authentication failed');
+      throw new Error('Test login failed');
     }
-    
-    if (result.mfaRequired) {
-      throw new Error('Test user requires MFA - use an account without MFA for testing');
-    }
-    
+
+
     // Get test user ID
     const profile = await userService.getProfile();
     global.testUserId = profile.user.userId;
-    
+
+    // Store token if available
+    const tokens = await authService.getTokens();
+    if (tokens.accessToken) {
+      global.testAuthToken = tokens.accessToken;
+    }
+
   } catch (error) {
     console.error('Integration test setup failed:', error);
     process.exit(1);
@@ -35,7 +42,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Global cleanup if needed
+  // Global cleanup
+  try {
+    if (global.testAuthToken) {
+      await authService.logout();
+    }
+  } catch (error) {
+    console.warn('Cleanup error:', error);
+  }
 });
 
-export {}; // This makes the file a module
+export { }; // This makes the file a module

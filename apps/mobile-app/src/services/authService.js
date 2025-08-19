@@ -40,6 +40,43 @@ class AuthService {
     return !!accessToken;
   }
 
+  // Add this method to the AuthService class
+async testLogin(username, password) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/test/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+    console.log("TEST LOGIN DATA:", data);
+
+    if (!response.ok) {
+      throw new Error(data.error || data.details || 'Test login failed');
+    }
+
+    // Save tokens if successful
+    await this.saveTokens(data.access_token, data.refresh_token);
+    
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    console.error('Test login error:', error);
+    return {
+      success: false,
+      error: error.message || 'Test login failed',
+    };
+  }
+}
+
   // Login with username/password
   async login(username, password) {
     try {
