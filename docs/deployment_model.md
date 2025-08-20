@@ -1,298 +1,184 @@
 # StockFellow System Deployment Model
 
-## 1. Executive Summary
+The StockFellow fintech backend will be deployed as a containerized Java Spring Boot microservices architecture on Oracle Cloud's free tier ARM compute instance. The system uses Docker Compose for orchestration and is cost-effective with very capable hardware.
 
-The StockFellow system is deployed as a containerized microservices architecture using Docker containers orchestrated through Docker Compose. The system follows a multi-tier architecture pattern with clear separation of concerns across presentation, business logic, and data layers.
+## 1. Deployment Environment
 
-## 2. Target Environment
+### 1.1 Target Platform
+- **Cloud Provider**: Oracle Cloud Infrastructure (OCI)
+- **Instance Type**: ARM-based Ampere A1 Compute (Always Free)
+- **Specifications**: 24GB RAM, 4 OCPUs, 200GB Storage
+- **Operating System**: Ubuntu 22.04 LTS
+- **Container Runtime**: Docker with Docker Compose
 
-### 2.1 Deployment Environment Options
+### 1.2 Reasons For Oracle Selection
+- **Low/No cost** with generous Always Free services
+- **Sufficient resources** for all microservices and databases
+- **ARM architecture** provides excellent performance per core
 
-**Primary Target: Cloud-Native Deployment**
-- **Cloud Platforms**: AWS, Azure, Google Cloud Platform
-- **Container Orchestration**: Kubernetes (production), Docker Swarm (development/staging)
-- **Current Configuration**: Docker Compose (development/local deployment)
+## 2. Backend Deployment Diagram
+![StockFellow Deployment Diagram](./images/deployment_diagram.jpg)
 
-**Secondary Target: Hybrid Deployment**
-- On-premises infrastructure with cloud backup and disaster recovery
-- Edge deployment capabilities for distributed access
+## 3. Architecture Overview
 
-**Development Environment**
-- Local development using Docker Compose
-- CI/CD pipeline integration with container registries
+### 3.1 Deployment Pattern
+The system implements a **single-server containerized microservices architecture** with:
+- **NGINX Reverse Proxy**: SSL termination and load balancing
+- **Java Spring Boot Services**: Business logic microservices
+- **PostgreSQL Databases**: Relational data storage
+- **Redis Cache**: Session management and caching
 
-### 2.2 Infrastructure Requirements
+### 3.2 Service Architecture
 
-**Minimum System Requirements:**
-- CPU: 8 vCPUs (16 recommended)
-- Memory: 16GB RAM (32GB recommended)
-- Storage: 100GB SSD (with volume expansion capability)
-- Network: 1Gbps connection with load balancing
+#### **Client Access Layer**
+- **Mobile Apps**: React Native/Flutter applications
+- **Web Admin Panel**: Browser-based administration
+- **External Access**: HTTPS through domain name or public IP
 
-## 3. Deployment Topology
+#### **Proxy Layer**
+- **NGINX**: Port 80/443 (SSL termination, reverse proxy)
 
-### 3.1 Architecture Pattern
-The system implements a **containerized microservices architecture** with the following characteristics:
+#### **Application Layer (Java Spring Boot)**
+- **API Gateway**: Port 3000 (Request routing, authentication)
+- **User Service**: Port 4000 (User management, profiles)
+- **Group Service**: Port 4040 (Investment groups, communities)
+- **Transaction Service**: Port 4080 (Payment processing, Paystack integration)
+- **MFA Service**: Port 8087 (Multi-factor authentication)
+- **Notification Service**: Port 4050 (Push notifications, messaging)
+- **Keycloak**: Port 8180 (Identity and access management)
 
+#### **Database Layer**
+- **Keycloak PostgreSQL**: Port 5432 (Identity data)
+- **User Service PostgreSQL**: Port 5431 (User profiles, accounts)
+- **Notification PostgreSQL**: Port 5440 (Notification history)
+- **Redis Cache**: Port 6379 (Sessions, cache)
+- **ActiveMQ**: Port 61616 (Message broker)
 
-- **API Gateway Pattern**: Centralized entry point for all client requests
-- **Database per Service**: Each microservice maintains its own data store
-- **Event-Driven Communication**: Asynchronous messaging via ActiveMQ
-
-### 3.2 Service Topology
-
-#### **Presentation Tier**
-- **API Gateway** (Port 3000): Central routing and authentication hub
-- **Load Balancer**: (Future implementation) Traffic distribution
-
-#### **Business Logic Tier**
-- **User Service** (Port 4020): User management and profile operations
-- **Group Service** (Port 4040): Group and community management
-- **Transaction Service** (Port 4080): Financial transaction processing
-- **Notification Service** (Port 4050): Real-time notifications and messaging
-- **MFA Service** (Port 8087): Multi-factor authentication
-
-#### **Data Tier**
-- **PostgreSQL Clusters**: 
-  - Keycloak DB (Port 5432)
-  - User Service DB (Port 5431)
-  - Notification DB (Port 5440)
-- **Redis Cache** (Port 6379): Session management and caching
-- **MongoDB**: Document storage for groups and MFA data
-- **ActiveMQ** (Port 61616): Message broker for asynchronous communication
-
-#### **Security & Identity Tier**
-- **Keycloak** (Port 8080): Identity and access management
+#### **External Services**
+- **Gmail SMTP**: Email delivery for MFA
+- **Paystack API**: Payment processing
 
 ## 4. Container Architecture
 
-### 4.1 Service Containers
+### 4.1 Application Containers
 
-| Service | Base Image | Purpose | Health Check |
-|---------|------------|---------|--------------|
-| API Gateway | Java Spring Boot | Request routing, authentication | HTTP /actuator/health |
-| User Service | Java Spring Boot | User management | HTTP /actuator/health |
-| Group Service | Java Spring Boot | Group operations | HTTP /actuator/health |
-| Transaction Service | Java Spring Boot | Transaction processing | HTTP /actuator/health |
-| Notification Service | Java Spring Boot | Notification delivery | HTTP /actuator/health |
-| MFA Service | Java Spring Boot | Multi-factor auth | HTTP /actuator/health |
-| Keycloak | Quay.io/keycloak | Identity management | Built-in |
+| Service | Technology | Port | Purpose |
+|---------|------------|------|---------|
+| nginx-proxy | NGINX | 80, 443 | Reverse proxy, SSL termination |
+| api-gateway | Spring Boot | 3000 | API routing, authentication |
+| user-service | Spring Boot | 4000 | User management |
+| group-service | Spring Boot | 4040 | Group operations |
+| transaction-service | Spring Boot | 4080 | Payment processing |
+| mfa-service | Spring Boot | 8087 | Multi-factor authentication |
+| notification-service | Spring Boot | 4050 | Notifications |
+| keycloak | Keycloak | 8080 | Identity management |
 
-### 4.2 Infrastructure Containers
+### 4.2 Database Containers
 
-| Service | Image | Purpose | Health Check |
-|---------|--------|---------|--------------|
-| PostgreSQL (Main) | postgres:15 | Keycloak database | pg_isready |
-| PostgreSQL (User) | postgres:15 | User service database | pg_isready + connection test |
-| PostgreSQL (Notification) | postgres:15 | Notification database | pg_isready |
-| Redis | redis:7-alpine | Caching and sessions | redis-cli ping |
-| ActiveMQ | apache/activemq-artemis | Message brokering | HTTP health endpoint |
+| Service | Technology | Port | Purpose |
+|---------|------------|------|---------|
+| keycloak-postgres | PostgreSQL 15 | 5432 | Keycloak data |
+| user-service-postgres | PostgreSQL 15 | 5431 | User data |
+| notification-postgres | PostgreSQL 15 | 5440 | Notification data |
+| redis | Redis 7 | 6379 | Cache and sessions |
+| activemq | ActiveMQ Artemis | 61616 | Message brokering |
 
 ## 5. Network Architecture
 
-### 5.1 Container Networking
-- **Internal Network**: `stockfellow-net` (bridge driver)
-- **Service Discovery**: Docker DNS for inter-service communication
-- **Port Mapping**: External access through mapped ports
+### 5.1 Security Model
+- **External Access**: Only NGINX (ports 80, 443) exposed to internet
+- **Internal Network**: All services communicate via Docker bridge network
+- **SSL/TLS**: NGINX handles SSL termination
+- **Authentication**: JWT tokens via Keycloak for all API access
 
-### 5.2 Communication Patterns
-
+### 5.2 Communication Flow
 ```
-Client → API Gateway → Microservices
-         ↓
-    Keycloak (Auth)
-         ↓
-    Redis (Cache)
-         ↓
-    Databases (Persistence)
-         ↓
-    ActiveMQ (Messaging)
+Mobile App → NGINX (HTTPS) → API Gateway → Keycloak (Auth) → Microservices
+                                      ↓
+                              Redis Cache + PostgreSQL DBs           
 ```
 
-## 6. Data Management Strategy
+## 6. Deployment Process
 
-### 6.1 Database Architecture
-- **Database per Service**: Ensures loose coupling and independent scaling
-- **ACID Compliance**: PostgreSQL for transactional data
-- **Caching Strategy**: Redis for frequently accessed data
-- **Message Persistence**: ActiveMQ for reliable message delivery
+### 6.1 Prerequisites
+1. Oracle Cloud ARM compute instance (24GB RAM)
+2. Domain name pointing to public IP (optional)
+3. Gmail account with app password for SMTP
 
-### 6.2 Data Volumes
-- **Persistent Volumes**: All databases use named volumes for data persistence
-- **Configuration Volumes**: Mounted configuration files and initialization scripts
-- **Log Volumes**: Centralized logging (future implementation)
-
-## 7. Security Model
-
-### 7.1 Authentication & Authorization
-- **OAuth 2.0/OpenID Connect**: Via Keycloak
-- **JWT Tokens**: For service-to-service communication
-- **Role-Based Access Control (RBAC)**: Implemented through Keycloak realms
-
-### 7.2 Network Security
-- **Internal Communication**: Services communicate through private network
-- **External Access**: Only API Gateway and Keycloak exposed
-- **Secrets Management**: Environment variables for sensitive configuration
-
-## 8. Deployment Strategies
-
-### 8.1 Development Deployment
+### 6.2 Deployment Steps
 ```bash
-# Start entire stack
-docker-compose up -d
+# 1. Setup server environment
+./deploy.sh
 
-# Start specific services
-docker-compose up -d postgres redis keycloak
-docker-compose up -d api-gateway user-service
+# 2. Transfer project files
+scp -r stockfellow-project ubuntu@server-ip:/home/ubuntu/stockfellow/
+
+# 3. Configure environment
+cp .env.production .env
+# Edit .env with production values
+
+# 4. Deploy services
+docker-compose -f docker-compose.prod.yml up -d
+
+# 5. Validate deployment
+./validate.sh
 ```
 
-### 8.2 Production Deployment (Kubernetes Migration Path)
-```yaml
-# Example Kubernetes deployment structure
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: user-service
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: user-service
-  template:
-    metadata:
-      labels:
-        app: user-service
-    spec:
-      containers:
-      - name: user-service
-        image: stockfellow/user-service:latest
-        ports:
-        - containerPort: 4020
+### 6.3 Configuration Management
+- **Environment Variables**: All configuration via .env file
+- **Secrets**: Database passwords, API keys in environment variables
+- **External URLs**: Domain-based URLs for production
+- **JVM Settings**: Optimized for 24GB RAM allocation
+
+## 7. Resource Allocation
+
+### 7.1 Memory Distribution (24GB Total)
+- **Java Services**: 10GB (6 services × ~1.5GB each)
+- **Keycloak**: 2GB
+- **PostgreSQL**: 1.5GB (3 instances)
+- **Redis + ActiveMQ**: 0.5GB
+- **NGINX**: 0.1GB
+- **System/OS**: 6GB
+- **Buffer**: 4GB
+
+### 7.2 JVM Optimization
+```bash
+JVM_OPTS=-Xms512m -Xmx1.5g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
 ```
 
-### 8.3 CI/CD Pipeline Integration
-1. **Build Stage**: Docker image creation
-2. **Test Stage**: Container-based testing
-3. **Registry Stage**: Push to container registry
-4. **Deploy Stage**: Rolling deployment to target environment
+## 8. Data Management
 
-## 9. Quality Requirements Support
+### 8.1 Database Strategy
+- **PostgreSQL**: ACID-compliant relational data
+- **Redis**: Session storage and caching
+- **Persistent Volumes**: All data stored in Docker volumes
 
-### 9.1 Scalability
-- **Horizontal Scaling**: Microservices can be independently scaled
-- **Database Scaling**: Read replicas and connection pooling
-- **Cache Scaling**: Redis clustering support
-- **Load Distribution**: API Gateway handles request routing
+### 8.2 Backup Strategy
+- **Automated Backups**: Daily PostgreSQL dumps
+- **Configuration**: Version controlled in Git
 
-### 9.2 Reliability
-- **Health Checks**: All services implement health monitoring
-- **Circuit Breaker**: Fault tolerance patterns (future implementation)
-- **Data Persistence**: Volume-based data protection
-- **Service Recovery**: Automatic container restart policies
+## 9. Monitoring and Maintenance
 
-### 9.3 Maintainability
-- **Service Independence**: Services can be updated independently
-- **Configuration Management**: Environment-based configuration
-- **Monitoring & Logging**: Health endpoints and structured logging
-- **Version Control**: Container tagging and rollback capabilities
+### 9.1 Health Monitoring
+- **Health Endpoints**: All Spring Boot services expose `/actuator/health`
+- **Database Health**: `pg_isready` for PostgreSQL instances
+- **System Monitoring**: `monitor.sh` script for resource usage
 
-### 9.4 Performance
-- **Caching Strategy**: Redis for improved response times
-- **Connection Pooling**: Database connection optimization
-- **Asynchronous Processing**: Message queues for non-blocking operations
-- **Resource Optimization**: Container resource limits and requests
+### 9.2 Logging
+- **Application Logs**: Docker container logs
+- **Access Logs**: NGINX request logging
+- **Error Tracking**: Centralized via Docker logs
 
-## 10. Monitoring and Observability
+## 10. Security Considerations
 
-### 10.1 Health Monitoring
-- **Application Health**: Spring Boot Actuator endpoints
-- **Infrastructure Health**: Container and resource monitoring
-- **Database Health**: Connection and performance monitoring
+### 10.1 Network Security
+- **Firewall**: Only ports 22, 80, 443 open to internet
+- **Internal Communication**: Services isolated in Docker network
+- **SSL/TLS**: All external communication encrypted
 
-### 10.2 Logging Strategy
-- **Structured Logging**: JSON-formatted logs
-- **Log Levels**: Configurable per service
-- **Centralized Logging**: Future ELK stack integration
-
-## 11. Deployment Diagram
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    External Network                         │
-│  ┌─────────┐  ┌─────────┐  ┌─────────────────────────────┐  │
-│  │ Client  │  │ Client  │  │        Load Balancer        │  │
-│  │   Web   │  │ Mobile  │  │       (Future)              │  │
-│  └─────────┘  └─────────┘  └─────────────────────────────┘  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────────────┐
-│                 DMZ / Edge Network                          │
-│  ┌─────────────────┐         ┌─────────────────────────────┐ │
-│  │   API Gateway   │◄────────┤        Keycloak             │ │
-│  │   (Port 3000)   │         │      (Port 8080)            │ │
-│  │                 │         │   Identity & Access Mgmt    │ │
-│  └─────────────────┘         └─────────────────────────────┘ │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────────────┐
-│               Internal Service Network                      │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
-│  │User Service │ │Group Service│ │   Transaction Service   │ │
-│  │(Port 4020)  │ │(Port 4040)  │ │     (Port 4080)         │ │
-│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
-│                                                              │
-│  ┌─────────────────────────┐    ┌─────────────────────────┐  │
-│  │   Notification Service  │    │      MFA Service        │  │
-│  │     (Port 4050)         │    │     (Port 8087)         │  │
-│  └─────────────────────────┘    └─────────────────────────┘  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────────────┐
-│                  Message & Cache Layer                      │
-│  ┌─────────────────┐         ┌─────────────────────────────┐ │
-│  │     Redis       │         │        ActiveMQ             │ │
-│  │   (Port 6379)   │         │      (Port 61616)           │ │
-│  │   Caching &     │         │    Message Broker           │ │
-│  │   Sessions      │         │                             │ │
-│  └─────────────────┘         └─────────────────────────────┘ │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────────────┐
-│                   Data Persistence Layer                    │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
-│  │   PostgreSQL    │ │   PostgreSQL    │ │   PostgreSQL    │ │
-│  │   (Keycloak)    │ │  (User Service) │ │  (Notification) │ │
-│  │   Port 5432     │ │   Port 5431     │ │   Port 5440     │ │
-│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
-│                                                              │
-│  ┌─────────────────────────┐    ┌─────────────────────────┐  │
-│  │       MongoDB           │    │    Volume Storage       │  │
-│  │  (Groups & MFA Data)    │    │   (Persistent Data)     │  │
-│  │                         │    │                         │  │
-│  └─────────────────────────┘    └─────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-## 12. Migration and Scaling Path
-
-### 12.1 Current State → Production Ready
-1. **Container Registry**: Implement proper image versioning
-2. **Secrets Management**: Move from environment variables to secure vaults
-3. **Load Balancing**: Add NGINX or cloud load balancer
-4. **Monitoring**: Implement Prometheus and Grafana
-
-### 12.2 Kubernetes Migration
-1. **Convert Docker Compose**: Transform to Kubernetes manifests
-2. **Service Mesh**: Consider Istio for advanced traffic management
-3. **Auto-scaling**: Implement HPA (Horizontal Pod Autoscaler)
-4. **Storage**: Migrate to persistent volume claims
-
-### 12.3 Cloud-Native Enhancements
-1. **Managed Services**: Replace self-hosted databases with cloud equivalents
-2. **Serverless Functions**: Consider AWS Lambda for event processing
-3. **CDN Integration**: Add CloudFront/CloudFlare for static content
-4. **Multi-Region**: Implement cross-region deployment for disaster recovery
-
-## 13. Conclusion
-
-The StockFellow deployment model provides a solid foundation for a scalable, maintainable microservices architecture. The containerized approach ensures consistency across environments while the service-oriented design supports independent scaling and development. The current Docker Compose configuration serves as an excellent stepping stone toward a full Kubernetes production deployment, with clear migration paths for enhanced scalability and reliability.
+### 10.2 Application Security
+- **OAuth 2.0**: Authentication via Keycloak
+- **JWT Tokens**: Secure service-to-service communication
+- **Database Security**: Isolated databases per service
+- **Secret Management**: Environment variable based
+- **Tokenized Payment Details**: via Paystack Authorizations
