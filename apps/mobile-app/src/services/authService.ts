@@ -12,6 +12,22 @@ interface UserInfo {
   idNumber?: string;
 }
 
+interface LoginResponse {
+  success: boolean;
+  mfaRequired?: boolean;
+  email?: string;
+  tempSession?: string;
+  message?: string;
+  data?: any;
+  error?: string;
+}
+
+interface MfaVerificationResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
 class AuthService {
   private userCache: UserInfo | null = null;
 
@@ -227,8 +243,8 @@ class AuthService {
     return !!accessToken;
   }
 
-  // Login with username/password
-  async login(username: string, password: string) {
+  // Login with username/password (with MFA support)
+  async login(username: string, password: string): Promise<LoginResponse> {
     try {
       const requestBody = {
         username,
@@ -238,7 +254,7 @@ class AuthService {
       const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'StockFellow-Mobile-App', // Add custom user agent
+        'User-Agent': 'StockFellow-Mobile-App',
       };
       
       console.log('=== LOGIN DEBUG INFO ===');
@@ -278,35 +294,121 @@ class AuthService {
         throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 100)}`);
       }
 
+      console.log("LOGINDATA: ", data.mfa_required, data.access_token, data.refresh_token);
+
       if (!response.ok) {
         console.error('Login failed with data:', data);
         throw new Error(data.error || data.details || data.message || `Login failed with status ${response.status}`);
       }
 
-      // Check if we have the required tokens
-      if (!data.access_token || !data.refresh_token) {
-        console.error('Missing tokens in response:', data);
-        throw new Error('Server response missing required tokens');
+      // Check if MFA is required
+      if (data.mfa_required) {
+        return {
+          success: true,
+          mfaRequired: true,
+          email: data.email,
+          tempSession: data.temp_session,
+          message: data.message,
+        };
+      } else {
+        // MFA not required -> save tokens normally
+        // Check if we have the required tokens
+        if (!data.access_token || !data.refresh_token) {
+          console.error('Missing tokens in response:', data);
+          throw new Error('Server response missing required tokens');
+        }
+
+        await this.saveTokens(data.access_token, data.refresh_token);
+
+        // If user info is returned in login response, cache it
+        if (data.user) {
+          this.userCache = data.user;
+          await SecureStore.setItemAsync('user_info', JSON.stringify(data.user));
+        }
+
+        console.log('Login successful!');
+        return {
+          success: true,
+          mfaRequired: false,
+          data,
+        };
       }
-
-      await this.saveTokens(data.access_token, data.refresh_token);
-
-      // If user info is returned in login response, cache it
-      if (data.user) {
-        this.userCache = data.user;
-        await SecureStore.setItemAsync('user_info', JSON.stringify(data.user));
-      }
-
-      console.log('Login successful!');
-      return {
-        success: true,
-        data,
-      };
     } catch (error) {
       console.error('Login error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error) || 'Login failed',
+      };
+    }
+  }
+
+  // Verify MFA code
+  async verifyMfaCode(email: string, otpCode: string, tempSession: string): Promise<MfaVerificationResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-mfa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          otpCode, 
+          tempSession 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: data.error || 'MFA verification failed' 
+        };
+      }
+      
+      // MFA verification successful -> save tokens
+      await this.saveTokens(data.access_token, data.refresh_token);
+      
+      // If user info is returned in MFA response, cache it
+      if (data.user) {
+        this.userCache = data.user;
+        await SecureStore.setItemAsync('user_info', JSON.stringify(data.user));
+      }
+      
+      return { 
+        success: true, 
+        data 
+      };
+    } catch (error) {
+      console.error('MFA verification error:', error);
+      return { 
+        success: false, 
+        error: this.getErrorMessage(error) || 'MFA verification failed' 
+      };
+    }
+  }
+
+  // Resend MFA code
+  async resendMfaCode(email: string) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/mfa/resend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to resend code');
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: this.getErrorMessage(error) 
       };
     }
   }
@@ -506,43 +608,6 @@ class AuthService {
     } catch (error) {
       console.error('Token validation error:', error);
       return { valid: false };
-    }
-  }
-
-  async verifyMfaCode(email: string, code: string) {
-    try {
-      const response = await this.apiRequest('/auth/mfa/verify', {
-        method: 'POST',
-        body: JSON.stringify({ email, code })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return { success: false, error: error.message };
-      }
-      
-      const data = await response.json();
-      // Store tokens or session as needed
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: this.getErrorMessage(error) };
-    }
-  }
-
-  async resendMfaCode(email: string) {
-    try {
-      const response = await this.apiRequest('/auth/mfa/resend', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to resend code');
-      }
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 

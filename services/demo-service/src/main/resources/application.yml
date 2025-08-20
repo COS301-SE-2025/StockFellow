@@ -29,7 +29,7 @@ services:
   gateway:
     url: ${SERVICES_GATEWAY_URL:http://localhost:3000}
   user:
-    url: ${SERVICES_USER_SERVICE_URL:http://localhost:4000}
+    url: ${SERVICES_USER_SERVICE_URL:http://localhost:4020}
   group:
     url: ${SERVICES_GROUP_SERVICE_URL:http://localhost:4040}
   transaction:

@@ -42,8 +42,6 @@ public class RouteConfig {
                 "/api/users/**",
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 100),
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             ),
             
@@ -51,8 +49,6 @@ public class RouteConfig {
             new Route(
                 "/api/groups/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                false,
                 new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(groupServiceUrl, true)
             ),
@@ -62,7 +58,6 @@ public class RouteConfig {
                 "/api/transaction/**",
                 true,
                 new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(transactionServiceUrl, true)
             ),
 
@@ -70,7 +65,6 @@ public class RouteConfig {
             new Route(
                 "/api/notifications/**",
                 true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(notificationServiceUrl, true)
             ),
@@ -87,7 +81,6 @@ public class RouteConfig {
             new Route(
                 "/api",
                 false,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.RateLimit(15 * 60 * 1000L, 100),
                 new Route.Proxy(userServiceUrl, true)
             )

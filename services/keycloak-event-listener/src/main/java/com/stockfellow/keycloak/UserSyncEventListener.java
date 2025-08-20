@@ -14,11 +14,14 @@ import java.net.http.HttpResponse;
 import java.net.URI;
 import java.util.Map;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class UserSyncEventListener implements EventListenerProvider {
     private final KeycloakSession session;
     private final String userServiceUrl;
     private final String transactionServiceUrl;
+    private static final Logger logger = LoggerFactory.getLogger(UserSyncEventListener.class);
     
     public UserSyncEventListener(KeycloakSession session, String userServiceUrl, String transactionServiceUrl) {
         this.session = session;
@@ -67,7 +70,7 @@ public class UserSyncEventListener implements EventListenerProvider {
     private void syncToUserService(UserModel user) {
         try {
             String payload = createUserServicePayload(user);
-            sendRequest(userServiceUrl + "/sync", payload, "User Service");
+            sendRequest(userServiceUrl + "/api/sync", payload, "User Service");
         } catch (Exception e) {
             System.err.println("Failed to sync to User Service: " + e.getMessage());
         }
@@ -84,6 +87,7 @@ public class UserSyncEventListener implements EventListenerProvider {
     
     private void sendRequest(String url, String payload, String serviceName) {
         try {
+            logger.info("Attempting to call: {} for service: {}", url, serviceName);
             HttpClient client = HttpClient.newHttpClient();
             
             HttpRequest request = HttpRequest.newBuilder()
@@ -103,7 +107,7 @@ public class UserSyncEventListener implements EventListenerProvider {
             }
             
         } catch (Exception e) {
-            System.err.println("Error calling " + serviceName + ": " + e.getMessage());
+            logger.error("Errors calling {}: {}", serviceName, e.getMessage(), e);
         }
     }
     

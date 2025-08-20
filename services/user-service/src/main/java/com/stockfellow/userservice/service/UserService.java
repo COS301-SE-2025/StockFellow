@@ -11,8 +11,9 @@ import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -124,9 +125,9 @@ public class UserService {
     /**
      * Get user by Keycloak user ID
      */
-    @Retryable(value = { JpaSystemException.class,
-            DataAccessException.class }, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    @Transactional(readOnly = true)
+    @Retryable(value = { JpaSystemException.class, DataAccessException.class }, 
+           maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    // @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public User getUserByUserId(String userId) {
         try {
             logger.info("Fetching user with ID: {}", userId);

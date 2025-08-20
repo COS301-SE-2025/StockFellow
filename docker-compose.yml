@@ -40,6 +40,7 @@ services:
 
 
   # PostgreSQL database for User Service
+  # docker exec -it user-service-postgres psql -U userservice_user -d userservice_db -c "SELECT * FROM users;"
   user-service-postgres:
     image: postgres:15
     container_name: user-service-postgres

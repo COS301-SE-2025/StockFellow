@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/sync")
+@RequestMapping("/api/sync")
 @Validated
 public class SyncController {
     
