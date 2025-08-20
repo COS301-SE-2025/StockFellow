@@ -24,7 +24,9 @@ public class ReadModelService {
     }
 
     public Optional<Group> getGroup(String groupId) {
-        return Optional.ofNullable(mongoTemplate.findById(groupId, Group.class));
+        Query query = new Query(Criteria.where("groupId").is(groupId));
+        Group group = mongoTemplate.findOne(query, Group.class);
+        return Optional.ofNullable(group);
     }
 
     public List<Group> getUserGroups(String userId) {
@@ -46,16 +48,34 @@ public class ReadModelService {
 
     private void applyEvent(Group groupData, Event event) {
         Map<String, Object> data = event.getData();
-        
+
         switch (event.getType()) {
             case "GroupCreated":
                 applyGroupCreatedEvent(groupData, data);
                 break;
-            case "UserJoinedGroup":
-                applyUserJoinedGroupEvent(groupData, data);
+            case "GroupUpdated":
+                applyGroupUpdatedEvent(groupData, data);
+                break;
+            case "UserJoinedGroup": // System Groups
+            case "MemberAdded": // Custom Groups
+                applyMemberAddedEvent(groupData, data);
                 break;
             case "UserLeftGroup":
-                applyUserLeftGroupEvent(groupData, data);
+            case "MemberRemoved":
+                applyMemberRemovedEvent(groupData, data);
+                break;
+            case "MemberRoleUpdated":
+                applyMemberRoleUpdatedEvent(groupData, data);
+                break;
+            case "JoinRequestCreated":
+                applyJoinRequestCreatedEvent(groupData, data);
+                break;
+            case "JoinRequestProcessed":
+                applyJoinRequestProcessedEvent(groupData, data);
+                break;
+            case "JoinRequestRejected":
+                logger.debug("Join request rejected for user {} in group {}",
+                        data.get("userId"), data.get("groupId"));
                 break;
             case "ContributionMade":
                 applyContributionMadeEvent(groupData, data);
@@ -79,7 +99,7 @@ public class ReadModelService {
         groupData.setVisibility((String) data.get("visibility"));
         groupData.setContributionFrequency((String) data.get("contributionFrequency"));
         groupData.setPayoutFrequency((String) data.get("payoutFrequency"));
-        
+
         // Handle balance
         Object balanceObj = data.get("balance");
         if (balanceObj != null) {
@@ -87,104 +107,142 @@ public class ReadModelService {
         } else {
             groupData.setBalance(0.0);
         }
-        
-        // Handle dates
-        String contributionDateStr = (String) data.get("contributionDate");
-        if (contributionDateStr != null && !contributionDateStr.isEmpty()) {
-            groupData.setContributionDate(new Date(contributionDateStr));
-        }
-        
-        String payoutDateStr = (String) data.get("payoutDate");
-        if (payoutDateStr != null && !payoutDateStr.isEmpty()) {
-            groupData.setPayoutDate(new Date(payoutDateStr));
-        }
-        
-        // Handle createdAt
-        Object createdAtObj = data.get("createdAt");
-        if (createdAtObj instanceof Date) {
-            groupData.setCreatedAt((Date) createdAtObj);
-        } else if (createdAtObj instanceof String) {
-            groupData.setCreatedAt(new Date((String) createdAtObj));
-        } else {
-            groupData.setCreatedAt(new Date());
-        }
-        
-        // Handle members
-        List<Map<String, Object>> membersData = (List<Map<String, Object>>) data.get("members");
-        if (membersData != null) {
-            List<Group.Member> members = new ArrayList<>();
-            for (Map<String, Object> memberData : membersData) {
-                Group.Member member = new Group.Member();
-                member.setUserId((String) memberData.get("userId"));
-                member.setRole((String) memberData.get("role"));
-                
-                Object contributionObj = memberData.get("contribution");
-                if (contributionObj != null) {
-                    member.setContribution(((Number) contributionObj).doubleValue());
-                } else {
-                    member.setContribution(0.0);
+
+        // Handle dates - improved parsing
+        groupData.setContributionDate(parseDate(data.get("contributionDate")));
+        groupData.setPayoutDate(parseDate(data.get("payoutDate")));
+        groupData.setCreatedAt(parseDate(data.get("createdAt"), new Date()));
+
+        // Handle members - support both string list and member object list
+        Object membersObj = data.get("members");
+        List<Group.Member> members = new ArrayList<>();
+
+        if (membersObj instanceof List) {
+            List<?> membersList = (List<?>) membersObj;
+            for (Object memberObj : membersList) {
+                if (memberObj instanceof String) {
+                    // Handle string list (initial member IDs)
+                    String userId = (String) memberObj;
+                    String username = userId;
+                    String role = userId.equals(data.get("adminId")) ? "founder" : "member";
+                    members.add(new Group.Member(userId, username, role));
+                } else if (memberObj instanceof Map) {
+                    // Handle member object list
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> memberData = (Map<String, Object>) memberObj;
+                    Group.Member member = new Group.Member();
+                    member.setUserId((String) memberData.get("userId"));
+                    member.setUsername((String) memberData.getOrDefault("username", memberData.get("userId")));
+                    member.setRole((String) memberData.getOrDefault("role", "member"));
+                    member.setContribution(parseDouble(memberData.get("contribution"), 0.0));
+                    member.setJoinedAt(parseDate(memberData.get("joinedAt"), new Date()));
+                    member.setLastActive(parseDate(memberData.get("lastActive"), new Date()));
+                    members.add(member);
                 }
-                
-                Object joinedAtObj = memberData.get("joinedAt");
-                if (joinedAtObj instanceof Date) {
-                    member.setJoinedAt((Date) joinedAtObj);
-                } else if (joinedAtObj instanceof String) {
-                    member.setJoinedAt(new Date((String) joinedAtObj));
-                } else {
-                    member.setJoinedAt(new Date());
-                }
-                
-                Object lastActiveObj = memberData.get("lastActive");
-                if (lastActiveObj instanceof Date) {
-                    member.setLastActive((Date) lastActiveObj);
-                } else if (lastActiveObj instanceof String) {
-                    member.setLastActive(new Date((String) lastActiveObj));
-                } else {
-                    member.setLastActive(new Date());
-                }
-                
-                members.add(member);
             }
-            groupData.setMembers(members);
-        } else {
-            groupData.setMembers(new ArrayList<>());
         }
-        
+
+        groupData.setMembers(members);
+        groupData.setRequests(new ArrayList<>()); // Initialize empty requests list
+
         logger.info("Applied GroupCreated event for group: {}", groupData.getGroupId());
     }
 
-    private void applyUserJoinedGroupEvent(Group groupData, Map<String, Object> data) {
+    private void applyMemberAddedEvent(Group groupData, Map<String, Object> data) {
         String userId = (String) data.get("userId");
+        String username = (String) data.get("username");
         String role = (String) data.getOrDefault("role", "member");
-        
+
         if (groupData.getMembers() == null) {
             groupData.setMembers(new ArrayList<>());
         }
-        
+
         // Check if user is already a member
         boolean alreadyMember = groupData.getMembers().stream()
                 .anyMatch(member -> member.getUserId().equals(userId));
-        
+
         if (!alreadyMember) {
-            Group.Member newMember = new Group.Member(userId, role);
+            Group.Member newMember = new Group.Member(userId, username, role);
             groupData.getMembers().add(newMember);
             logger.info("User {} joined group: {}", userId, groupData.getGroupId());
         }
     }
 
-    private void applyUserLeftGroupEvent(Group groupData, Map<String, Object> data) {
+    private void applyMemberRemovedEvent(Group groupData, Map<String, Object> data) {
         String userId = (String) data.get("userId");
-        
+
         if (groupData.getMembers() != null) {
             groupData.getMembers().removeIf(member -> member.getUserId().equals(userId));
             logger.info("User {} left group: {}", userId, groupData.getGroupId());
         }
     }
 
+    private void applyMemberRoleUpdatedEvent(Group groupData, Map<String, Object> data) {
+        String userId = (String) data.get("userId");
+        String newRole = (String) data.get("newRole");
+
+        if (groupData.getMembers() != null) {
+            groupData.getMembers().stream()
+                    .filter(member -> member.getUserId().equals(userId))
+                    .findFirst()
+                    .ifPresent(member -> {
+                        String oldRole = member.getRole();
+                        member.setRole(newRole);
+                        member.setLastActive(new Date());
+                        logger.info("User {} role updated from {} to {} in group: {}",
+                                userId, oldRole, newRole, groupData.getGroupId());
+                    });
+        }
+    }
+
+    private void applyJoinRequestCreatedEvent(Group groupData, Map<String, Object> data) {
+        String userId = (String) data.get("userId");
+        String username = (String) data.get("username");
+        String requestId = (String) data.get("requestId");
+
+        if (groupData.getRequests() == null) {
+            groupData.setRequests(new ArrayList<>());
+        }
+
+        // Check if request already exists
+        boolean requestExists = groupData.getRequests().stream()
+                .anyMatch(request -> request.getRequestId().equals(requestId));
+
+        if (!requestExists) {
+            Group.JoinRequest joinRequest = new Group.JoinRequest(userId, username);
+            joinRequest.setRequestId(requestId);
+            joinRequest.setState("waiting");
+            groupData.getRequests().add(joinRequest);
+            logger.info("Join request {} created for user {} in group: {}",
+                    requestId, userId, groupData.getGroupId());
+        }
+    }
+
+    private void applyJoinRequestProcessedEvent(Group groupData, Map<String, Object> data) {
+        String requestId = (String) data.get("requestId");
+        String action = (String) data.get("action");
+        String userId = (String) data.get("userId");
+
+        if (groupData.getRequests() != null) {
+            groupData.getRequests().stream()
+                    .filter(request -> request.getRequestId().equals(requestId))
+                    .findFirst()
+                    .ifPresent(request -> {
+                        String newState = "accept".equals(action) ? "accepted" : "rejected";
+                        request.setState(newState);
+                        logger.info("Join request {} {} for user {} in group: {}",
+                                requestId, newState, userId, groupData.getGroupId());
+                    });
+        }
+
+        // If accepted, the user should already be added by a separate MemberAdded event
+        // If rejected, we just update the request state above
+    }
+
     private void applyContributionMadeEvent(Group groupData, Map<String, Object> data) {
         String userId = (String) data.get("userId");
-        Double amount = ((Number) data.get("amount")).doubleValue();
-        
+        Double amount = parseDouble(data.get("amount"), 0.0);
+
         if (groupData.getMembers() != null) {
             groupData.getMembers().stream()
                     .filter(member -> member.getUserId().equals(userId))
@@ -194,25 +252,61 @@ public class ReadModelService {
                         member.setLastActive(new Date());
                     });
         }
-        
+
         // Update group balance
         Double currentBalance = groupData.getBalance() != null ? groupData.getBalance() : 0.0;
         groupData.setBalance(currentBalance + amount);
-        
+
         logger.info("Contribution of {} made by user {} to group: {}", amount, userId, groupData.getGroupId());
     }
 
     private void applyPayoutMadeEvent(Group groupData, Map<String, Object> data) {
         String recipientId = (String) data.get("recipientId");
-        Double amount = ((Number) data.get("amount")).doubleValue();
-        
+        Double amount = parseDouble(data.get("amount"), 0.0);
+
         // Update group balance
         Double currentBalance = groupData.getBalance() != null ? groupData.getBalance() : 0.0;
         groupData.setBalance(Math.max(0.0, currentBalance - amount));
-        
+
         logger.info("Payout of {} made to user {} from group: {}", amount, recipientId, groupData.getGroupId());
     }
 
+    // Helper methods for robust data parsing
+    private Date parseDate(Object dateObj) {
+        return parseDate(dateObj, null);
+    }
+
+    private Date parseDate(Object dateObj, Date defaultValue) {
+        if (dateObj instanceof Date) {
+            return (Date) dateObj;
+        } else if (dateObj instanceof String) {
+            try {
+                return new Date((String) dateObj);
+            } catch (Exception e) {
+                logger.warn("Failed to parse date string: {}", dateObj);
+                return defaultValue;
+            }
+        } else if (dateObj instanceof Number) {
+            return new Date(((Number) dateObj).longValue());
+        }
+        return defaultValue;
+    }
+
+    private Double parseDouble(Object obj, Double defaultValue) {
+        if (obj instanceof Number) {
+            return ((Number) obj).doubleValue();
+        } else if (obj instanceof String) {
+            try {
+                return Double.parseDouble((String) obj);
+            } catch (NumberFormatException e) {
+                logger.warn("Failed to parse double string: {}", obj);
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    // Existing utility methods
     public List<String> getGroupMemberIds(String groupId) {
         Optional<Group> groupOpt = getGroup(groupId);
         if (groupOpt.isPresent()) {
@@ -232,5 +326,63 @@ public class ReadModelService {
                     .anyMatch(member -> member.getUserId().equals(userId));
         }
         return false;
+    }
+
+    public boolean isUserAdminOfGroup(String groupId, String userId) {
+        Optional<Group> groupOpt = getGroup(groupId);
+        if (groupOpt.isPresent()) {
+            Group group = groupOpt.get();
+            return group.getAdminId().equals(userId) ||
+                    group.getMembers().stream()
+                            .anyMatch(member -> member.getUserId().equals(userId) &&
+                                    Arrays.asList("admin", "founder").contains(member.getRole()));
+        }
+        return false;
+    }
+
+    public List<Group.JoinRequest> getPendingJoinRequests(String groupId) {
+        Optional<Group> groupOpt = getGroup(groupId);
+        if (groupOpt.isPresent()) {
+            Group group = groupOpt.get();
+            return group.getRequests().stream()
+                    .filter(request -> "waiting".equals(request.getState()))
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<>();
+    }
+
+    private void applyGroupUpdatedEvent(Group groupData, Map<String, Object> data) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> updatedFields = (Map<String, Object>) data.get("updatedFields");
+
+        if (updatedFields.containsKey("name")) {
+            groupData.setName((String) updatedFields.get("name"));
+        }
+        if (updatedFields.containsKey("maxMembers")) {
+            groupData.setMaxMembers(((Number) updatedFields.get("maxMembers")).intValue());
+        }
+        if (updatedFields.containsKey("description")) {
+            groupData.setDescription((String) updatedFields.get("description"));
+        }
+        if (updatedFields.containsKey("profileImage")) {
+            groupData.setProfileImage((String) updatedFields.get("profileImage"));
+        }
+        if (updatedFields.containsKey("visibility")) {
+            groupData.setVisibility((String) updatedFields.get("visibility"));
+        }
+        if (updatedFields.containsKey("contributionFrequency")) {
+            groupData.setContributionFrequency((String) updatedFields.get("contributionFrequency"));
+        }
+        if (updatedFields.containsKey("contributionDate")) {
+            groupData.setContributionDate(parseDate(updatedFields.get("contributionDate")));
+        }
+        if (updatedFields.containsKey("payoutFrequency")) {
+            groupData.setPayoutFrequency((String) updatedFields.get("payoutFrequency"));
+        }
+        if (updatedFields.containsKey("payoutDate")) {
+            groupData.setPayoutDate(parseDate(updatedFields.get("payoutDate")));
+        }
+
+        logger.info("Applied GroupUpdated event for group: {}", groupData.getGroupId());
     }
 }

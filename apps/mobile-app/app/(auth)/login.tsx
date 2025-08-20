@@ -43,18 +43,65 @@ const Login = () => {
     return valid;
   };
 
+  // const handleLogin = async () => {
+  //   if (validateForm()) {
+  //     setIsSubmitting(true);
+  //     try {
+  //       console.log('Attempting login...');
+
+  //       // Auth service instead of direct KC call
+  //       const result = await authService.login(form.username, form.password);
+
+  //       if (result.success) {
+  //         console.log('Login successful');
+  //         router.push('/(tabs)/home');
+  //       } else {
+  //         // Handle login failure
+  //         console.error('Login failed:', result.error);
+  //         setErrors({
+  //           ...errors,
+  //           username: result.error,
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Login error:', error);
+  //       setErrors({
+  //         ...errors,
+  //         username: error instanceof Error ?
+  //           error.message :
+  //           'Network error. Please check your connection.',
+  //       });
+  //     } finally {
+  //       setIsSubmitting(false);
+  //     }
+  //   }
+  // };
+
   const handleLogin = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
         console.log('Attempting login...');
 
-        // Auth service instead of direct KC call
         const result = await authService.login(form.username, form.password);
 
         if (result.success) {
-          console.log('Login successful');
-          router.push('/(tabs)/home');
+          if (result.mfaRequired) {
+            // MFA is required - navigate to MFA verification
+            console.log('MFA required, navigating to verification');
+            router.push({
+              pathname: '/mfaVerification',
+              params: {
+                email: result.email,
+                tempSession: result.tempSession,
+                message: result.message,
+              },
+            });
+          } else {
+            // No MFA required - login successful
+            console.log('Login successful, navigating to home');
+            router.replace('/(tabs)/home');
+          }
         } else {
           // Handle login failure
           console.error('Login failed:', result.error);
@@ -77,6 +124,7 @@ const Login = () => {
     }
   };
 
+
   return (
     <GestureHandlerRootView className='flex-1'>
       <StatusBar style="light" />
@@ -89,8 +137,8 @@ const Login = () => {
               showsVerticalScrollIndicator={false}
             >
               <View className='flex-1 justify-start'>
-                <Text className="text-2xl text-left font-semibold my-3">Login</Text>
-                <Text className="text-m text-left mb-3 text-[#71727A] font-light">
+                <Text className="text-2xl text-left font-['PlusJakartaSans-SemiBold'] my-3">Login</Text>
+                <Text className="text-m text-left mb-3 text-[#71727A] font-['PlusJakartaSans-Light']">
                   Access your existing account
                 </Text>
 
@@ -109,13 +157,23 @@ const Login = () => {
                   handleChangeText={(e) => setForm({ ...form, password: e })}
                   otherStyles="mt-3"
                   placeholder='Password'
-                  secureTextEntry
                   error={errors.password}
                 />
 
-                <Link href="/forgot-password" className="text-[#1DA1FA] font-medium self-start mt-4 mb-4 text-sm">
+                <Link href="/forgot-password" className="text-[#1DA1FA] font-['PlusJakartaSans-Medium'] self-start mt-4 mb-4 text-sm">
                   Forgot Password?
                 </Link>
+
+
+                {/* <Link
+                  href={{
+                    pathname: "/mfaVerification",
+                    params: { email: form.username } // Pass the username/email as param
+                  }}
+                  className="text-[#1DA1FA] font-medium self-start mt-4 mb-4 text-sm"
+                >
+                  MFA Verification
+                </Link> */}
 
                 <CustomButton
                   title="Login"
@@ -126,8 +184,8 @@ const Login = () => {
                 />
 
                 <View className="flex-row justify-center gap-2 mt-1">
-                  <Text className="text-sm text-[#71727A]">Not a Member?</Text>
-                  <Link href="/signup" className="text-[#1DA1FA] font-semibold text-sm">
+                  <Text className="text-sm text-[#71727A] font-['PlusJakartaSans-Regular']">Not a Member?</Text>
+                  <Link href="/signup" className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold'] text-sm">
                     Register Now
                   </Link>
                 </View>

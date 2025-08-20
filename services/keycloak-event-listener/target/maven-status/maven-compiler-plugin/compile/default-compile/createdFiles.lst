@@ -1,3 +1,2 @@
-com\stockfellow\keycloak\UserSyncEventListener.class
-com\stockfellow\keycloak\UserSyncEventListener$UserSyncData.class
 com\stockfellow\keycloak\UserSyncEventListenerProviderFactory.class
+com\stockfellow\keycloak\UserSyncEventListener.class

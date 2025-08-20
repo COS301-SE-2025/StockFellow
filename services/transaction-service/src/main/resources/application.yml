@@ -2,9 +2,9 @@ spring:
   application:
     name: transaction-service
   datasource:
-    url: jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0&preparedStatementCacheQueries=0&preparedStatementCacheSizeMiB=0
-    username: postgres.lcrdisuesrfbohqvudus
-    password: DevOpps123@
+    url: ${TRANSACTIONDB_URI}
+    username: ${TRANSACTIONDB_USER}
+    password: ${TRANSACTIONDB_PASS}
     driver-class-name: org.postgresql.Driver
 
     # Connection pool settings
@@ -34,14 +34,18 @@ scheduler:
   debit-order-cron: "0 0 1 * * ?" # Run at 1 AM on the 1st of every month
   payout-cron: "0 0 2 * * ?" # Run at 2 AM on the 2nd of every month
 
+paystack:
+  secretKey: ${PAYSTACK_TEST_API_KEY}
+  callback-base-url: ${CALLBACK_BASE_URL}
+  
 server:
   port: 4080 # was 4042
 
 logging:
   level:
     com.stockfellow: DEBUG
+    org.springframework.boot.context.config: DEBUG
 
-# Add this section for actuator
 management:
   endpoints:
     web:
@@ -50,3 +54,17 @@ management:
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    filter: true
+  show-actuator: true
+  group-configs:
+    - group: 'transaction-service'
+      paths-to-match: '/api/**'

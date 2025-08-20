@@ -9,7 +9,7 @@ import MemberCard from "../../../src/components/MemberCard";
 import StokvelActivity from "../../../src/components/StokvelActivity";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import authService from '../../../src/services/authService';
-
+import StokvelMandate from "../../../src/components/StokvelMandate";
 interface Member {
   id: string;
   name: string;
@@ -49,6 +49,7 @@ const Stokvel = () => {
   const router = useRouter();
   const [stokvel, setStokvel] = useState<StokvelDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMandateModal, setShowMandateModal] = useState(false);
 
   const params = useLocalSearchParams();
   const id = params.id || params.stokvel;
@@ -92,7 +93,7 @@ const Stokvel = () => {
           balance: data.group.balance ? `R ${data.group.balance.toFixed(2)}` : "R 0.00",
           members: data.group.members?.map((member: any) => ({
             id: member.userId,
-            name: member.userId,
+            name: member.username,
             role: member.role,
             contribution: member.contribution ? `R ${member.contribution.toFixed(2)}` : "R 0.00",
             tier: member.role === 'admin' ? 3 : 1,
@@ -162,27 +163,43 @@ const Stokvel = () => {
 
     try {
       if (stokvel.userPermissions.isAdmin) {
-        // Admin/Founder - navigate to edit page
-        router.push(`/stokvels/${id}/editStokvel`);
+        // Pass both id and groupId as params
+        router.push({
+          pathname: `/stokvels/${id}/editStokvel`,
+          params: {
+            id: id,
+            groupId: id // Make sure we're passing the correct ID
+          }
+        });
       } else if (stokvel.userPermissions.isMember) {
-        // Member - leave group (disabled for now)
         Alert.alert('Info', 'Leave functionality coming soon');
       } else {
-        // Not a member - send join request
-        const response = await authService.apiRequest(`/groups/${id}/join`, {
-          method: 'GET'
-        });
-
-        if (response.ok) {
-          Alert.alert('Success', 'Join request sent successfully');
-        } else {
-          const errorData = await response.json();
-          Alert.alert('Error', errorData.error || 'Failed to send join request');
-        }
+        setShowMandateModal(true);
       }
     } catch (error) {
       console.error('Manage button error:', error);
       Alert.alert('Error', 'An error occurred');
+    }
+  };
+
+  // Add this function to handle the actual join request
+  const handleJoinRequest = async () => {
+    try {
+      const response = await authService.apiRequest(`/groups/${id}/join`, {
+        method: 'GET'
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Join request sent successfully');
+        // Optionally refresh the stokvel data
+        // fetchStokvelDetails();
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.error || 'Failed to send join request');
+      }
+    } catch (error) {
+      console.error('Join request error:', error);
+      Alert.alert('Error', 'An error occurred while sending the request');
     }
   };
 
@@ -265,12 +282,12 @@ const Stokvel = () => {
                     : "Send Join Request"
               }
               containerStyles={`rounded-full py-4 px-12 my-6 self-center ${stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin
-                  ? "bg-gray-400"
-                  : "bg-[#0C0C0F]"
+                ? "bg-gray-400"
+                : "bg-[#0C0C0F]"
                 }`}
               textStyles="text-white text-base font-['PlusJakartaSans-SemiBold']"
               handlePress={handleManageButtonPress}
-              //isDisabled={stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin}
+            //isDisabled={stokvel.userPermissions?.isMember && !stokvel.userPermissions?.isAdmin}
             />
 
             <View className="w-full py-3 pl-5">
@@ -310,6 +327,11 @@ const Stokvel = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <StokvelMandate
+        visible={showMandateModal}
+        onClose={() => setShowMandateModal(false)}
+        onAccept={handleJoinRequest}
+      />
     </GestureHandlerRootView>
   );
 };

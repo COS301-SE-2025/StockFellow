@@ -1,72 +1,141 @@
 package com.stockfellow.transactionservice.controller;
 
-import com.stockfellow.transactionservice.model.Transaction;
-import com.stockfellow.transactionservice.repository.TransactionRepository;
-import com.stockfellow.transactionservice.dto.TransactionResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.stockfellow.transactionservice.dto.*;
+import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.service.TransactionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import jakarta.validation.Valid;
 import java.util.UUID;
+import java.util.Map;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
+
+import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
+@Tag(name = "Transactions", description = "Operations related to transactions (contributions)")
 @RequestMapping("/api/transactions")
+@CrossOrigin(origins = "*")
 public class TransactionController {
+    @Autowired
+    private TransactionService transactionService;
+    
+    // @Autowired
+    // private ActivityLogService activityLogService;
 
-    private static final Logger logger = LoggerFactory.getLogger(TransactionController.class);
-    private final TransactionRepository transactionRepository;
-
-    public TransactionController(TransactionRepository transactionRepository) {
-        this.transactionRepository = transactionRepository;
+    // Create transaction (called when user contributes to cycle)
+    //TODO: Remove this endpoint and replace with charge if possible
+    @PostMapping
+    @Operation(summary = "Create a new transaction", 
+                description = "Creates a new transaction for a group cycle with specified parameters")
+    public ResponseEntity<TransactionResponseDto> createTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
+        Transaction transaction = transactionService.createTransaction(createDto);
+        // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
+        //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
+        //                              "TRANSACTION_CREATED", null, null);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                           .body(TransactionResponseDto.fromEntity(transaction));
     }
+    
+    // Process transaction (handle payment gateway response)
+    // @PostMapping("/{transactionId}/process")
+    // @Operation(summary = "Process a transaction", 
+    //            description = "Processes a transaction and handle payment gateway response")
 
-    //Get all
-    //Get by id
-    //Get by cycle
-    //Get by transactions by cycle
-    //Get transactions by payer
-    //Get by status
+    // public ResponseEntity<TransactionResponseDto> processTransaction(
+    //         @PathVariable UUID transactionId,
+    //         @RequestBody ProcessTransactionDto processDto) {
+    //     Transaction transaction = transactionService.processTransaction(transactionId, processDto);
+    //     return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
+    // }
 
-    // Get all transactions
-    @GetMapping
-    public ResponseEntity<List<Transaction>> getAllTransactions() {
-        logger.info("Getting all transactions");
-        List<Transaction> transactions = transactionRepository.findAll();
-        return ResponseEntity.ok(transactions);
+    @PostMapping("/charge-card")
+    @Operation(summary = "Charge existing authorization", 
+                description = "Creates a new transaction for a group cycle using an existing payment authorization. Use in group cycle for recurring payments")
+    public ResponseEntity<TransactionResponseDto> chargeTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
+        Transaction transaction = transactionService.chargeStoredCard(createDto);
+        // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
+        //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
+        //                              "TRANSACTION_CREATED", null, null);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                           .body(TransactionResponseDto.fromEntity(transaction));
     }
-
-    // Get transaction by ID
+    
+    // Get transaction details
     @GetMapping("/{transactionId}")
-    public ResponseEntity<Transaction> getTransaction(@PathVariable UUID transactionId) {
-        logger.info("Getting transaction: {}", transactionId);
-        return transactionRepository.findById(transactionId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Fetch transaction details", 
+               description = "Returns details about a particular transaction based on the provided transactionId")
+    public ResponseEntity<TransactionResponseDto> getTransaction(@PathVariable UUID transactionId) {
+        Transaction transaction = transactionService.findById(transactionId);
+        return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
     }
-
+    
     // Get transactions by cycle
     @GetMapping("/cycle/{cycleId}")
-    public ResponseEntity<List<Transaction>> getTransactionsByCycle(@PathVariable UUID cycleId) {
-        logger.info("Getting transactions for cycle: {}", cycleId);
-        List<Transaction> transactions = transactionRepository.findByCycleIdOrderByCreatedAtDesc(cycleId);
-        return ResponseEntity.ok(transactions);
+    public ResponseEntity<Page<TransactionResponseDto>> getTransactionsByCycle(
+            @PathVariable UUID cycleId, 
+            Pageable pageable) {
+        Page<Transaction> transactions = transactionService.findByCycleId(cycleId, pageable);
+        return ResponseEntity.ok(transactions.map(TransactionResponseDto::fromEntity));
     }
+    
+    // Get transactions by user
+    @GetMapping("/user")
+    public ResponseEntity<Page<TransactionResponseDto>> getTransactionsByUser(
+            HttpServletRequest request,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            ResponseEntity<?> userIdResponse = extractUserIdFromHeaders(request); // Fixed variable name
+            if (userIdResponse.getStatusCode() != HttpStatus.OK) {
+                return (ResponseEntity<Page<TransactionResponseDto>>) userIdResponse;
+            }
 
-    // Get transactions by payer
-    @GetMapping("/payer/{payerUserId}")
-    public ResponseEntity<List<Transaction>> getTransactionsByPayer(@PathVariable UUID payerUserId) {
-        logger.info("Getting transactions for payer: {}", payerUserId);
-        List<Transaction> transactions = transactionRepository.findByPayerUserIdOrderByCreatedAtDesc(payerUserId);
-        return ResponseEntity.ok(transactions);
+            UUID userId = (UUID) userIdResponse.getBody();
+            
+            Page<Transaction> transactions = transactionService.findByUserId(userId, pageable);
+            Page<TransactionResponseDto> responseDto = transactions.map(TransactionResponseDto::fromEntity);
+            
+            return ResponseEntity.ok(responseDto);
+            
+        } catch (Exception e) {
+            // logger.error("Error fetching transactions for user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
-
-    // Get transactions by status
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<Transaction>> getTransactionsByStatus(@PathVariable String status) {
-        logger.info("Getting transactions with status: {}", status);
-        List<Transaction> transactions = transactionRepository.findByStatus(status);
-        return ResponseEntity.ok(transactions);
+    
+    // Retry failed transaction
+    @PostMapping("/{transactionId}/retry")
+    public ResponseEntity<TransactionResponseDto> retryTransaction(@PathVariable UUID transactionId) {
+        Transaction transaction = transactionService.retryTransaction(transactionId);
+        return ResponseEntity.ok(TransactionResponseDto.fromEntity(transaction));
+    }
+    
+    /**
+     * Helper method to extract and validate user ID from headers
+     */
+    private ResponseEntity<?> extractUserIdFromHeaders(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        
+        if (userIdHeader == null || userIdHeader.trim().isEmpty()) {
+            // logger.warn("Missing X-User-Id header in request");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "User ID not found in request headers"));
+        }
+        
+        try {
+            UUID userId = UUID.fromString(userIdHeader);
+            return ResponseEntity.ok(userId);
+        } catch (IllegalArgumentException e) {
+            // logger.error("Invalid UUID format in X-User-Id header: {}", userIdHeader);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid user ID format"));
+        }
     }
 }

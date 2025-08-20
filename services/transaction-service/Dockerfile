@@ -1,4 +1,4 @@
-# Multi-stage build for group-service
+# Multi-stage build for transaction-service (Java 17 version)
 FROM maven:3-openjdk-17-slim AS build
 
 WORKDIR /app
@@ -35,12 +35,15 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose the port
+# Use fixed port 4080
 EXPOSE 4080
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:4080/actuator/health || exit 1
 
+# Set JVM options for containerized environment
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
 # Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["sh", "-c", "java $JAVA_OPTS $JVM_OPTS -jar app.jar"]

@@ -7,7 +7,9 @@ coverage/
 *.lcov
 *.lcov.info
 
-*.env
+# Secrets
+# *.env
+ngrok.yml
 
 # Java
 target/
@@ -39,6 +41,7 @@ buildNumber.properties
 .project
 .classpath
 .settings/
+StockFellow.code-workspace
 
 # OS
 .DS_Store

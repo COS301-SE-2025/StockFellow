@@ -1,45 +1,117 @@
 // apps/mobile-app/app/transactions/cards.tsx
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import DebitCard from '../../src/components/DebitCard';
 import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
-import { loadCards, saveCards } from '../../src/services/cardService';
-
-interface Card {
-  id: string;
-  bank: string;
-  cardNumber: string;
-  cardHolderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cardType: 'mastercard' | 'visa';
-  isActive?: boolean;
-}
+import cardService from '../../src/services/cardService';
+import authService from '../../src/services/authService';
 
 const Cards = () => {
   const router = useRouter();
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activatingCardId, setActivatingCardId] = useState<string | null>(null);
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const [addingNewCard, setAddingNewCard] = useState(false);
+
+  const fetchCards = async () => {
+    try {
+      const userCards = await cardService.getUserBankDetails();
+      setCards(userCards);
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+      Alert.alert('Error', 'Failed to load cards');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCards = async () => {
-      const loadedCards = await loadCards();
-      setCards(loadedCards);
-    };
-    
     fetchCards();
   }, []);
 
+  // Refresh cards when screen comes into focus (after returning from Paystack)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!loading) {
+        fetchCards();
+      }
+    }, [loading])
+  );
+
+	// Handle deep link when returning from Paystack
+	useEffect(() => {
+		const handleDeepLink = (url: string) => {
+			console.log('Deep link received:', url);
+			
+			// Simple check - if URL contains our callback path, refresh cards
+			if (url.includes('cards/callback')) {
+				console.log('Paystack callback received, refreshing cards...');
+				
+				// Check for success/failure in the URL string
+				if (url.includes('status=success')) {
+					Alert.alert(
+						'Card Added Successfully!',
+						'Your card has been added and will be available shortly.',
+						[
+							{
+								text: 'OK',
+								onPress: () => {
+									setLoading(true);
+									fetchCards();
+								}
+							}
+						]
+					);
+				} else if (url.includes('status=cancelled')) {
+					Alert.alert('Card Addition Cancelled', 'You cancelled the card addition process.');
+				} else if (url.includes('status=failed')) {
+					Alert.alert('Card Addition Failed', 'There was an error adding your card. Please try again.');
+				} else {
+					// Generic callback - just refresh
+					setLoading(true);
+					fetchCards();
+				}
+			}
+		};
+
+		// Listen for deep links when app is already open
+		const subscription = Linking.addEventListener('url', ({ url }) => {
+			handleDeepLink(url);
+		});
+
+		// Check if app was opened via deep link
+		Linking.getInitialURL().then((url) => {
+			if (url) {
+				handleDeepLink(url);
+			}
+		});
+
+		return () => {
+			subscription?.remove();
+		};
+	}, []);
+	
   const setActiveCard = async (cardId: string) => {
-    const updatedCards = cards.map(card => ({
-      ...card,
-      isActive: card.id === cardId
-    }));
-    setCards(updatedCards);
-    await saveCards(updatedCards);
+    try {
+      setActivatingCardId(cardId);
+      await cardService.activateBankDetails(cardId);
+      // Update local state to reflect the change
+      setCards(cards.map(card => ({
+        ...card,
+        isActive: card.id === cardId
+      })));
+    } catch (error) {
+      console.error('Error activating card:', error);
+      Alert.alert('Error', 'Failed to set card as active');
+    } finally {
+      setActivatingCardId(null);
+    }
   };
 
   const deleteCard = async (cardId: string) => {
@@ -49,57 +121,120 @@ const Cards = () => {
       [
         {
           text: 'Cancel',
-          style: 'cancel'
+          style: 'cancel',
+          onPress: () => setDeletingCardId(null)
         },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const updatedCards = cards.filter(card => card.id !== cardId);
-            if (updatedCards.length > 0 && !updatedCards.some(card => card.isActive)) {
-              updatedCards[0].isActive = true;
+            try {
+              setDeletingCardId(cardId);
+              await cardService.deleteBankDetails(cardId);
+              // Update local state
+              const updatedCards = cards.filter(card => card.id !== cardId);
+              setCards(updatedCards);
+            } catch (error) {
+              console.error('Error deleting card:', error);
+              Alert.alert('Error', 'Failed to delete card');
+            } finally {
+              setDeletingCardId(null);
             }
-            setCards(updatedCards);
-            await saveCards(updatedCards);
           }
         }
       ]
     );
   };
 
+  const addNewCard = async () => {
+		try {
+			setAddingNewCard(true);
+			
+			// Get Paystack authorization URL (user info extracted from token)
+			const authUrl = await cardService.openPaystackAuthorization();
+			
+			// Open Paystack in browser
+			const canOpen = await Linking.canOpenURL(authUrl);
+			if (canOpen) {
+				await Linking.openURL(authUrl);
+				
+				// Show a simple message that the user will be redirected back
+				Alert.alert(
+					'Redirecting to Paystack',
+					'Complete your card authorization. You\'ll be automatically redirected back to the app when done.',
+					[
+						{
+							text: 'OK'
+						}
+					]
+				);
+			} else {
+				Alert.alert('Error', 'Cannot open Paystack authorization page');
+			}
+		} catch (error) {
+			console.error('Error adding new card:', error);
+			Alert.alert('Error', 'Failed to initialize card addition');
+		} finally {
+			setAddingNewCard(false);
+		}
+	};
+
+  if (loading) {
+    return (
+      <GestureHandlerRootView className="flex-1">
+        <SafeAreaView className="flex-1 bg-white">
+          <TopBar title="My Cards" />
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#0000ff" />
+            <Text className="mt-4 text-gray-600">Loading your cards...</Text>
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaView className="flex-1 bg-white">
-        <TopBar title="Stokvels" />
+        <TopBar title="My Cards" />
         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 80 }}>
           {/* Header with "My Cards" and Add Button */}
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-xl font-['PlusJakartaSans-Bold']">My Cards</Text>
             <TouchableOpacity
-              onPress={() => router.push('/transactions/cardform')}
+              onPress={addNewCard}
+              disabled={addingNewCard}
               className="p-2"
             >
-              <Image 
-                source={icons.plus}
-                className="w-8 h-8"
-                resizeMode="contain"
-              />
+              {addingNewCard ? (
+                <ActivityIndicator color="#0000ff" />
+              ) : (
+                <Image 
+                  source={icons.plus}
+                  className="w-8 h-8"
+                  resizeMode="contain"
+                />
+              )}
             </TouchableOpacity>
           </View>
 
           {/* Current Active Card */}
-          <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Current Active Card</Text>
-          {cards.filter(card => card.isActive).map(card => (
-            <View key={card.id} >
-              <DebitCard
-                bankName={card.bank}
-                cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
-                cardHolderName={card.cardHolderName}
-                expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
-                cardType={card.cardType}
-              />
-            </View>
-          ))}
+          {cards.filter(card => card.isActive).length > 0 && (
+            <>
+              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Current Active Card</Text>
+              {cards.filter(card => card.isActive).map(card => (
+                <View key={card.id} className="mb-6">
+                  <DebitCard
+                    bankName={card.bank}
+                    cardNumber={`•••• •••• •••• ${card.last4Digits}`}
+                    cardHolder={card.cardHolder}
+                    expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
+                    cardType={card.cardType}
+                  />
+                </View>
+              ))}
+            </>
+          )}
 
           {/* Other Cards */}
           {cards.filter(card => !card.isActive).length > 0 && (
@@ -109,23 +244,33 @@ const Cards = () => {
                 <View key={card.id} className="mb-6">
                   <DebitCard
                     bankName={card.bank}
-                    cardNumber={`•••• •••• •••• ${card.cardNumber.slice(-4)}`}
-                    cardHolderName={card.cardHolderName}
+                    cardNumber={`•••• •••• •••• ${card.last4Digits}`}
+                    cardHolder={card.cardHolder}
                     expiryDate={`${card.expiryMonth}/${card.expiryYear}`}
                     cardType={card.cardType}
                   />
-                  <View className="flex-row justify-center mt-1">
+                  <View className="flex-row justify-center mt-4">
                     <TouchableOpacity
-                      className="bg-[#0C0C0F] px-4 py-3 mx-2 rounded-3xl"
+                      className="bg-[#0C0C0F] px-4 py-3 mx-2 rounded-3xl items-center justify-center min-w-[120px]"
                       onPress={() => setActiveCard(card.id)}
+                      disabled={!!activatingCardId}
                     >
-                      <Text className="text-white">Set as Active</Text>
+                      {activatingCardId === card.id ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text className="text-white font-['PlusJakartaSans-SemiBold']">Set as Active</Text>
+                      )}
                     </TouchableOpacity>
                     <TouchableOpacity
-                      className="bg-[#D10000] px-4 py-3 mx-2 rounded-3xl"
+                      className="bg-[#D10000] px-4 py-3 mx-2 rounded-3xl items-center justify-center min-w-[120px]"
                       onPress={() => deleteCard(card.id)}
+                      disabled={!!deletingCardId}
                     >
-                      <Text className="text-white">Delete Card</Text>
+                      {deletingCardId === card.id ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text className="text-white font-['PlusJakartaSans-SemiBold']">Delete Card</Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -133,9 +278,29 @@ const Cards = () => {
             </>
           )}
 
+          {/* Empty State */}
           {cards.length === 0 && (
-            <View className="items-center justify-center py-10">
-              <Text className="text-gray-500">No cards added yet</Text>
+            <View className="items-center justify-center py-20">
+              <Image 
+                source={icons.plus} // You might want a different icon here
+                className="w-16 h-16 opacity-30 mb-4"
+                resizeMode="contain"
+              />
+              <Text className="text-gray-500 text-lg mb-2">No cards added yet</Text>
+              <Text className="text-gray-400 text-center px-8 mb-6">
+                Add your first card to start making payments
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/transactions/cardform')}
+                disabled={addingNewCard}
+                className="bg-[#0C0C0F] px-6 py-3 rounded-3xl"
+              >
+                {addingNewCard ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-['PlusJakartaSans-SemiBold']">Add Your First Card</Text>
+                )}
+              </TouchableOpacity>
             </View>
           )}
         </ScrollView>

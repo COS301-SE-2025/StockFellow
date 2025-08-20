@@ -1,25 +1,43 @@
-# Development Dockerfile for user-service with hot reload
-FROM maven:3-openjdk-17-slim
-
-WORKDIR /app
+FROM openjdk:17-jdk-slim
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Copy pom.xml and download dependencies
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Set working directory
+WORKDIR /app
 
-# Copy source code (this will be mounted as volume in development)
+# Copy Maven wrapper and pom.xml first for better caching
+COPY pom.xml ./
+COPY .mvn .mvn
+#COPY mvnw ./
+
+# Make Maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
 COPY src ./src
 
+# Set JVM arguments for development
+ENV JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -Xmx512m -Xms256m"
+
 # Expose ports
-EXPOSE 4000 5005
+EXPOSE 4020 5005
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:4000/actuator/health || exit 1
+# Create a script to run the application with hot reload
+RUN echo '#!/bin/bash\n\
+./mvnw spring-boot:run \
+  -Dspring-boot.run.jvmArguments="$JVM_OPTS" \
+  -Dspring-boot.run.fork=false \
+  -Dspring.devtools.restart.enabled=true \
+  -Dspring.devtools.livereload.enabled=true' > start.sh
 
-# Use Spring Boot DevTools for hot reload in development
-# Enable debug mode and remote debugging
-ENTRYPOINT ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"]
+RUN chmod +x start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:4020/actuator/health || exit 1
+
+CMD ["./start.sh"]

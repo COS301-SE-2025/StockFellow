@@ -8,6 +8,8 @@ import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
+import userService from '../../src/services/userService';
+import groupService from '../../src/services/groupService';
 
 interface Stokvel {
   id: string;
@@ -28,9 +30,11 @@ const Stokvels = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const { colors } = useTheme();
 
+  // Fetch user groups, else create/auto join by system based on tier
   useEffect(() => {
     const fetchStokvels = async () => {
       try {
+        // First try to fetch user's existing groups
         const response = await authService.apiRequest('/groups/user', {
           method: 'GET'
         });
@@ -39,11 +43,59 @@ const Stokvels = () => {
           throw new Error('Failed to fetch stokvels');
         }
 
-        const data = await response.json();
+        let data = await response.json();
+
+        console.debug("FIRST CHECK, user groups: " + data);
+        // If user has no groups, check their tier and auto-join/create
+        if (data.length === 0) {
+          try {
+            // Try to get user's affordability tier from backend
+            let tier;
+            try {
+              const profileResponse = await userService.getProfile();
+              tier = profileResponse.affordability?.tier;
+              console.debug("Retrieved user tier from backend:", tier);
+            } catch (error) {
+              console.warn("Could not fetch user tier, generating random tier:", error);
+            }
+
+            // If tier not available from backend, generate random tier (1-6)
+            if (!tier) {
+              tier = Math.floor(Math.random() * 6) + 1; // Random number between 1-6
+              console.debug("Using randomly generated tier:", tier);
+            }
+
+            // Auto-create/join group based on tier
+            console.debug("Attempting to join/create stokvel for tier:", tier);
+            const joinResult = await groupService.joinOrCreateStokvel(tier);
+
+            // After joining, refetch user's groups
+            const newResponse = await authService.apiRequest('/groups/user', {
+              method: 'GET'
+            });
+
+            if (newResponse.ok) {
+              data = await newResponse.json();
+              const tierName = [
+                "Essential Savers",
+                "Steady Builders",
+                "Balanced Savers",
+                "Growth Investors",
+                "Premium Accumulators",
+                "Elite Circle"
+              ][tier - 1];
+
+              Alert.alert('Success', `You've been added to a ${tierName} stokvel`);
+            }
+          } catch (tierError) {
+            console.error('Error joining stokvel:', tierError);
+            Alert.alert('Info', 'Could not automatically join a stokvel. Please create one manually.');
+          }
+        }
 
         const transformedStokvels = data.map((group: any) => ({
-          id: group.id, // Keep the id for your own stokvels
-          groupId: group.groupId || group.id || group._id, // Keep groupId for public stokvels
+          id: group._id || group.id,
+          groupId: group.groupId,
           name: group.name,
           memberCount: group.members?.length || 0,
           balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
@@ -141,7 +193,7 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
-      
+
       <View className="px-6 pt-4">
         <SearchBar
           nativeID="search-bar"
@@ -173,11 +225,10 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                        const routeId = stokvel.id || stokvel.groupId;
+                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: routeId }
+                          params: { id: stokvel.groupId }
                         });
                       }}
                     />
@@ -203,11 +254,10 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                        const routeId = stokvel.id || stokvel.groupId;
+                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
-                          params: { id: routeId }
+                          params: { id: stokvel.groupId }
                         });
                       }}
                     />
@@ -231,11 +281,10 @@ const Stokvels = () => {
                     balance={stokvel.balance || "R 0.00"}
                     profileImage={stokvel.profileImage}
                     onPress={() => {
-                      // Use id if available (for your own stokvels), otherwise use groupId (for public stokvels)
-                      const routeId = stokvel.id || stokvel.groupId;
+                      // Use groupId consistently for navigation
                       router.push({
                         pathname: '/stokvels/[id]',
-                        params: { id: routeId }
+                        params: { id: stokvel.groupId }
                       });
                     }}
                   />

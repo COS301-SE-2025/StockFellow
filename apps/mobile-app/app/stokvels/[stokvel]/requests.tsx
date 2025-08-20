@@ -27,11 +27,14 @@ interface JoinRequest {
 }
 
 const StokvelRequests = () => {
-    const { stokvel: id } = useLocalSearchParams<{ stokvel: string }>();
+    // Fixed: Handle both possible parameter names
+    const params = useLocalSearchParams<{ stokvel?: string; id?: string }>();
+    const id = params.stokvel || params.id;
     const router = useRouter();
     const [requests, setRequests] = useState<JoinRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [groupName, setGroupName] = useState<string>('');
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -39,47 +42,67 @@ const StokvelRequests = () => {
                 throw new Error('No group ID provided');
             }
 
-            console.log("Group ID recieved to check requests: " + id);
+            console.log("Group ID received to check requests: " + id);
 
             const response = await authService.apiRequest(`/groups/${id}/requests`, {
                 method: 'GET'
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch group details');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch requests');
             }
 
             const data = await response.json();
+            console.log("API Response: ", data);
 
-            console.log("Group Data: ", data);
-
-            // Filter only waiting requests and transform to frontend format
-            // const pendingRequests = data.group.requests
-            //     ?.filter((req: any) => req.state === "waiting")
-            //     ?.map((req: any) => ({
-            //         requestId: req.requestId,
-            //         userId: req.userId,
-            //         state: req.state,
-            //         timestamp: new Date(req.timestamp),
-            //         profileName: req.userId, // You should fetch actual user names here
-            //         profileImage: null
-            //     })) || [];
+            const pendingRequests = data.requests?.map((req: any) => ({
+                requestId: req.requestId,
+                userId: req.userId,
+                state: req.state,
+                timestamp: new Date(req.timestamp),
+                profileName: req.username, 
+                profileImage: null
+            })) || [];
             
-            // console.log("Groups Requests: " + pendingRequests);
+            console.log("Pending Requests: ", pendingRequests);
 
-            // setRequests(pendingRequests);
+            setRequests(pendingRequests);
+            setGroupName(data.groupName || 'Group'); // Set group name from response
         } catch (error) {
             console.error('Error fetching requests:', error);
-            Alert.alert('Error', 'Failed to load join requests');
+            
+            // Better error handling
+            if (error instanceof Error) {
+                if (error.message.includes('403') || error.message.includes('Access denied')) {
+                    Alert.alert('Access Denied', 'Only group admins can view join requests', [
+                        { text: 'OK', onPress: () => router.back() }
+                    ]);
+                } else if (error.message.includes('404')) {
+                    Alert.alert('Not Found', 'Group not found', [
+                        { text: 'OK', onPress: () => router.back() }
+                    ]);
+                } else {
+                    Alert.alert('Error', error.message || 'Failed to load join requests');
+                }
+            } else {
+                Alert.alert('Error', 'Failed to load join requests');
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [id]);
+    }, [id, router]);
 
     useEffect(() => {
+        if (!id) {
+            Alert.alert('Error', 'No group ID provided', [
+                { text: 'OK', onPress: () => router.back() }
+            ]);
+            return;
+        }
         fetchRequests();
-    }, [fetchRequests]);
+    }, [fetchRequests, id, router]);
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
@@ -88,8 +111,6 @@ const StokvelRequests = () => {
 
     const processRequest = async (requestId: string, action: 'accept' | 'reject') => {
         try {
-            setLoading(true);
-
             const response = await authService.apiRequest(`/groups/${id}/request`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -99,7 +120,8 @@ const StokvelRequests = () => {
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to ${action} request`);
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to ${action} request`);
             }
 
             // Remove the processed request from local state
@@ -108,14 +130,31 @@ const StokvelRequests = () => {
             Alert.alert('Success', `Request ${action}ed successfully`);
         } catch (error) {
             console.error(`Error ${action}ing request:`, error);
-            Alert.alert('Error', `Failed to ${action} request`);
-        } finally {
-            setLoading(false);
+            Alert.alert('Error', error instanceof Error ? error.message : `Failed to ${action} request`);
         }
     };
 
-    const handleAccept = (requestId: string) => processRequest(requestId, 'accept');
-    const handleReject = (requestId: string) => processRequest(requestId, 'reject');
+    const handleAccept = (requestId: string) => {
+        Alert.alert(
+            'Accept Request',
+            'Are you sure you want to accept this join request?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Accept', onPress: () => processRequest(requestId, 'accept') }
+            ]
+        );
+    };
+
+    const handleReject = (requestId: string) => {
+        Alert.alert(
+            'Reject Request',
+            'Are you sure you want to reject this join request?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Reject', style: 'destructive', onPress: () => processRequest(requestId, 'reject') }
+            ]
+        );
+    };
 
     if (loading && requests.length === 0) {
         return (
@@ -133,10 +172,17 @@ const StokvelRequests = () => {
     return (
         <GestureHandlerRootView className="flex-1">
             <SafeAreaView className="flex-1 bg-white">
-                <TopBar title="Stokvels" />
-                <Text className="m-6 text-xl font-['PlusJakartaSans-SemiBold']">
-                    Join Requests
-                </Text>
+                <TopBar title="Join Requests" />
+                <View className="mx-6 mt-6 mb-4">
+                    <Text className="text-xl font-['PlusJakartaSans-SemiBold']">
+                        Join Requests
+                    </Text>
+                    {groupName && (
+                        <Text className="text-sm text-gray-600 font-['PlusJakartaSans-Regular'] mt-1">
+                            {groupName}
+                        </Text>
+                    )}
+                </View>
 
                 <ScrollView
                     className="flex-1 px-5 py-3"
@@ -154,7 +200,7 @@ const StokvelRequests = () => {
                         requests.map((request) => (
                             <View key={request.requestId} className="mb-6 p-4 bg-gray-50 rounded-lg">
                                 <View className="flex-row items-center mb-3">
-                                    <View className="w-14 h-14 rounded-full bg-white items-center justify-center mr-2 shadow-xl shadow-[#1DA1FA]/90">
+                                    <View className="w-14 h-14 rounded-full bg-white items-center justify-center mr-3 shadow-xl shadow-[#1DA1FA]/90">
                                         <Image
                                             source={request.profileImage ? { uri: request.profileImage } : icons.avatar}
                                             className="w-12 h-12 rounded-full"
@@ -163,7 +209,10 @@ const StokvelRequests = () => {
                                     </View>
                                     <View className="flex-1">
                                         <Text className="font-['PlusJakartaSans-SemiBold'] text-base">
-                                            {request.profileName || request.userId} wants to join
+                                            {request.profileName || request.userId}
+                                        </Text>
+                                        <Text className="text-gray-600 text-sm">
+                                            wants to join
                                         </Text>
                                         <Text className="text-gray-500 text-xs mt-1">
                                             {formatDistanceToNow(request.timestamp, { addSuffix: true })}
@@ -195,7 +244,7 @@ const StokvelRequests = () => {
                         ))
                     ) : (
                         <View className="flex-1 justify-center items-center">
-                            <View className="items-center "> 
+                            <View className="items-center">
                                 <Image
                                     source={icons.request}
                                     className="w-24 h-24 opacity-70 mb-4"
@@ -203,6 +252,9 @@ const StokvelRequests = () => {
                                 />
                                 <Text className="text-gray-600 font-['PlusJakartaSans-Medium']">
                                     No pending requests
+                                </Text>
+                                <Text className="text-gray-500 text-sm text-center mt-2">
+                                    When users request to join this group,{'\n'}they will appear here
                                 </Text>
                             </View>
                         </View>

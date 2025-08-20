@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Redis for caching
   redis:
@@ -31,7 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${KEYCLOAK_POSTGRES_EXTERNAL_PORT:-5432}:5432"  # Fixed: Use correct env var
     networks:
       - stockfellow-net
     healthcheck:
@@ -39,6 +37,202 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # PostgreSQL database for User Service
+  # docker exec -it user-service-postgres psql -U userservice_user -d userservice_db -c "SELECT * FROM users;"
+  user-service-postgres:
+    image: postgres:15
+    container_name: user-service-postgres
+    volumes:
+      - ./services/user-service/postgresql.conf:/etc/postgresql/postgresql.conf
+      - user_service_postgres_data:/var/lib/postgresql/data
+      - ./services/user-service/init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_DB: ${USER_SERVICE_POSTGRES_DB}  # Use env var
+      POSTGRES_USER: ${USER_SERVICE_POSTGRES_USER}  # Use env var
+      POSTGRES_PASSWORD: ${USER_SERVICE_POSTGRES_PASSWORD}  # Use env var
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_CONFIG_FILE: /etc/postgresql/postgresql.conf
+    ports:
+      - "${USER_SERVICE_POSTGRES_EXTERNAL_PORT:-5431}:5432"  # Use env var
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_SERVICE_POSTGRES_USER} -d ${USER_SERVICE_POSTGRES_DB} && psql -U ${USER_SERVICE_POSTGRES_USER} -d ${USER_SERVICE_POSTGRES_DB} -c 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # PostgreSQL Database for Notification Service
+  notification-postgres:
+    image: postgres:15
+    container_name: notification-postgres
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${NOTIFICATION_POSTGRES_DB}  # Use env var
+      POSTGRES_USER: ${NOTIFICATION_POSTGRES_USER}  # Use env var
+      POSTGRES_PASSWORD: ${NOTIFICATION_POSTGRES_PASSWORD}  # Use env var
+    ports:
+      - "${NOTIFICATION_POSTGRES_EXTERNAL_PORT:-5440}:5432"  # Use env var
+    networks:
+      - stockfellow-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${NOTIFICATION_POSTGRES_USER}", "-d", "${NOTIFICATION_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database for Alfresco
+  # alfresco-postgres:
+  #   image: postgres:15
+  #   container_name: alfresco-postgres
+  #   volumes:
+  #     - alfresco_postgres_data:/var/lib/postgresql/data
+  #     - ./alfresco/init-scripts:/docker-entrypoint-initdb.d
+  #   environment:
+  #     POSTGRES_DB: alfresco
+  #     POSTGRES_USER: alfresco
+  #     POSTGRES_PASSWORD: alfresco123
+  #     POSTGRES_MULTIPLE_DATABASES: alfresco,activiti
+  #   ports:
+  #     - "5435:5432"
+  #   networks:
+  #     - stockfellow-net
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "alfresco"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ActiveMQ
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: activemq
+    ports:
+      - "61616:61616"  # OpenWire protocol
+      - "8161:8161"    # Web console
+      - "5672:5672"    # AMQP
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    networks:
+      - stockfellow-net
+    volumes:
+      - activemq_data:/var/lib/artemis-instance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Alfresco Search Services (Solr6)
+  # alfresco-search:
+  #   image: alfresco/alfresco-search-services:2.0.8.1
+  #   container_name: alfresco-search
+  #   environment:
+  #     SOLR_ALFRESCO_HOST: alfresco-content-repository
+  #     SOLR_ALFRESCO_PORT: 8080
+  #     SOLR_SOLR_HOST: alfresco-search
+  #     SOLR_SOLR_PORT: 8983
+  #     SOLR_CREATE_ALFRESCO_DEFAULTS: alfresco,archive
+  #     ALFRESCO_SECURE_COMMS: secret
+  #     JAVA_TOOL_OPTIONS: "-Dalfresco.secureComms.secret=secret"
+  #   ports:
+  #     - "8983:8983"
+  #   networks:
+  #     - stockfellow-net
+  #   volumes:
+  #     - alfresco_search_data:/opt/alfresco-search-services/data
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/cores"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+
+  # # Alfresco Content Repository
+  # alfresco-content-repository:
+  #   image: alfresco/alfresco-content-repository-community:23.2.1
+  #   container_name: alfresco-content-repository
+  #   depends_on:
+  #     - alfresco-postgres
+  #     - alfresco-search
+  #   environment:
+  #     JAVA_TOOL_OPTIONS: >-
+  #       -Dencryption.keystore.type=JCEKS
+  #       -Dencryption.cipherAlgorithm=DESede/CBC/PKCS5Padding
+  #       -Dencryption.keyAlgorithm=DESede
+  #       -Dencryption.keystore.location=/usr/local/tomcat/shared/classes/alfresco/extension/keystore/keystore
+  #       -Dmetadata-keystore.password=mp6yc0UD9e
+  #       -Dmetadata-keystore.aliases=metadata
+  #       -Dmetadata-keystore.metadata.password=oKIWzVdEdA
+  #       -Dmetadata-keystore.metadata.algorithm=DESede
+  #     JAVA_OPTS: >-
+  #       -Ddb.driver=org.postgresql.Driver
+  #       -Ddb.username=alfresco
+  #       -Ddb.password=alfresco123
+  #       -Ddb.url=jdbc:postgresql://alfresco-postgres:5432/alfresco
+  #       -Dsolr.host=alfresco-search
+  #       -Dsolr.port=8983
+  #       -Dsolr.http.connection.timeout=1000
+  #       -Dsolr.secureComms=secret
+  #       -Dsolr.sharedSecret=secret
+  #       -Dsolr.base.url=/solr
+  #       -Dindex.subsystem.name=solr6
+  #       -Dshare.host=127.0.0.1
+  #       -Dshare.port=8080
+  #       -Dalfresco.host=localhost
+  #       -Dalfresco.port=8080
+  #       -Daos.baseUrlOverwrite=http://localhost:8080/alfresco/aos
+  #       -Dmessaging.broker.url="failover:(nio://activemq:61616)?timeout=3000&jms.useCompression=true"
+  #       -Ddeployment.method=DOCKER_COMPOSE
+  #       -Dtransform.service.enabled=false
+  #       -Dlegacy.transform.service.enabled=false
+  #       -Dcsrf.filter.enabled=false
+  #       -Dalfresco.restApi.basicAuthScheme=true
+  #       -Dauthentication.protection.enabled=false
+  #       -XX:MinRAMPercentage=50
+  #       -XX:MaxRAMPercentage=80
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - stockfellow-net
+  #   volumes:
+  #     - alfresco_acs_data:/usr/local/tomcat/alf_data
+  #     - ./alfresco/keystore:/usr/local/tomcat/shared/classes/alfresco/extension/keystore
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/probes/-ready-"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 120s
+
+  # # Alfresco Share (Optional Web UI)
+  # alfresco-share:
+  #   image: alfresco/alfresco-share:23.2.1
+  #   container_name: alfresco-share
+  #   depends_on:
+  #     - alfresco-content-repository
+  #   environment:
+  #     REPO_HOST: "alfresco-content-repository"
+  #     REPO_PORT: "8080"
+  #     JAVA_OPTS: >-
+  #       -XX:MinRAMPercentage=50
+  #       -XX:MaxRAMPercentage=80
+  #       -Dalfresco.host=localhost
+  #       -Dalfresco.port=8080
+  #       -Dalfresco.context=alfresco
+  #       -Dalfresco.protocol=http
+  #   ports:
+  #     - "8082:8080"
+  #   networks:
+  #     - stockfellow-net
+  #   volumes:
+  #     - alfresco_share_data:/usr/local/tomcat/shared/classes/alfresco/web-extension
 
   # Keycloak 
   keycloak:
@@ -74,6 +268,7 @@ services:
     depends_on:
       - keycloak
       - redis
+      # - alfresco-content-repository
     ports:
       - "${API_GATEWAY_PORT}:3000"
       - "${API_GATEWAY_DEBUG_PORT}:5007"
@@ -92,6 +287,9 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
+      # - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
+      # - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
       - JVM_OPTS=${JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
@@ -111,33 +309,45 @@ services:
   user-service:
     build:
       context: ./services/user-service
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: user-service
     depends_on:
+      - user-service-postgres
       - keycloak
     ports:
-      - "${USER_SERVICE_PORT}:4000"
+      - "${USER_SERVICE_PORT}:4020"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
-      - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE}
-      - SPRING_DATA_MONGODB_URI=${USER_SERVICE_MONGODB_URI}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://user-service-postgres:5432/userservice_db
+      - SPRING_DATASOURCE_USERNAME=userservice_user
+      - SPRING_DATASOURCE_PASSWORD=userservice_pass
+      - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
+      - USER_SERVICE_POSTGRES_HOST=${USER_SERVICE_POSTGRES_HOST}  # Use env var
+      - USER_SERVICE_POSTGRES_PORT=${USER_SERVICE_POSTGRES_PORT}  # Use env var
+      - USER_SERVICE_POSTGRES_DB=${USER_SERVICE_POSTGRES_DB}      # Use env var
+      - USER_SERVICE_POSTGRES_USER=${USER_SERVICE_POSTGRES_USER}  # Use env var
+      - USER_SERVICE_POSTGRES_PASSWORD=${USER_SERVICE_POSTGRES_PASSWORD}  # Use env var
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
-      - JVM_OPTS=${USER_SERVICE_JVM_OPTS}
+      - JVM_OPTS=${USER_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+      - JPA_SHOW_SQL=${JPA_SHOW_SQL:-false}
+      - SPRING_WEB_LOG_LEVEL=${SPRING_WEB_LOG_LEVEL:-INFO}
+      - HIBERNATE_SQL_LOG_LEVEL=${HIBERNATE_SQL_LOG_LEVEL:-WARN}
     networks:
       - stockfellow-net
     volumes:
       - ./services/user-service/src:/app/src
       - ./services/user-service/pom.xml:/app/pom.xml
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4020/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
-  
+    restart: unless-stopped
+
   # Group Service (Spring Boot)
   group-service:
     build:
@@ -168,7 +378,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
+      retries:  ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
   # Transaction Service
@@ -180,12 +390,18 @@ services:
     depends_on:
       - group-service
       - user-service
+      - ngrok
     ports:
-      - "${TRANSACTION_SERVICE_PORT}:4080"
+      - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
-      - SERVER_PORT=${TRANSACTION_SERVICE_PORT}
+      - SERVER_PORT=4080  # Fixed: Use consistent internal port
       - SPRING_PROFILES_ACTIVE=${TRANSACTION_SERVICE_SPRING_PROFILE}
       - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
+      - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
+      - TRANSACTIONDB_USER=${TRANSACTIONDB_USER}
+      - PAYSTACK_API_URL=${PAYSTACK_API_URL}
+      - PAYSTACK_TEST_API_KEY=${PAYSTACK_TEST_API_KEY}
+      - CALLBACK_BASE_URL=${PAYSTACK_CALLBACK_URL}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=${USER_SERVICE_URL}
@@ -193,6 +409,8 @@ services:
       - JVM_OPTS=${TRANSACTION_SERVICE_JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+      # Add JVM options for Java 21
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     networks:
       - stockfellow-net
     volumes:
@@ -203,6 +421,148 @@ services:
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+    restart: unless-stopped
+  
+  # Used to expose local hosted port online for paystack callback
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4041:4041  
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    networks:
+      - stockfellow-net
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    depends_on:
+      - notification-postgres
+      - activemq
+      - group-service  
+    ports:
+      - "4050:4050"
+      - "5008:5008"  # Debug port
+    environment:
+      - SERVER_PORT=4050
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://notification-postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=notification_user
+      - SPRING_DATASOURCE_PASSWORD=notification_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_USER_SERVICE_URL=http://user-service:4020
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/notification-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4050/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    
+# MFA Service (Spring Boot)
+  mfa-service:
+    build:
+      context: ./services/mfa-service
+      dockerfile: Dockerfile
+    container_name: mfa-service
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${MFA_SERVICE_PORT}:8087" 
+      - "${MFA_SERVICE_DEBUG_PORT}:5008"
+    environment:
+      - SERVER_PORT=8087  
+      - SPRING_PROFILES_ACTIVE=${MFA_SERVICE_SPRING_PROFILE}
+      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - JVM_OPTS=${MFA_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+      # Mail configuration
+      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
+      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
+      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
+      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+      - MFA_MAIL_FROM=${MFA_MAIL_FROM}
+      - MFA_MAIL_STARTTLS=${MFA_MAIL_STARTTLS}
+      - MFA_MAIL_SSL=${MFA_MAIL_SSL}
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/mfa-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+  
+  demo-service:
+    build:
+      context: ./services/demo-service
+      dockerfile: Dockerfile
+    container_name: demo-service
+    depends_on:
+      - api-gateway
+      - user-service
+      - group-service
+      - transaction-service
+      - keycloak
+    ports:
+      - "${DEMO_SERVICE_PORT}:8090"
+      - "${DEMO_SERVICE_DEBUG_PORT}:5009"
+    environment:
+      - SERVER_PORT=8090
+      - SPRING_PROFILES_ACTIVE=${DEMO_SERVICE_SPRING_PROFILE:-docker}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      # Service URLs for orchestration
+      - SERVICES_GATEWAY_URL=http://api-gateway:3000
+      - SERVICES_USER_SERVICE_URL=http://user-service:4000
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_TRANSACTION_SERVICE_URL=http://transaction-service:4080
+      - SERVICES_NOTIFICATION_SERVICE_URL=http://notification-service:4050
+      - JVM_OPTS=${DEMO_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5009}
+      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/demo-service/src:/app/src
+      - ./services/demo-service/pom.xml:/app/pom.xml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+    restart: unless-stopped
 
 networks:
   stockfellow-net:
@@ -210,5 +570,11 @@ networks:
 
 volumes:
   postgres_data:
-  mongodb_data:
+  notification_postgres_data:
+  #alfresco_postgres_data:
+  user_service_postgres_data:
   redis_data:
+  activemq_data:
+  #alfresco_acs_data:
+  #alfresco_search_data:
+  #alfresco_share_data:

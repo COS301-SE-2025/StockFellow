@@ -1,0 +1,42 @@
+server:
+  port: 0  # random port for testing
+
+spring:
+  application:
+    name: mfa-service-test
+
+  mail:
+    host: localhost
+    port: 25
+    username: test@example.com
+    password: testpassword
+    properties:
+      mail:
+        transport:
+          protocol: smtp
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+          ssl:
+            enable: false
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+        debug: false
+
+app:
+  mail:
+    from: test@stockfellow.com
+  mfa:
+    otp:
+      length: 6
+      expiry-minutes: 5
+
+logging:
+  level:
+    com.stockfellow.mfa: INFO
+    org.springframework.mail: WARN
+    org.springframework.boot: WARN
+    org.springframework.web: WARN
+    root: WARN

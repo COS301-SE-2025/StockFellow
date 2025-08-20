@@ -9,16 +9,18 @@ import org.keycloak.models.KeycloakSessionFactory;
 public class UserSyncEventListenerProviderFactory implements EventListenerProviderFactory {
 
     private String userServiceUrl;
+    private String transactionServiceUrl;
 
     @Override
     public EventListenerProvider create(KeycloakSession session) {
-        return new UserSyncEventListener(session, userServiceUrl);
+        return new UserSyncEventListener(session, userServiceUrl, transactionServiceUrl);
     }
 
     @Override
     public void init(Config.Scope config) {
-        userServiceUrl = config.get("userServiceUrl", "http://user-service:4000");
-        System.out.println("UserSync EventListener initialized with URL: " + userServiceUrl);
+        userServiceUrl = config.get("userServiceUrl", "http://user-service:4020");
+        transactionServiceUrl = config.get("transactionServiceUrl", "http://transaction-service:4080");
+        System.out.println("UserSync EventListener initialized with URLs: " + userServiceUrl + " and " + transactionServiceUrl);
     }
 
     @Override

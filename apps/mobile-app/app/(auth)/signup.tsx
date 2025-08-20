@@ -1,12 +1,14 @@
-import { Text, View } from 'react-native';
-import React, { useState, useRef } from 'react';
+import { Text, View, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormInput from '../../src/components/FormInput';
+import PDFUpload from '../../src/components/pdfUpload';
 import CustomButton from '../../src/components/CustomButton';
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from 'expo-status-bar';
-import authService from '../../src/services/authService'; // Import the auth service
+import authService from '../../src/services/authService';
+import * as DocumentPicker from 'expo-document-picker';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -31,9 +33,53 @@ const SignUp = () => {
     confirmPassword: ''
   });
 
+  // Commented out PDF-related states
+  const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
   const passwordRef = useRef<string>('');
+
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    digit: false,
+    symbol: false
+  });
+
+  // Dynamic password validation
+  useEffect(() => {
+    const newRequirements = {
+      length: form.password.length >= 6,
+      uppercase: /[A-Z]/.test(form.password),
+      digit: /\d/.test(form.password),
+      symbol: /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
+    };
+    setPasswordRequirements(newRequirements);
+
+    // Clear error when all requirements are met
+    if (newRequirements.length && newRequirements.uppercase &&
+      newRequirements.digit && newRequirements.symbol) {
+      setErrors({ ...errors, password: '' });
+    }
+  }, [form.password]);
+
+  const getPasswordError = () => {
+    if (!form.password) return 'Password is required';
+
+    const requirements = [
+      { met: passwordRequirements.length, text: 'at least 6 characters' },
+      { met: passwordRequirements.uppercase, text: 'one uppercase letter' },
+      { met: passwordRequirements.digit, text: 'one digit' },
+      { met: passwordRequirements.symbol, text: 'one symbol' }
+    ];
+
+    const unmet = requirements.filter(req => !req.met);
+    if (unmet.length === 0) return '';
+
+    return `Password must contain: ${unmet.map(req => req.text).join(', ')}`;
+  };
 
   const validateForm = () => {
     let valid = true;
@@ -100,9 +146,71 @@ const SignUp = () => {
       valid = false;
     }
 
+    const passwordError = getPasswordError();
+    if (passwordError) {
+      newErrors.password = passwordError;
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
+
+  // Update the password input to show requirements
+  const renderPasswordRequirements = () => {
+    return (
+      <View className="mt-2">
+        <Text className="text-xs text-gray-900 font-['PlusJakartaSans-Regular']">Password must contain:</Text>
+        <View className="ml-2 mt-1 flex-1 flex-row justify-around">
+          <View>
+            <Text className={`text-xs ${passwordRequirements.length ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • At least 6 characters
+            </Text>
+            <Text className={`text-xs ${passwordRequirements.uppercase ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One uppercase letter
+            </Text>
+          </View>
+          <View>
+            <Text className={`text-xs ${passwordRequirements.digit ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One digit (0-9)
+            </Text>
+            <Text className={`text-xs ${passwordRequirements.symbol ? 'text-green-500' : 'text-gray-400'} font-['PlusJakartaSans-Regular']`}>
+              • One symbol (!@#$%^&* etc.)
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+
+  // Commented out document upload handler
+  // const handleDocumentUpload = async (type: 'bankStatement' | 'payslip') => {
+  //   try {
+  //     setUploadingDoc(type);
+  //     const res = await DocumentPicker.getDocumentAsync({
+  //       type: 'application/pdf',
+  //     });
+
+  //     if (res.canceled) {
+  //       console.log('File selection canceled');
+  //       return;
+  //     }
+
+  //     if (res.assets && res.assets[0]) {
+  //       if (type === 'bankStatement') {
+  //         setBankStatement(res.assets[0]);
+  //       } else {
+  //         setPayslip(res.assets[0]);
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error('Error during document picker:', err);
+  //     Alert.alert('Error', 'Failed to select document. Please try again.');
+  //   } finally {
+  //     setUploadingDoc(null);
+  //   }
+  // };
 
   const handlePasswordChange = (text: string) => {
     setForm({ ...form, password: text });
@@ -124,38 +232,59 @@ const SignUp = () => {
       try {
         console.log('Attempting registration...');
 
-        // Use the auth service for registration
-        const registrationResult = await authService.register({
+        // Prepare form data without documents
+        const registrationData = {
           username: form.username,
           firstName: form.firstName,
           lastName: form.lastName,
           email: form.email,
           password: form.password,
           contactNumber: form.contactNumber,
-          idNumber: form.idNumber,
-        });
+          idNumber: form.idNumber
+        };
+
+        console.log('Registration data:', registrationData);
+
+        const registrationResult = await authService.register(registrationData);
 
         if (registrationResult.success) {
           console.log('Registration successful');
-          
+
           // Automatically login after successful registration
-          const loginResult = await authService.login(form.username, form.password);
-          
-          if (loginResult.success) {
-            console.log('Auto-login successful');
-            router.push('/(tabs)/home');
+          const result = await authService.login(form.username, form.password);
+
+          if (result.success) {
+            if (result.mfaRequired) {
+              // MFA is required - navigate to MFA verification
+              console.log('MFA required, navigating to verification');
+              router.push({
+                pathname: '/mfaVerification',
+                params: {
+                  email: result.email,
+                  tempSession: result.tempSession,
+                  message: result.message,
+                },
+              });
+            } else {
+              // No MFA required - login successful
+              console.log('Login successful, navigating to home');
+              router.replace('/(tabs)/home');
+            }
           } else {
-            // Registration successful but auto-login failed
-            console.log('Registration successful, redirecting to login');
-            router.push('/login');
+            // Handle login failure
+            console.error('Login failed:', result.error);
+            setErrors({
+              ...errors,
+              username: result.error,
+            });
           }
         } else {
           // Handle registration failure
           console.error('Registration failed:', registrationResult.error);
-          
+
           // Show error on appropriate field
-          if (registrationResult.error.includes('already exists') || 
-              registrationResult.error.includes('User already exists')) {
+          if (registrationResult.error.includes('already exists') ||
+            registrationResult.error.includes('User already exists')) {
             setErrors({
               ...errors,
               username: 'Username or email already exists',
@@ -170,6 +299,7 @@ const SignUp = () => {
       } catch (error) {
         console.error('Registration error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+        Alert.alert('Registration Error', errorMessage);
         setErrors({
           ...errors,
           email: errorMessage,
@@ -192,8 +322,8 @@ const SignUp = () => {
               showsVerticalScrollIndicator={false}
             >
               <View className='flex-1 justify-start'>
-                <Text className="text-2xl text-left font-semibold my-3">Sign Up</Text>
-                <Text className="text-m text-left mb-3 text-[#71727A] font-light">
+                <Text className="text-xl text-left font-['PlusJakartaSans-SemiBold'] my-2">Sign Up</Text>
+                <Text className="text-sm text-left mb-3 text-[#71727A] font-['PlusJakartaSans-Light']">
                   Create an account to get started
                 </Text>
 
@@ -265,9 +395,9 @@ const SignUp = () => {
                   handleChangeText={handlePasswordChange}
                   otherStyles="mt-3"
                   placeholder='Create a password'
-                  secureTextEntry
                   error={errors.password}
                 />
+                {renderPasswordRequirements()}
 
                 <FormInput
                   title="Confirm Password"
@@ -275,8 +405,18 @@ const SignUp = () => {
                   handleChangeText={handleConfirmPasswordChange}
                   otherStyles="mt-3"
                   placeholder='Confirm your password'
-                  secureTextEntry
                   error={errors.confirmPassword}
+                />
+                {/* 3 Month Bank Statement Upload */}
+                <PDFUpload
+                  heading="3 Month Bank Statement"
+                  onDocumentSelect={(doc) => setBankStatement(doc)}
+                />
+
+                {/* Payslip Upload */}
+                <PDFUpload
+                  heading="Latest Payslip"
+                  onDocumentSelect={(doc) => setPayslip(doc)}
                 />
 
                 <CustomButton
@@ -285,22 +425,23 @@ const SignUp = () => {
                   textStyles="text-white text-lg"
                   handlePress={handleSignup}
                   isLoading={isSubmitting}
+                  disabled={isSubmitting}  // Add this line to prevent multiple submissions
                 />
 
                 <View className="flex-row justify-center gap-2 mt-1">
-                  <Text className="text-sm text-[#71727A]">Already a Member?</Text>
-                  <Link href="/login" className="text-[#1DA1FA] font-semibold text-sm">
+                  <Text className="text-sm text-[#71727A] font-['PlusJakartaSans-Regular']">Already a Member?</Text>
+                  <Link href="/login" className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold'] text-sm">
                     Login
                   </Link>
                 </View>
               </View>
 
               <View className="flex-1 px-4 text-center self-end mt-4">
-                <Text className="text-center text-sm font-light">
+                <Text className="text-center text-sm font-['PlusJakartaSans-Light']">
                   By clicking Sign Up, you have read and agreed to our
-                  <Link href='' className="text-[#1DA1FA] font-semibold"> Terms of Use </Link>
+                  <Link href='' className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold']"> Terms of Use </Link>
                   and
-                  <Link href='' className="text-[#1DA1FA] font-semibold"> Privacy Policy </Link>
+                  <Link href='' className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold']"> Privacy Policy </Link>
                 </Text>
               </View>
             </ScrollView>

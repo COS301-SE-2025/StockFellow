@@ -23,7 +23,7 @@ export default function StokvelLayout() {
       <Stack.Screen name="create" options={{ headerShown: false }} />
       <Stack.Screen name="[stokvel]/index" options={{ headerShown: false }} />
       <Stack.Screen name="[stokvel]/requests" options={{ headerShown: false }} />
-      
+      <Stack.Screen name="[stokvel]/editStokvel" options={{ headerShown: false }} />
     </Stack>
   );
 }
