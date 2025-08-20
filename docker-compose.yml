@@ -29,7 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${KEYCLOAK_POSTGRES_EXTERNAL_PORT:-5432}:5432"  # Fixed: Use correct env var
+      - "${POSTGRES_PORT}:5432"
     networks:
       - stockfellow-net
     healthcheck:
@@ -37,6 +37,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
 
   # PostgreSQL database for User Service
   # docker exec -it user-service-postgres psql -U userservice_user -d userservice_db -c "SELECT * FROM users;"
@@ -48,18 +49,18 @@ services:
       - user_service_postgres_data:/var/lib/postgresql/data
       - ./services/user-service/init-scripts:/docker-entrypoint-initdb.d
     environment:
-      POSTGRES_DB: ${USER_SERVICE_POSTGRES_DB}  # Use env var
-      POSTGRES_USER: ${USER_SERVICE_POSTGRES_USER}  # Use env var
-      POSTGRES_PASSWORD: ${USER_SERVICE_POSTGRES_PASSWORD}  # Use env var
+      POSTGRES_DB: userservice_db
+      POSTGRES_USER: userservice_user
+      POSTGRES_PASSWORD: userservice_pass
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_CONFIG_FILE: /etc/postgresql/postgresql.conf
     ports:
-      - "${USER_SERVICE_POSTGRES_EXTERNAL_PORT:-5431}:5432"  # Use env var
+      - "5431:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER_SERVICE_POSTGRES_USER} -d ${USER_SERVICE_POSTGRES_DB} && psql -U ${USER_SERVICE_POSTGRES_USER} -d ${USER_SERVICE_POSTGRES_DB} -c 'SELECT 1'"]
+      test: ["CMD-SHELL", "pg_isready -U userservice_user -d userservice_db && psql -U userservice_user -d userservice_db -c 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -73,15 +74,15 @@ services:
     volumes:
       - notification_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${NOTIFICATION_POSTGRES_DB}  # Use env var
-      POSTGRES_USER: ${NOTIFICATION_POSTGRES_USER}  # Use env var
-      POSTGRES_PASSWORD: ${NOTIFICATION_POSTGRES_PASSWORD}  # Use env var
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
     ports:
-      - "${NOTIFICATION_POSTGRES_EXTERNAL_PORT:-5440}:5432"  # Use env var
+      - "5440:5432"
     networks:
       - stockfellow-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${NOTIFICATION_POSTGRES_USER}", "-d", "${NOTIFICATION_POSTGRES_DB}"]
+      test: ["CMD", "pg_isready", "-U", "notification_user", "-d", "notification_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -314,21 +315,23 @@ services:
     depends_on:
       - user-service-postgres
       - keycloak
+      # - alfresco-content-repository
     ports:
       - "${USER_SERVICE_PORT}:4020"
       - "${USER_SERVICE_DEBUG_PORT}:5005"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://user-service-postgres:5432/userservice_db
-      - SPRING_DATASOURCE_USERNAME=userservice_user
-      - SPRING_DATASOURCE_PASSWORD=userservice_pass
       - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
-      - USER_SERVICE_POSTGRES_HOST=${USER_SERVICE_POSTGRES_HOST}  # Use env var
-      - USER_SERVICE_POSTGRES_PORT=${USER_SERVICE_POSTGRES_PORT}  # Use env var
-      - USER_SERVICE_POSTGRES_DB=${USER_SERVICE_POSTGRES_DB}      # Use env var
-      - USER_SERVICE_POSTGRES_USER=${USER_SERVICE_POSTGRES_USER}  # Use env var
-      - USER_SERVICE_POSTGRES_PASSWORD=${USER_SERVICE_POSTGRES_PASSWORD}  # Use env var
+      - POSTGRES_HOST=user-service-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=userservice_db
+      - POSTGRES_USER=userservice_user
+      - POSTGRES_PASSWORD=userservice_pass
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      # - ALFRESCO_BASE_URL=${ALFRESCO_BASE_URL:-http://alfresco-content-repository:8080/alfresco}
+      # - ALFRESCO_USERNAME=${ALFRESCO_USERNAME:-admin}
+      # - ALFRESCO_PASSWORD=${ALFRESCO_PASSWORD:-admin}
+      # - ALFRESCO_SITE_NAME=${ALFRESCO_SITE_NAME:-stockfellow}
       - JVM_OPTS=${USER_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
@@ -347,7 +350,7 @@ services:
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
     restart: unless-stopped
-
+  
   # Group Service (Spring Boot)
   group-service:
     build:
