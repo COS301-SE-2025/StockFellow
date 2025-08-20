@@ -43,24 +43,29 @@ public class AffordabilityTierService {
     );
     
     public AffordabilityTierResult analyzeBankStatements(String userId, List<BankTransaction> transactions) {
-        try {
+        try
+        {
             logger.info("Starting affordability analysis for user: {}", userId);
             
             // Validate input
-            if (transactions == null || transactions.isEmpty()) {
+            if (transactions == null) {
+                throw new IllegalArgumentException("Bank statements are required for analysis");
+            }
+            
+            if (transactions.isEmpty()) {
                 throw new IllegalArgumentException("Bank statements are required for analysis");
             }
             
             if (transactions.size() < 50) {
                 throw new IllegalArgumentException("Insufficient transaction data. Minimum 50 transactions required for reliable analysis");
             }
-            
+
             // Get user details
             User user = userService.getUserByUserId(userId);
             if (user == null) {
-                throw new IllegalArgumentException("User not found: " + userId);
+                throw new IllegalArgumentException("User not found: " + userId); // Change to IllegalArgumentException
             }
-            
+                
             // Analyze transactions
             BankStatementAnalysis analysis = performBankStatementAnalysis(transactions);
             
@@ -87,20 +92,24 @@ public class AffordabilityTierService {
             
             return result;
             
+        } catch (IllegalArgumentException e) {
+        // Re-throw IllegalArgumentException directly
+        throw e;
         } catch (Exception e) {
             logger.error("Error analyzing affordability for user {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Failed to analyze affordability: " + e.getMessage(), e);
         }
     }
     
-    private BankStatementAnalysis performBankStatementAnalysis(List<BankTransaction> transactions) {
+    public BankStatementAnalysis performBankStatementAnalysis(List<BankTransaction> transactions) {
         BankStatementAnalysis analysis = new BankStatementAnalysis();
         
-        // Sort transactions by date
-        transactions.sort(Comparator.comparing(BankTransaction::getDate));
+        // Create a mutable list for sorting
+        List<BankTransaction> sortedTransactions = new ArrayList<>(transactions);
+        sortedTransactions.sort(Comparator.comparing(BankTransaction::getDate));
         
         // Group by month
-        Map<String, List<BankTransaction>> monthlyTransactions = transactions.stream()
+        Map<String, List<BankTransaction>> monthlyTransactions = sortedTransactions.stream()
             .collect(Collectors.groupingBy(t -> t.getDate().toString().substring(0, 7)));
         
         List<Double> monthlyIncomes = new ArrayList<>();
@@ -117,7 +126,7 @@ public class AffordabilityTierService {
             double savings = calculateMonthlySavings(monthTrans);
             double avgBalance = calculateAverageMonthlyBalance(monthTrans);
             
-            if (income > 1000) { // Only count valid months
+            if (income > 1000 && monthTrans.size() >= 15) { // Only count valid months
                 monthlyIncomes.add(income);
                 monthlyExpenses.add(expenses);
                 monthlySavings.add(savings);
@@ -137,9 +146,9 @@ public class AffordabilityTierService {
         analysis.setSavingsRate(analysis.getAverageMonthlySavings() / analysis.getAverageMonthlyIncome());
         
         // Count special transactions
-        analysis.setOverdraftCount(countOverdrafts(transactions));
-        analysis.setGamblingTransactions(countGamblingTransactions(transactions));
-        analysis.setInvestmentTransactions(countInvestmentTransactions(transactions));
+        analysis.setOverdraftCount(countOverdrafts(sortedTransactions));
+        analysis.setGamblingTransactions(countGamblingTransactions(sortedTransactions));
+        analysis.setInvestmentTransactions(countInvestmentTransactions(sortedTransactions));
         
         // Calculate trends
         analysis.setIncomeGrowthTrend(calculateIncomeGrowthTrend(monthlyIncomes));
@@ -147,7 +156,7 @@ public class AffordabilityTierService {
         return analysis;
     }
     
-    private int determineTierWithRules(BankStatementAnalysis analysis, int incomeScore, 
+    public int determineTierWithRules(BankStatementAnalysis analysis, int incomeScore, 
                                      int expenseScore, int savingsScore, int stabilityScore) {
         
         double monthlyIncome = analysis.getAverageMonthlyIncome();
@@ -238,13 +247,18 @@ public class AffordabilityTierService {
         for (int tier = 6; tier >= 1; tier--) {
             double[] range = TIER_INCOME_RANGES.get(tier);
             if (monthlyIncome >= range[0]) {
+                // For tier boundaries, ensure we're not including values that are too close to the next tier
+                if (tier < 6 && monthlyIncome >= TIER_INCOME_RANGES.get(tier + 1)[0] * 0.9) {
+                    // If income is within 90% of next tier, consider it for the next tier
+                    continue;
+                }
                 return tier;
             }
         }
         return 1;
     }
     
-    private int calculateIncomeStabilityScore(BankStatementAnalysis analysis) {
+    public int calculateIncomeStabilityScore(BankStatementAnalysis analysis) {
         int score = 0;
         
         // Income level scoring
@@ -290,7 +304,7 @@ public class AffordabilityTierService {
         return Math.min(100, score);
     }
     
-    private int calculateExpenseManagementScore(BankStatementAnalysis analysis) {
+    public int calculateExpenseManagementScore(BankStatementAnalysis analysis) {
         int score = 0;
         
         // Expense ratio scoring
