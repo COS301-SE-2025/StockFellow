@@ -154,6 +154,21 @@ Follow these steps to set up the StockFellow mobile app on your machine. Command
    npm run test:cypress --workspace=apps/mobile-app
    ```
    - Ensures Jest (unit) and Cypress (end-to-end) tests pass, aligning with N6.3 (Automated testing).
+   - To execute the integration tests:
+
+  ```powershell
+  npm run test:integration
+  ```
+  - To run in watch mode:
+
+  ```powershell
+  npm run test:integration:watch
+  ```
+  - To generate coverage reports:
+
+  ```powershell
+  npm run test:integration:coverage
+  ```
 
 9. **Git Workflow**:
    - Create a feature branch:

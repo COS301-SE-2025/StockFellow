@@ -228,7 +228,7 @@ public class GroupMemberService {
         logger.info("Getting next payee for group {}", groupId);
         if (group.getPayoutOrder() == null || group.getPayoutOrder().isEmpty()) {
             group.initializePayoutOrder();
-            groupRepository.save(group);
+            group = groupRepository.save(group);
         }
 
         // Get next payee
