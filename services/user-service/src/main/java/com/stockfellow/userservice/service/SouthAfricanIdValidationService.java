@@ -37,8 +37,13 @@ public class SouthAfricanIdValidationService {
      * Validates the date of birth portion of the SA ID
      * Format: YYMMDD
      */
-    private boolean isValidDateOfBirth(String dobPart) {
+    public boolean isValidDateOfBirth(String dobPart) {
         try {
+
+            if (dobPart == null || dobPart.length() != 6) {
+                return false;
+            }
+        
             int year = Integer.parseInt(dobPart.substring(0, 2));
             int month = Integer.parseInt(dobPart.substring(2, 4));
             int day = Integer.parseInt(dobPart.substring(4, 6));
@@ -58,13 +63,19 @@ public class SouthAfricanIdValidationService {
                 return false;
             }
             
-            // February validation (not accounting for leap years in this simple check)
-            if (month == 2 && day > 29) {
-                return false;
+            // February validation with leap year check
+            if (month == 2) {
+                // Determine full year for leap year calculation
+                int fullYear = (year <= 21) ? 2000 + year : 1900 + year;
+                boolean isLeapYear = (fullYear % 4 == 0 && fullYear % 100 != 0) || (fullYear % 400 == 0);
+                
+                if (day > 29 || (day == 29 && !isLeapYear)) {
+                    return false;
+                }
             }
             
             return true;
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
             return false;
         }
     }
@@ -72,30 +83,27 @@ public class SouthAfricanIdValidationService {
     /**
      * Applies the Luhn algorithm to validate the checksum
      */
-    private boolean isValidLuhnChecksum(String idNumber) {
+    public boolean isValidLuhnChecksum(String idNumber) {
         int sum = 0;
-        boolean alternate = false;
+        boolean doubleDigit = false;
         
-        // Process digits from right to left (excluding the last digit which is the check digit)
-        for (int i = idNumber.length() - 2; i >= 0; i--) {
+        // Process all digits including the check digit
+        for (int i = idNumber.length() - 1; i >= 0; i--) {
             int digit = Character.getNumericValue(idNumber.charAt(i));
             
-            if (alternate) {
+            if (doubleDigit) {
                 digit *= 2;
                 if (digit > 9) {
-                    digit = (digit % 10) + 1;
+                    digit = digit - 9; // Same as adding the digits (e.g., 16 -> 1 + 6 = 7)
                 }
             }
             
             sum += digit;
-            alternate = !alternate;
+            doubleDigit = !doubleDigit;
         }
         
-        // Calculate the check digit
-        int checkDigit = (10 - (sum % 10)) % 10;
-        int actualCheckDigit = Character.getNumericValue(idNumber.charAt(idNumber.length() - 1));
-        
-        return checkDigit == actualCheckDigit;
+        // The sum should be divisible by 10 for a valid number
+        return (sum % 10) == 0;
     }
     
     /**
