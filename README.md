@@ -109,6 +109,7 @@
 | ------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Demo 1 | [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) |
 | Demo 2 |   [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link)   | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)                                                 |
+|Demo 3| [Video]() | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
 
 <!-- Documentation -->
 ## Documentation
@@ -120,6 +121,8 @@
 | [Coding Standard](https://docs.google.com/document/d/1JtcF5wKQR_0zuQ-hYQdeu_yoRJDwTwQZCLHr7yqKuU8/edit?usp=drive_link) | Coding best practices to follow and programming guidelines   |
 | [Service Contract](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/servicess_contract.md) | Service contracts and API specifications for system integration |
 | [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/deployment_model.md) | Deployment architecture and infrastructure specifications |
+| [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/user_manual.pdf) | Step by step documentation on how to use the app |
+| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/technical_installation_manual.pdf) | Guide to install and run project |
 
 
 <!-- ROADMAP -->
@@ -135,6 +138,11 @@
   - [x] Notification Service
   - [ ] Mock Payment Service
 - [ ] Demo 3
+  - [x] Transaction Service
+  - [x] System Tier And Group Management
+  - [x] Notification Service
+  - [x] Mock Payment Service
+  - [x] MFA Service
 - [ ] Demo 4
     
 
