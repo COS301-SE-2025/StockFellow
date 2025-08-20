@@ -4,6 +4,7 @@ import com.stockfellow.groupservice.dto.CreateGroupResult;
 import com.stockfellow.groupservice.dto.NextPayeeResult;
 import com.stockfellow.groupservice.dto.UpdateGroupRequest;
 import com.stockfellow.groupservice.model.Group;
+import com.stockfellow.groupservice.service.EventStoreService;
 import com.stockfellow.groupservice.service.GroupMemberService;
 import com.stockfellow.groupservice.service.GroupService;
 import com.stockfellow.groupservice.service.ReadModelService;
@@ -36,6 +37,9 @@ public class GroupsControllerTest {
 
     @MockBean
     private ReadModelService readModelService;
+
+    @MockBean
+    private EventStoreService eventStoreService;
 
     @Test
     public void updateGroup_Success() throws Exception {
