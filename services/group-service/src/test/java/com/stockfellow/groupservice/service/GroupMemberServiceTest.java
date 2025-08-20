@@ -1,7 +1,5 @@
 package com.stockfellow.groupservice.service;
 
-import com.stockfellow.groupservice.model.Event;
-import com.mongodb.BasicDBObject;
 import org.bson.Document;
 import com.stockfellow.groupservice.dto.NextPayeeResult;
 import com.stockfellow.groupservice.model.Group;
@@ -18,7 +16,6 @@ import org.springframework.data.mongodb.core.query.Update;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.argThat;
 
 import java.util.*;
 
