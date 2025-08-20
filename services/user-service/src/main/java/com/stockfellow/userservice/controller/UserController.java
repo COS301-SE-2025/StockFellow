@@ -232,7 +232,7 @@ public class UserController {
             profileResponse.put("user", user);
             profileResponse.put("affordability", affordabilityMap);
 
-            logger.info("User profile fetched successfully for user: {}", profileResponse);
+            logger.info("User profile fetched successfully for user: {}", user.getUserId());
 
             return ResponseEntity.ok(profileResponse);
 

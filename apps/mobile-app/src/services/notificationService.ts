@@ -47,7 +47,7 @@ export interface SendNotificationResponse {
 }
 
 class NotificationService {
-  private readonly baseUrl = '/api/notifications';
+  private readonly baseUrl = '/notifications';
 
   // Get all notifications for the authenticated user
   async getUserNotifications(): Promise<NotificationResponse> {
