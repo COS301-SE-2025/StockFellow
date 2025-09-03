@@ -122,7 +122,7 @@
 | [Service Contract](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/servicess_contract.md) | Service contracts and API specifications for system integration |
 | [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/deployment_model.md) | Deployment architecture and infrastructure specifications |
 | [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/user_manual.pdf) | Step by step documentation on how to use the app |
-| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/technical_installation_manual.pdf) | Guide to install and run project |
+| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/Technical%20Installation%20Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
 
 
 <!-- ROADMAP -->
