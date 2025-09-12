@@ -41,7 +41,9 @@
   },
   "dependencies": {
     "@react-native-community/datetimepicker": "github:react-native-community/datetimepicker",
+    "@types/recharts": "^2.0.1",
     "expo-image-picker": "^16.1.4",
-    "nativewind": "^4.1.23"
+    "nativewind": "^4.1.23",
+    "recharts": "^3.2.0"
   }
 }
