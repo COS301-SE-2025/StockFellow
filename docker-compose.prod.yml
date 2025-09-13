@@ -1,0 +1,403 @@
+# docker-compose.prod.yml
+# Production environment with AWS ECS resource constraints simulation (No Nginx)
+
+version: '3.8'
+
+services:
+  # Single PostgreSQL instance for all databases - Simulating AWS RDS t3.small
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Redis - Simulating AWS ElastiCache t3.micro
+  redis:
+    image: redis:7-alpine
+    container_name: redis-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - stockfellow-prod
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --maxmemory 768mb --maxmemory-policy allkeys-lru ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ActiveMQ - Resource constrained for production
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: activemq-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    networks:
+      - stockfellow-prod
+    volumes:
+      - activemq_prod_data:/var/lib/artemis-instance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Keycloak - Simulating ECS task (0.25 vCPU, 512MB RAM)
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgresql
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_LOG_LEVEL: WARN
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_PROXY: edge
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    networks:
+      - stockfellow-prod
+    command: start-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  # API Gateway - Production optimized
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - keycloak
+      - redis
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # User Service - Production optimized
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - postgres
+      - keycloak
+    ports:
+      - "${USER_SERVICE_PORT:-4020}:4020"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/userservice_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4020/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Group Service - Most resource constrained
+  group-service:
+    build:
+      context: ./services/group-service
+      dockerfile: Dockerfile
+    container_name: group-service-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.125'
+          memory: 256M
+        reservations:
+          cpus: '0.0625'
+          memory: 128M
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${GROUP_SERVICE_PORT:-4040}:4040"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4040/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Transaction Service - Critical service with moderate resources
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile
+    container_name: transaction-service-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - group-service
+      - user-service
+    ports:
+      - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
+      - TRANSACTIONDB_USER=${TRANSACTIONDB_USER}
+      - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - GROUP_SERVICE_URL=http://group-service:4040
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4080/actuator/health || exit 1"]
+      interval: 45s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Notification Service - Production optimized
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - postgres
+      - activemq
+      - group-service
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-4050}:4050"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_USER_SERVICE_URL=http://user-service:4020
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4050/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  # MFA Service - Production optimized
+  mfa-service:
+    build:
+      context: ./services/mfa-service
+      dockerfile: Dockerfile
+    container_name: mfa-service-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.125'
+          memory: 256M
+        reservations:
+          cpus: '0.0625'
+          memory: 128M
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${MFA_SERVICE_PORT:-8087}:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
+      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
+      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
+      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Resource Monitor - Monitor memory/CPU usage in production
+  resource-monitor:
+    image: nicolargo/glances:latest
+    container_name: resource-monitor-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    ports:
+      - "61208:61208"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - stockfellow-prod
+    environment:
+      - GLANCES_OPT=-w
+    restart: unless-stopped
+
+networks:
+  stockfellow-prod:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+  activemq_prod_data:
+    driver: local

@@ -1,9 +1,27 @@
 server:
   port: 3000
 
+  tomcat:
+    threads:
+      max: 50         
+      min-spare: 5     
+    max-connections: 500  
+    accept-count: 100     
+    connection-timeout: 20000ms
+    max-http-header-size: 8KB
+
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css
+    min-response-size: 1024
+
 spring:
   application:
     name: api-gateway
+
+  # jpa:
+  #   open-in-view: false
+
   # Redic Config
   redis:
     host: ${REDIS_HOST:localhost}
@@ -11,10 +29,48 @@ spring:
     timeout: 2000ms
     lettuce:
       pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
-        max-wait: -1ms
+        max-active: 4
+        max-idle: 2
+        min-idle: 1
+        max-wait: 1000ms
+      shutdown-timeout: 100ms
+    connect-timeout: 1000ms
+    command-timeout: 1000ms
+  
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000ms
+      cache-null-values: false
+  
+  jackson:
+    default-property-inclusion: NON_NULL
+    serialization:
+      write-dates-as-timestamps: true 
+
+  security:
+    sessions: never  # Stateless for microservices
+
+# Management endpoints - Minimal set for memory savings
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics  # Only essential endpoints
+    jmx:
+      exposure:
+        exclude: "*"  # Disable JMX to save memory
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    enable:
+      jvm: false          # Disable detailed JVM metrics
+      process: false      # Disable process metrics
+      system: false       # Disable system metrics
+    export:
+      simple:
+        enabled: false    # Disable metrics export to save memory
 
 keycloak:
   realm: ${KEYCLOAK_REALM:stockfellow}
@@ -23,21 +79,20 @@ keycloak:
   resource: ${KEYCLOAK_FRONTEND_CLIENT_ID:frontend-client}
   public-client: true
   confidential-port: 0
+  # Connection pool for Keycloak HTTP client
+  connection-pool-size: 5    # Limit concurrent connections
+  socket-timeout-millis: 3000
+  connection-timeout-millis: 2000
 
 # Admin configuration
 app:
   keycloak:
-    # Gateway client (confidential)
     gateway:
       client-id: ${KEYCLOAK_GATEWAY_CLIENT_ID:api-gateway-client}
       client-secret: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:}
-
-    # Frontend client (public)
     frontend:
       client-id: ${KEYCLOAK_FRONTEND_CLIENT_ID:public-client}
       redirect-uri: ${KEYCLOAK_FRONTEND_REDIRECT_URI:http://localhost:3000/auth/callback}
-
-    # Admin configuration
     admin:
       username: ${KEYCLOAK_ADMIN_USERNAME:admin}
       password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
@@ -49,18 +104,36 @@ app:
 mfa:
   service:
     url: http://localhost:8087
+    # HTTP client optimizations
+    connection-timeout: 2000ms
+    read-timeout: 5000ms
+    max-connections: 5
 
-# Logging configuration (replaces morgan)
+# Logging configuration - Optimized for memory
 logging:
   level:
-    org.springframework.web: DEBUG
-    com.stockfellow.gateway: DEBUG
-    com.stockfellow.gateway.service: DEBUG
+    # Reduce logging verbosity to save memory and CPU
+    root: WARN
+    com.stockfellow.gateway: INFO
+    org.springframework.web: WARN  # Changed from DEBUG
+    org.springframework.security: WARN
+    org.springframework.boot.actuate: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  # Async logging to improve performance
+  config: classpath:logback-spring.xml
 
 # CORS configuration
 cors:
   allowed-origins: "*"
   allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
   allowed-headers: "Content-Type,Authorization"
+  max-age: 3600  # Cache preflight requests
+
+# HTTP client configurations for downstream services
+http:
+  client:
+    connection-timeout: 2000ms
+    read-timeout: 5000ms
+    max-connections-per-route: 5
+    max-connections-total: 12

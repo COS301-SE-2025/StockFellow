@@ -397,7 +397,7 @@ services:
     ports:
       - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
-      - SERVER_PORT=4080  # Fixed: Use consistent internal port
+      - SERVER_PORT=4080 
       - SPRING_PROFILES_ACTIVE=${TRANSACTION_SERVICE_SPRING_PROFILE}
       - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
       - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
@@ -412,7 +412,6 @@ services:
       - JVM_OPTS=${TRANSACTION_SERVICE_JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
-      # Add JVM options for Java 21
       - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     networks:
       - stockfellow-net
@@ -526,46 +525,46 @@ services:
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
   
-  demo-service:
-    build:
-      context: ./services/demo-service
-      dockerfile: Dockerfile
-    container_name: demo-service
-    depends_on:
-      - api-gateway
-      - user-service
-      - group-service
-      - transaction-service
-      - keycloak
-    ports:
-      - "${DEMO_SERVICE_PORT}:8090"
-      - "${DEMO_SERVICE_DEBUG_PORT}:5009"
-    environment:
-      - SERVER_PORT=8090
-      - SPRING_PROFILES_ACTIVE=${DEMO_SERVICE_SPRING_PROFILE:-docker}
-      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
-      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
-      # Service URLs for orchestration
-      - SERVICES_GATEWAY_URL=http://api-gateway:3000
-      - SERVICES_USER_SERVICE_URL=http://user-service:4000
-      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
-      - SERVICES_TRANSACTION_SERVICE_URL=http://transaction-service:4080
-      - SERVICES_NOTIFICATION_SERVICE_URL=http://notification-service:4050
-      - JVM_OPTS=${DEMO_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5009}
-      - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
-      - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
-    networks:
-      - stockfellow-net
-    volumes:
-      - ./services/demo-service/src:/app/src
-      - ./services/demo-service/pom.xml:/app/pom.xml
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
-      interval: ${HEALTH_CHECK_INTERVAL:-30s}
-      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
-      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
-    restart: unless-stopped
+  # demo-service:
+  #   build:
+  #     context: ./services/demo-service
+  #     dockerfile: Dockerfile
+  #   container_name: demo-service
+  #   depends_on:
+  #     - api-gateway
+  #     - user-service
+  #     - group-service
+  #     - transaction-service
+  #     - keycloak
+  #   ports:
+  #     - "${DEMO_SERVICE_PORT}:8090"
+  #     - "${DEMO_SERVICE_DEBUG_PORT}:5009"
+  #   environment:
+  #     - SERVER_PORT=8090
+  #     - SPRING_PROFILES_ACTIVE=${DEMO_SERVICE_SPRING_PROFILE:-docker}
+  #     - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+  #     - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+  #     # Service URLs for orchestration
+  #     - SERVICES_GATEWAY_URL=http://api-gateway:3000
+  #     - SERVICES_USER_SERVICE_URL=http://user-service:4000
+  #     - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+  #     - SERVICES_TRANSACTION_SERVICE_URL=http://transaction-service:4080
+  #     - SERVICES_NOTIFICATION_SERVICE_URL=http://notification-service:4050
+  #     - JVM_OPTS=${DEMO_SERVICE_JVM_OPTS:--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5009}
+  #     - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
+  #     - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
+  #   networks:
+  #     - stockfellow-net
+  #   volumes:
+  #     - ./services/demo-service/src:/app/src
+  #     - ./services/demo-service/pom.xml:/app/pom.xml
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+  #     interval: ${HEALTH_CHECK_INTERVAL:-30s}
+  #     timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+  #     retries: ${HEALTH_CHECK_RETRIES:-3}
+  #     start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
+  #   restart: unless-stopped
 
 networks:
   stockfellow-net:
