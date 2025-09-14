@@ -30,20 +30,22 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         super.configure(http);
         http.authorizeRequests()
-            .antMatchers("/api/users/register").permitAll()
-            .antMatchers("/api/users/**").permitAll()
-            .antMatchers("/api/group/**").permitAll() 
-            .antMatchers("/api/auth/mfa/**").permitAll()
-            .antMatchers("/api").permitAll()
-            .antMatchers("/login", "/register", "/logout").permitAll()
-            .antMatchers("/auth/login").permitAll()
-            .antMatchers("/actuator/**").permitAll()
-            .antMatchers("/api/transaction/**").authenticated()
-            .antMatchers("/api/transaction/**").authenticated()
-            .antMatchers("/sync/**").permitAll()
-            .anyRequest().permitAll()
-            .and()
-            .csrf().disable(); // Disable CSRF for API gateway
+                .antMatchers("/api/users/register").permitAll()
+                .antMatchers("/api/users/**").permitAll()
+                .antMatchers("/api/group/**").permitAll()
+                .antMatchers("/api/auth/mfa/**").permitAll()
+                .antMatchers("/api/webauthn/**").permitAll()
+                .antMatchers("/api/webauthn-status/**").permitAll()
+                .antMatchers("/api").permitAll()
+                .antMatchers("/login", "/register", "/logout").permitAll()
+                .antMatchers("/auth/login").permitAll()
+                .antMatchers("/actuator/**").permitAll()
+                .antMatchers("/api/transaction/**").authenticated()
+                .antMatchers("/api/transaction/**").authenticated()
+                .antMatchers("/sync/**").permitAll()
+                .anyRequest().permitAll()
+                .and()
+                .csrf().disable(); // Disable CSRF for API gateway
     }
 
     @Bean
