@@ -32,8 +32,8 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class JwtConfig {
-
-    private static final String JWKS_URL = "http://localhost:8080/realms/stockfellow/protocol/openid-connect/certs";
+    @Value("${keycloak.jwks.uri}")
+    private String jwksUrl;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -52,7 +52,7 @@ public class JwtConfig {
         private final JwkProvider provider;
 
         public JwtFilter() {
-            this.provider = new JwkProviderBuilder(JWKS_URL)
+            this.provider = new JwkProviderBuilder(jwksUrl)
                     .cached(10, java.time.Duration.ofHours(1))
                     .build();
         }

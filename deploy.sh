@@ -27,6 +27,8 @@ function print_usage() {
     echo "  logs    - Show logs"
     echo "  health  - Check service health"
     echo "  clean   - Clean up volumes and images"
+    echo "  keycloak-debug - Debug Keycloak realm import"
+    echo "  keycloak-logs  - Show Keycloak logs with import filtering"
     echo ""
     echo "Examples:"
     echo "  $0 dev up       # Start development environment"
@@ -48,6 +50,10 @@ function log_warning() {
 
 function log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+function log_debug() {
+    echo -e "${PURPLE}[DEBUG]${NC} $1"
 }
 
 function check_prerequisites() {
@@ -73,23 +79,38 @@ function check_prerequisites() {
     # Check if .env file exists
     if [ ! -f ".env" ]; then
         log_warning ".env file not found. Creating sample..."
-        cat > .env << EOF
-# Sample environment variables
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=postgres
+    fi
 
-KEYCLOAK_ADMIN=admin
-KEYCLOAK_ADMIN_PASSWORD=admin
+    check_keycloak_files
 
-REDIS_PASSWORD=
+    log_success "Prerequisites check completed"
+}
 
-# Add other required environment variables here
-EOF
-        log_info "Sample .env file created. Please configure it with your values."
+function check_keycloak_files() {
+    log_info "Checking Keycloak realm files..."
+    
+    if [ -d "./services/api-gateway/realm-exports" ]; then
+        local realm_files=$(find ./services/api-gateway/realm-exports -name "*.json" | wc -l)
+        if [ $realm_files -gt 0 ]; then
+            log_success "Found $realm_files realm file(s)"
+            ls -la ./services/api-gateway/realm-exports/*.json | while read line; do
+                log_debug "  $line"
+            done
+        else
+            log_warning "No JSON realm files found in ./services/api-gateway/realm-exports"
+        fi
+    else
+        log_warning "Realm exports directory not found: ./services/api-gateway/realm-exports"
     fi
     
-    log_success "Prerequisites check completed"
+    if [ -d "./keycloak-extensions" ]; then
+        local ext_files=$(find ./keycloak-extensions -name "*.jar" | wc -l)
+        if [ $ext_files -gt 0 ]; then
+            log_success "Found $ext_files Keycloak extension(s)"
+        else
+            log_info "No Keycloak extensions found"
+        fi
+    fi
 }
 
 function ensure_executable() {
@@ -97,6 +118,150 @@ function ensure_executable() {
         chmod +x ./database/init-multiple-databases.sh
         log_info "Made database init script executable"
     fi
+}
+
+function monitor_keycloak_startup() {
+    local env=$1
+    local compose_file
+    
+    case $env in
+        "dev")
+            compose_file="docker-compose.dev.yml"
+            ;;
+        "prod")
+            compose_file="docker-compose.prod.yml"
+            ;;
+    esac
+    
+    log_info "Monitoring Keycloak startup and realm import..."
+    
+    # Wait for container to start
+    sleep 5
+    
+    local container_name="keycloak-${env}"
+    if [ "$env" = "prod" ]; then
+        container_name="keycloak-prod"
+    fi
+    
+    # Check if container is running
+    if ! docker ps | grep -q "$container_name"; then
+        log_error "Keycloak container not found or not running"
+        return 1
+    fi
+    
+    log_info "Tailing Keycloak logs for import information..."
+    echo -e "${YELLOW}Press Ctrl+C to stop monitoring${NC}"
+    
+    # Monitor logs with filtering for important events
+    docker logs -f "$container_name" 2>&1 | while IFS= read -r line; do
+        case "$line" in
+            *"import"*|*"Import"*|*"IMPORT"*)
+                echo -e "${GREEN}[IMPORT]${NC} $line"
+                ;;
+            *"realm"*|*"Realm"*|*"REALM"*)
+                echo -e "${BLUE}[REALM]${NC} $line"
+                ;;
+            *"ERROR"*|*"error"*)
+                echo -e "${RED}[ERROR]${NC} $line"
+                ;;
+            *"WARN"*|*"warn"*)
+                echo -e "${YELLOW}[WARN]${NC} $line"
+                ;;
+            *"UserSync EventListener"*)
+                echo -e "${PURPLE}[EXTENSION]${NC} $line"
+                ;;
+            *"Server started"*|*"started in"*)
+                echo -e "${GREEN}[STARTUP]${NC} $line"
+                ;;
+            *)
+                echo "$line"
+                ;;
+        esac
+    done
+}
+
+function debug_keycloak() {
+    local env=$1
+    log_info "=== KEYCLOAK DEBUG REPORT ==="
+    
+    local container_name="keycloak-${env}"
+    if [ "$env" = "prod" ]; then
+        container_name="keycloak-prod"
+    fi
+    
+    # Check if container exists and is running
+    if ! docker ps | grep -q "$container_name"; then
+        log_error "Keycloak container '$container_name' is not running"
+        if docker ps -a | grep -q "$container_name"; then
+            log_info "Container exists but is stopped. Checking logs..."
+            docker logs --tail 50 "$container_name"
+        fi
+        return 1
+    fi
+    
+    log_success "Keycloak container is running"
+    
+    # Check mounted realm files
+    log_info "Checking mounted realm files..."
+    docker exec "$container_name" ls -la /opt/keycloak/data/import/ 2>/dev/null || {
+        log_error "Cannot access /opt/keycloak/data/import/ directory"
+    }
+    
+    # Check if realm file is valid JSON
+    log_info "Validating realm JSON files..."
+    docker exec "$container_name" sh -c 'for file in /opt/keycloak/data/import/*.json; do 
+        echo "=== Checking $file ==="; 
+        if python3 -m json.tool "$file" > /dev/null 2>&1; then 
+            echo "✓ Valid JSON"; 
+            head -5 "$file" | grep -E "\"realm\"|\"id\"" || echo "No realm name found in first 5 lines";
+        else 
+            echo "✗ Invalid JSON"; 
+        fi; 
+    done' 2>/dev/null
+    
+    # Check Keycloak providers
+    log_info "Checking custom providers..."
+    docker exec "$container_name" ls -la /opt/keycloak/providers/ 2>/dev/null || {
+        log_warning "No custom providers directory or empty"
+    }
+    
+    # Check if realm was imported by querying Keycloak
+    log_info "Checking imported realms..."
+    sleep 2
+    
+    # Try to get realm info
+    local realm_check=$(docker exec "$container_name" curl -s http://localhost:8080/realms/stockfellow/.well-known/openid_configuration 2>/dev/null)
+    if echo "$realm_check" | grep -q "stockfellow"; then
+        log_success "Stockfellow realm is accessible"
+        
+        # Check for clients
+        log_info "Checking realm clients via API..."
+        # This would need admin credentials, so we'll check logs instead
+        docker logs "$container_name" 2>&1 | grep -i "client" | tail -10
+    else
+        log_error "Stockfellow realm is not accessible"
+        log_info "Available realms:"
+        docker exec "$container_name" curl -s http://localhost:8080/realms/ 2>/dev/null | grep -o '"[^"]*"' || echo "Could not retrieve realms"
+    fi
+    
+    # Show recent import-related logs
+    log_info "Recent import-related logs:"
+    docker logs --tail 100 "$container_name" 2>&1 | grep -i -E "(import|realm|client|event)" | tail -20
+    
+    log_info "=== END DEBUG REPORT ==="
+}
+
+function show_keycloak_logs() {
+    local env=$1
+    local container_name="keycloak-${env}"
+    if [ "$env" = "prod" ]; then
+        container_name="keycloak-prod"
+    fi
+    
+    log_info "Showing Keycloak logs with import/realm filtering..."
+    echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
+    
+    docker logs -f "$container_name" 2>&1 | grep -E "(import|realm|client|event|ERROR|WARN)" --color=always
 }
 
 function start_services() {
@@ -206,6 +371,19 @@ function check_health() {
             log_error "$name is not healthy"
         fi
     done
+
+    log_info "Checking Keycloak..."
+    if curl -f http://localhost:8080/health/ready >/dev/null 2>&1; then
+        log_success "Keycloak is ready"
+        
+        if curl -f http://localhost:8080/realms/stockfellow/.well-known/openid_configuration >/dev/null 2>&1; then
+            log_success "Stockfellow realm is accessible"
+        else
+            log_warning "Stockfellow realm is not accessible"
+        fi
+    else
+        log_error "Keycloak is not ready"
+    fi
 }
 
 function clean_up() {
@@ -268,6 +446,12 @@ case $ACTION in
         ;;
     "clean")
         clean_up $ENVIRONMENT
+        ;;
+    "keycloak-debug")
+        debug_keycloak $ENVIRONMENT
+        ;;
+    "keycloak-logs")
+        show_keycloak_logs $ENVIRONMENT
         ;;
     *)
         log_error "Invalid action: $ACTION"

@@ -59,11 +59,9 @@ EOSQL
 if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
     echo "Multiple database creation requested: $POSTGRES_MULTIPLE_DATABASES"
     
-    # Split the comma-separated list
     IFS=',' read -ra DATABASES <<< "$POSTGRES_MULTIPLE_DATABASES"
     
     for db in "${DATABASES[@]}"; do
-        # Trim whitespace
         db=$(echo "$db" | xargs)
         
         case $db in

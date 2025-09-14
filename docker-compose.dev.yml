@@ -297,7 +297,6 @@ services:
       - "${MFA_SERVICE_DEBUG_PORT:-5010}:5010"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
       - USER_SERVICE_URL=http://user-service:4020

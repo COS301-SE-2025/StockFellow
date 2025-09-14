@@ -39,3 +39,4 @@ pids/
 .env
 .env.local
 .env.*.local
+*README

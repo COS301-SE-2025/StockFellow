@@ -43,16 +43,13 @@ public class AuthFilter implements Filter {
         TokenValidationResult validationResult = tokenValidationService.validateRequest(path, authHeader);
         
         if (validationResult.isSuccess()) {
-            // Token is valid, add user info to request headers for downstream services
             HttpServletRequest enrichedRequest = enrichRequestWithUserInfo(httpRequest, validationResult.getTokenInfo());
             chain.doFilter(enrichedRequest, response);
             
         } else if (validationResult.isExpired()) {
-            // Token is expired, send refresh token response
             sendTokenExpiredResponse(httpResponse);
             
         } else {
-            // Token is invalid or missing
             sendUnauthorizedResponse(httpResponse, validationResult.getMessage());
         }
     }

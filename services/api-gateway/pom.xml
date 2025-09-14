@@ -38,13 +38,6 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Keycloak Spring Boot Adapter (replaces keycloak-connect) -->
-        <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-spring-boot-starter</artifactId>
-            <version>${keycloak.version}</version>
-        </dependency>
-
         <!-- Keycloak Admin Client (for direct authentication) -->
         <dependency>
             <groupId>org.keycloak</groupId>
