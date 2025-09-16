@@ -5,11 +5,11 @@ server:
 spring:
   application:
     name: api-gateway
-    
+
   redis:
-    host: ${REDIS_HOST:redis}      
+    host: ${REDIS_HOST:redis}
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}       
+    password: ${REDIS_PASSWORD:}
     timeout: 2000ms
     lettuce:
       pool:
@@ -48,9 +48,21 @@ app:
   mfa:
     enabled: true
 
-mfa:
-  service:
-    url: ${MFA_SERVICE_URL:http://mfa-service:8087} 
+# mfa:
+#   service:
+#     url: ${MFA_SERVICE_URL:http://mfa-service:8087}
+
+services:
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:4020}
+  group-service:
+    url: ${GROUP_SERVICE_URL:http://group-service:4040}
+  transaction-service:
+    url: ${TRANSACTION_SERVICE_URL:http://transaction-service:4060}
+  notification-service:
+    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:4080}
+  mfa-service:
+    url: ${MFA_SERVICE_URL:http://mfa-service:8087}
 
 cors:
   allowed-origins: "*"

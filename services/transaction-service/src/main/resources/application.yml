@@ -68,3 +68,6 @@ springdoc:
   group-configs:
     - group: 'transaction-service'
       paths-to-match: '/api/**'
+
+paystack:
+  base-url: ${PAYSTACK_API_URL:https://api.paystack.co}

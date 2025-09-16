@@ -28,7 +28,10 @@ public class PaystackService {
     
     private final RestTemplate restTemplate;
     private final String apiKey;
-    private static final String PAYSTACK_BASE_URL = "https://api.paystack.co";
+   
+    @Value("${paystack.base-url}")
+    private String PAYSTACK_BASE_URL;
+    
 
     public PaystackService(
             RestTemplate restTemplate,
