@@ -48,7 +48,22 @@ app:
 
 mfa:
   service:
-    url: http://localhost:8087
+    url: http://mfa-service:8087
+
+# Service URLs for Docker development
+services:
+  user-service:
+    url: http://user-service:4020
+  group-service:
+    url: http://group-service:4040
+  transaction-service:
+    url: http://transaction-service:4080
+  notification-service:
+    url: http://notification-service:4050
+  mfa-service:
+    url: http://mfa-service:8087
+  webauthn-service:
+    url: http://webauthn-service:4090
 
 # Logging configuration (replaces morgan)
 logging:

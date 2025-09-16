@@ -10,13 +10,13 @@ import java.util.List;
 
 @Configuration
 public class RouteConfig {
-    
+
     @Value("${services.user-service.url:http://user-service:4020}")
     private String userServiceUrl;
-    
+
     @Value("${services.group-service.url:http://group-service:4040}")
     private String groupServiceUrl;
-    
+
     @Value("${services.transaction-service.url:http://transaction-service:4080}")
     private String transactionServiceUrl;
 
@@ -25,65 +25,66 @@ public class RouteConfig {
 
     @Value("${services.mfa-service.url:http://mfa-service:8087}")
     private String mfaServiceUrl;
-    
+
+    @Value("${services.webauthn-service.url:http://webauthn-service:4090}")
+    private String webauthnServiceUrl;
+
     @Bean
     public List<Route> routes() {
         return Arrays.asList(
-            // User service route
-             new Route(
-                "/api/users/register", // Registration endpoint (internal use by gateway)
-                false, // No auth required as it's called internally
-                new Route.RateLimit(15 * 60 * 1000L, 50), // More restrictive for registration
-                new Route.Proxy(userServiceUrl, true)
-            ),
+                // User service route
+                new Route(
+                        "/api/users/register", // Registration endpoint (internal use by gateway)
+                        false, // No auth required as it's called internally
+                        new Route.RateLimit(15 * 60 * 1000L, 50), // More restrictive for registration
+                        new Route.Proxy(userServiceUrl, true)),
 
-            
-            new Route(
-                "/api/users/**",
-                true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(userServiceUrl, true)
-            ),
-            
-            // Group service route
-            new Route(
-                "/api/groups/**",
-                true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(groupServiceUrl, true)
-            ),
-            
-            // Transaction service route (requires auth)
-            new Route(
-                "/api/transaction/**",
-                true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(transactionServiceUrl, true)
-            ),
+                new Route(
+                        "/api/users/**",
+                        true,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(userServiceUrl, true)),
 
-            // Notification service route
-            new Route(
-                "/api/notifications/**",
-                true,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(notificationServiceUrl, true)
-            ),
+                // Group service route
+                new Route(
+                        "/api/groups/**",
+                        true,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(groupServiceUrl, true)),
 
-            // MFA routes
-            new Route(
-                "/api/mfa/**",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(mfaServiceUrl, true)
-            ),
-            
-            // Default api route
-            new Route(
-                "/api",
-                false,
-                new Route.RateLimit(15 * 60 * 1000L, 100),
-                new Route.Proxy(userServiceUrl, true)
-            )
-        );
+                // Transaction service route (requires auth)
+                new Route(
+                        "/api/transaction/**",
+                        true,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(transactionServiceUrl, true)),
+
+                // Notification service route
+                new Route(
+                        "/api/notifications/**",
+                        true,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(notificationServiceUrl, true)),
+
+                // MFA routes
+                new Route(
+                        "/api/mfa/**",
+                        false,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(mfaServiceUrl, true)),
+
+                // WebAuthn routes (standalone service)
+                new Route(
+                        "/api/webauthn/**",
+                        false, // No auth required - handles its own authentication
+                        new Route.RateLimit(15 * 60 * 1000L, 50),
+                        new Route.Proxy(webauthnServiceUrl, true)),
+
+                // Default api route
+                new Route(
+                        "/api",
+                        false,
+                        new Route.RateLimit(15 * 60 * 1000L, 100),
+                        new Route.Proxy(userServiceUrl, true)));
     }
 }

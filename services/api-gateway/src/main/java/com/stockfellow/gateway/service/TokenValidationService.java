@@ -20,15 +20,15 @@ public class TokenValidationService {
 
     private final KeycloakService keycloakService;
     private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
-
-    // Endpoints that don't require authentication
+    private final ObjectMapper objectMapper; // Endpoints that don't require authentication
     private final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "/api/auth/login",
             "/api/auth/test/login",
             "/api/auth/verify-mfa",
             "/api/auth/register",
             "/api/auth/refresh",
+            "/api/webauthn",
+            "/api/mfa",
             "/api/health",
             "/actuator/health",
             "/actuator/info",

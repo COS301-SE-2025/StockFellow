@@ -1,3 +1,4 @@
+
 services:
   # Redis for caching
   redis:
@@ -17,7 +18,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
   # PostgreSQL Database for Keycloak
   postgres:
     image: postgres:15
@@ -29,7 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5433:5432"
     networks:
       - stockfellow-net
     healthcheck:
@@ -233,9 +233,7 @@ services:
   #   networks:
   #     - stockfellow-net
   #   volumes:
-  #     - alfresco_share_data:/usr/local/tomcat/shared/classes/alfresco/web-extension
-
-  # Keycloak 
+  #     - alfresco_share_data:/usr/local/tomcat/shared/classes/alfresco/web-extension  # Keycloak 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
@@ -322,7 +320,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=${USER_SERVICE_SPRING_PROFILE:-docker}
       - POSTGRES_HOST=user-service-postgres
-      - POSTGRES_PORT=5432
+      - POSTGRES_PORT=5433
       - POSTGRES_DB=userservice_db
       - POSTGRES_USER=userservice_user
       - POSTGRES_PASSWORD=userservice_pass
@@ -393,7 +391,7 @@ services:
     depends_on:
       - group-service
       - user-service
-      - ngrok
+      # - ngrok
     ports:
       - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
@@ -427,22 +425,22 @@ services:
     restart: unless-stopped
   
   # Used to expose local hosted port online for paystack callback
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    command:
-      - "start"
-      - "--all"
-      - "--config"
-      - "/etc/ngrok.yml"
-    volumes:
-      - ./ngrok.yml:/etc/ngrok.yml
-    ports:
-      - 4041:4041  
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    networks:
-      - stockfellow-net
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   restart: unless-stopped
+  #   command:
+  #     - "start"
+  #     - "--all"
+  #     - "--config"
+  #     - "/etc/ngrok.yml"
+  #   volumes:
+  #     - ./ngrok.yml:/etc/ngrok.yml
+  #   ports:
+  #     - 4041:4041  
+  #   environment:
+  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  #   networks:
+  #     - stockfellow-net
 
   # Notification Service
   notification-service:
@@ -483,8 +481,53 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-    restart: unless-stopped
-    
+    restart: unless-stopped  # WebAuthn Service (Custom UI, uses Keycloak database)
+  webauthn-service:
+    build:
+      context: ./services/webauthn-service
+      dockerfile: Dockerfile
+    container_name: webauthn-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    ports:
+      - "${WEBAUTHN_SERVICE_PORT}:4090"
+      - "${WEBAUTHN_SERVICE_DEBUG_PORT}:5010"
+    environment:
+      - SERVER_PORT=4090
+      - SPRING_PROFILES_ACTIVE=${WEBAUTHN_SERVICE_SPRING_PROFILE}
+      - SPRING_DATASOURCE_URL=${KC_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${KC_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${KC_DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - KEYCLOAK_AUTH_SERVER_URL=${KEYCLOAK_AUTH_SERVER_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_RESOURCE=webauthn-service
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - WEBAUTHN_RELYING_PARTY_NAME=${WEBAUTHN_RELYING_PARTY_NAME}
+      - WEBAUTHN_RELYING_PARTY_ID=${WEBAUTHN_RELYING_PARTY_ID}
+      - WEBAUTHN_ORIGIN=${WEBAUTHN_ORIGIN}
+      - WEBAUTHN_CHALLENGE_TIMEOUT=${WEBAUTHN_CHALLENGE_TIMEOUT}
+      - JVM_OPTS=${WEBAUTHN_SERVICE_JVM_OPTS}
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+    networks:
+      - stockfellow-net
+    volumes:
+      - ./services/webauthn-service/src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4090/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 # MFA Service (Spring Boot)
   mfa-service:
     build:
@@ -519,13 +562,14 @@ services:
       - stockfellow-net
     volumes:
       - ./services/mfa-service/src:/app/src
+      - ./services/mfa-service/pom.xml:/app/pom.xml
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
-  
+    restart: unless-stopped
   demo-service:
     build:
       context: ./services/demo-service
@@ -578,6 +622,10 @@ volumes:
   user_service_postgres_data:
   redis_data:
   activemq_data:
+  webauthn_postgres_data:
   #alfresco_acs_data:
   #alfresco_search_data:
   #alfresco_share_data:
+
+
+
