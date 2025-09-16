@@ -13,13 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface DailyMetricsRepository extends JpaRepository<DailyMetrics, LocalDate> {
-    
-    // Find metrics within date range
+    Optional<DailyMetrics> findByDate(LocalDate date);
+
+    // Find metrics between dates
     List<DailyMetrics> findByDateBetweenOrderByDateDesc(LocalDate startDate, LocalDate endDate);
-    
-    // Get latest metrics
-    Optional<DailyMetrics> findTopByOrderByDateDesc();
-    
+
     // Aggregation queries for dashboard
     @Query("""
         SELECT SUM(dm.newUsers) 

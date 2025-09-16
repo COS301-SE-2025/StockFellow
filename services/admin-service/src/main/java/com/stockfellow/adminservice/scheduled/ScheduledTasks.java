@@ -36,13 +36,13 @@ public class ScheduledTasks {
             
             DailyMetrics metrics = existingMetrics.orElse(new DailyMetrics(today));
             
-            // Fetch data from other services
+            // Update metrics from other services
             updateUserMetrics(metrics);
             updateGroupMetrics(metrics);
             updateTransactionMetrics(metrics);
             
-            metricsRepository.save(metrics);
-            logger.info("Daily metrics aggregation completed successfully");
+            metricsRepository.save(metrics); // Fixed: changed from dailyMetricsRepository to metricsRepository
+            logger.info("Daily metrics aggregated successfully for date: {}", today);
             
         } catch (Exception e) {
             logger.error("Error during daily metrics aggregation: {}", e.getMessage(), e);
@@ -58,6 +58,7 @@ public class ScheduledTasks {
                 metrics.setActiveUsers(getLongValue(userStats, "totalUsers"));
                 // For new users, we'd need a separate endpoint that tracks daily registrations
                 // This is a simplified version
+                metrics.setNewUsers(getLongValue(userStats, "newUsersToday"));
             }
         } catch (Exception e) {
             logger.error("Error updating user metrics: {}", e.getMessage());

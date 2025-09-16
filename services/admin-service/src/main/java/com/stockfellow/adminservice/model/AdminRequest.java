@@ -1,8 +1,8 @@
 package com.stockfellow.adminservice.model;
 
 import jakarta.persistence.*;
-import com.vladmihalcea.hibernate.type.json.JsonType;
-import org.hibernate.annotations.Type;
+// import io.hypersistence.utils.hibernate.type.json.JsonType;
+// import org.hibernate.annotations.Type;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -48,9 +48,9 @@ public class AdminRequest {
     @Column(name = "processed_at")
     private LocalDateTime processedAt;
 
-    @Type(JsonType.class)
+   
     @Column(name = "metadata", columnDefinition = "jsonb")
-    private Map<String, Object> metadata;
+    private String metadata;
 
     // Constructors
     public AdminRequest() {}
@@ -89,6 +89,6 @@ public class AdminRequest {
     public LocalDateTime getProcessedAt() { return processedAt; }
     public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
 
-    public Map<String, Object> getMetadata() { return metadata; }
-    public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+    public String getMetadata() { return metadata; }
+    public void setMetadata(String metadata) { this.metadata = metadata; }
 }

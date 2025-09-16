@@ -130,9 +130,9 @@ public class AnalyticsService {
 
     public Map<String, Object> getRevenueAnalytics(String period) {
         LocalDate startDate = calculateStartDate(period);
-        List<DailyMetrics> metrics = metricsRepository.findByDateBetweenOrderByDateDesc(
-            startDate, LocalDate.now()
-        );
+        LocalDate endDate = LocalDate.now(); // Fixed: Added missing endDate variable
+        List<DailyMetrics> metrics = metricsRepository.findByDateBetweenOrderByDateDesc(startDate, endDate);
+        
 
         Map<String, Object> revenue = new HashMap<>();
         BigDecimal totalRevenue = BigDecimal.ZERO;

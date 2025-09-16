@@ -3,6 +3,7 @@ package com.stockfellow.adminservice.aspect;
 import com.stockfellow.adminservice.model.AuditLog;
 import com.stockfellow.adminservice.service.AuditLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -80,18 +81,26 @@ public class AuditLogAspect {
             auditLog.setUserAgent(request.getHeader("User-Agent"));
             auditLog.setSessionId(request.getHeader("X-Session-Id"));
             
-            // Capture request headers (excluding sensitive ones)
-            Map<String, String> headers = new HashMap<>();
+            // Capture request headers (excluding sensitive ones) and convert to JSON string
+            Map<String, String> headersMap = new HashMap<>();
             Enumeration<String> headerNames = request.getHeaderNames();
             if (headerNames != null) {
                 while (headerNames.hasMoreElements()) {
                     String headerName = headerNames.nextElement();
                     if (!isSensitiveHeader(headerName)) {
-                        headers.put(headerName, request.getHeader(headerName));
+                        headersMap.put(headerName, request.getHeader(headerName));
                     }
                 }
             }
-            auditLog.setHeaders(headers);
+            
+            // Convert headers map to JSON string
+            try {
+                String headersJson = objectMapper.writeValueAsString(headersMap);
+                auditLog.setHeaders(headersJson);
+            } catch (JsonProcessingException e) {
+                logger.warn("Failed to serialize headers to JSON: {}", e.getMessage());
+                auditLog.setHeaders("{}"); // Fallback to empty JSON object
+            }
             
             // Capture request payload for non-GET requests (limit size)
             if (!"GET".equals(request.getMethod())) {
@@ -109,11 +118,10 @@ public class AuditLogAspect {
                 }
             }
             
-            // Add performance metrics
+            // Add performance metrics to metadata if needed (you'll need to add metadata field handling)
             long executionTime = System.currentTimeMillis() - startTime;
-            Map<String, Object> metadata = auditLog.getHeaders() != null ? 
-                new HashMap<>(auditLog.getHeaders()) : new HashMap<>();
-            metadata.put("executionTimeMs", executionTime);
+            // Note: If you want to store execution time, you'll need to add a field for it
+            // or include it in a metadata JSON field
             
             auditLogService.createAuditLog(auditLog);
             

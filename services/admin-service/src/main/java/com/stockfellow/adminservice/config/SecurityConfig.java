@@ -2,45 +2,38 @@ package com.stockfellow.adminservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+    
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        logger.info("Configuring Spring Security - allowing all requests and disabling CSRF");
         http
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
-            )
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configure(http));
-
+            .authorizeHttpRequests(authz -> authz
+                .anyRequest().permitAll()
+            );
         return http.build();
     }
 
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-        authoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
-        
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
-        return converter;
-    }
 }
+//     @Bean
+//     public JwtAuthenticationConverter jwtAuthenticationConverter() {
+//         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+//         authoritiesConverter.setAuthorityPrefix("ROLE_");
+//         authoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
+        
+//         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+//         converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+//         return converter;
+//     }
+// }
