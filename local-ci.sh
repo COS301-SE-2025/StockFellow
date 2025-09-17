@@ -128,14 +128,41 @@ if [ -f ".github/workflows/ci.yml" ] || [ -f ".github/workflows/main.yml" ]; the
     
     # Check if all services in docker-compose are also in CI matrix
     if [ -f "docker-compose.prod.yml" ]; then
-        compose_services=$(grep -E "^\s+[a-zA-Z0-9-]+:" docker-compose.prod.yml | grep -v "postgres\|redis\|keycloak\|activemq\|resource-monitor" | sed 's/://g' | sed 's/^[[:space:]]*//')
+        echo "Extracting services from docker-compose.prod.yml..."
         
-        for service in $compose_services; do
-            if ! grep -r "matrix:" .github/workflows/ | grep -q "$service"; then
-                print_warning "Service '$service' in docker-compose.prod.yml but not in CI matrix"
-            fi
-        done
+        # Better parsing: look for services under the 'services:' section only
+        # and exclude Docker Compose configuration keys
+        compose_services=$(awk '
+        /^services:/ { in_services=1; next }
+        /^[a-zA-Z]/ && in_services==0 { next }
+        /^[^ ]/ && !/^services:/ && in_services==1 { in_services=0 }
+        in_services==1 && /^  [a-zA-Z0-9][a-zA-Z0-9_-]*:/ {
+            gsub(/^  /, "")
+            gsub(/:.*$/, "")
+            if ($1 !~ /^(volumes|networks|configs|secrets)$/) print $1
+        }' docker-compose.prod.yml | grep -v -E "^(postgres|redis|keycloak|activemq|resource-monitor)$")
+        
+        echo "Found services: $compose_services"
+        
+        if [ -n "$compose_services" ]; then
+            for service in $compose_services; do
+                # Check if service exists in CI workflow matrix
+                if ls .github/workflows/*.yml 1> /dev/null 2>&1; then
+                    if ! grep -r "matrix:" .github/workflows/ | grep -q "$service"; then
+                        print_warning "Service '$service' in docker-compose.prod.yml but not in CI matrix"
+                    else
+                        print_status "Service '$service' found in CI matrix"
+                    fi
+                fi
+            done
+        else
+            print_warning "No services found in docker-compose.prod.yml or file format issue"
+        fi
+    else
+        print_warning "docker-compose.prod.yml not found"
     fi
+else
+    print_warning "No GitHub Actions workflow files found"
 fi
 
 echo ""
