@@ -13,7 +13,7 @@ env:
   MAVEN_CLI_OPTS: '--batch-mode --errors --fail-at-end --show-version'
 
 jobs:
-  # For PRs
+  # Validation job for PRs
   validate:
     name: Quick Validation
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1 # Shallow clone
+          fetch-depth: 1 
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -72,6 +72,7 @@ jobs:
             ${{ runner.os }}-maven-${{ matrix.service }}-
             ${{ runner.os }}-maven-
 
+      # Start services 
       - name: Start test services
         run: |
           # Start services in parallel and don't wait for full startup
@@ -130,14 +131,14 @@ jobs:
           fail_ci_if_error: false
         continue-on-error: true
 
-      # Build 
+      # Build
       - name: Build and package ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
           # Skip tests since we already ran them, use parallel compilation
           mvn ${{ env.MAVEN_CLI_OPTS }} package -DskipTests -T 1C -q
 
-      # Build Docker(main branch)
+      # Build Docker images (main branch only)
       - name: Build Docker image
         run: |
           cd services/${{ matrix.service }}
@@ -168,7 +169,7 @@ jobs:
           docker stop postgres-test mongo-test redis-test || true
           docker rm postgres-test mongo-test redis-test || true
 
-  # Packaging
+  # Package
   package:
     name: Package & Release
     runs-on: ubuntu-latest
@@ -188,18 +189,24 @@ jobs:
 
       - name: Create deployment package
         run: |
-          # Simplified package creation
+          # Package creation
           mkdir -p release-package
           
           # Copy artifacts efficiently
           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
             if [ -d "./artifacts/${service}-artifact" ]; then
               mkdir -p "release-package/${service}"
-              cp ./artifacts/${service}-artifact/* "release-package/${service}/"
+              # Handle both possible artifact structures
+              if [ -d "./artifacts/${service}-artifact/services" ]; then
+                cp -r ./artifacts/${service}-artifact/services/${service}/target/* "release-package/${service}/" 2>/dev/null || true
+                cp ./artifacts/${service}-artifact/${service}-image.tar.gz "release-package/${service}/" 2>/dev/null || true
+              else
+                cp -r ./artifacts/${service}-artifact/* "release-package/${service}/" 2>/dev/null || true
+              fi
             fi
           done
           
-          # Create minimal deployment info
+          # Deployment info
           cat > release-package/deployment-info.json << EOF
           {
             "version": "${{ github.run_number }}",
@@ -226,7 +233,6 @@ jobs:
       - name: Create release archive
         run: |
           cd release-package
-          # Use faster compression
           tar -cf ../stockfellow-release-v${{ github.run_number }}.tar.gz --use-compress-program="gzip -1" .
           cd ..
           sha256sum stockfellow-release-v${{ github.run_number }}.tar.gz > stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
@@ -240,7 +246,7 @@ jobs:
             stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
           retention-days: 30
 
-    #   # GitHub release
+    #   # GitHub release 
     #   - name: Create GitHub Release
     #     uses: softprops/action-gh-release@v2
     #     with:
@@ -255,4 +261,4 @@ jobs:
     #         stockfellow-release-v${{ github.run_number }}.tar.gz.sha256
     #       draft: false
     #       prerelease: false
-    #     continue-on-error: true
+    #     continue-on-error: true 
