@@ -55,4 +55,8 @@ Thumbs.db
 *.tmp 
 *~
 .env
+.env.droplet*
+deploy-config.sh
 .turbo
+nginx.conf
+stockfellow-9e*
