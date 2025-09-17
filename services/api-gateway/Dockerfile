@@ -30,9 +30,6 @@ WORKDIR /app
 # Copy the built JAR from the builder stage
 COPY --from=builder /app/target/api-gateway-*.jar app.jar
 
-# Copy resources (like keycloak.json) if needed
-COPY --from=builder /app/src/main/resources/keycloak.json ./keycloak.json
-
 # Create a non-root user for security (Alpine way)
 RUN addgroup -S appuser && adduser -S appuser -G appuser
 RUN chown -R appuser:appuser /app
