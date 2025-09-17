@@ -1,7 +1,7 @@
-# Multi-stage build for Java Spring Boot application
+# Multi-stage build for Java Spring Boot application - Optimized for resource-constrained environments
 
 # Stage 1: Build the application
-FROM maven:3.8.4-openjdk-11 AS builder
+FROM maven:3.8.4-openjdk-11-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -15,41 +15,46 @@ RUN mvn dependency:go-offline -B
 # Copy source code
 COPY src ./src
 
-# Build the application
-RUN mvn clean package -DskipTests
+# Build the application with optimizations
+RUN mvn clean package -DskipTests -Dmaven.javadoc.skip=true
 
-# Stage 2: Runtime image
-FROM openjdk:11-jre-slim
+# Stage 2: Runtime image - Use Eclipse Temurin (official OpenJDK builds)
+FROM eclipse-temurin:11-jre-alpine
 
-# Install curl for health checks (optional)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install curl for health checks using alpine package manager
+RUN apk add --no-cache curl
 
 # Set working directory
 WORKDIR /app
 
 # Copy the built JAR from the builder stage
-COPY --from=builder /app/target/api-gateway-1.0.0.jar app.jar
+COPY --from=builder /app/target/api-gateway-*.jar app.jar
 
 # Copy resources (like keycloak.json) if needed
 COPY --from=builder /app/src/main/resources/keycloak.json ./keycloak.json
 
-# Create a non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create a non-root user for security (Alpine way)
+RUN addgroup -S appuser && adduser -S appuser -G appuser
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Expose the application port
+# Expose only the application port (remove debug port for production)
 EXPOSE 3000
 
-# Expose debugging port
-EXPOSE 5005
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+# Optimized health check with longer intervals for resource savings
+HEALTHCHECK --interval=60s --timeout=5s --start-period=90s --retries=2 \
   CMD curl -f http://localhost:3000/actuator/health || exit 1
 
-# Set JVM options for containerized environment
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+# Optimized JVM options for resource-constrained environments
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+               -XX:MaxRAMPercentage=70.0 \
+               -XX:InitialRAMPercentage=50.0 \
+               -XX:+UseG1GC \
+               -XX:+UseStringDeduplication \
+               -XX:+OptimizeStringConcat \
+               -Djava.security.egd=file:/dev/./urandom \
+               -Dspring.jmx.enabled=false \
+               -Dmanagement.endpoints.jmx.exposure.exclude=*"
 
 # Run the application
 CMD ["sh", "-c", "java $JAVA_OPTS $JVM_OPTS -jar app.jar"]

@@ -16,7 +16,7 @@ public class GroupServiceClient {
     
     private final WebClient webClient;
     
-    @Value("${services.group-service.url:http://localhost:4040}")
+    @Value("${services.group-service.url}")
     private String groupServiceUrl;
     
     public GroupServiceClient(WebClient.Builder webClientBuilder) {
