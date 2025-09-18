@@ -1,19 +1,17 @@
-transaction-service:
-  build:
-    context: ./services/transaction-service
-    dockerfile: Dockerfile
-  container_name: transaction-service
-  deploy:
-    resources:
-      limits:
-        cpus: '0.25'
-        memory: 512M
+services:
+  transaction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: transaction-service
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
       reservations:
         cpus: '0.125'
         memory: 256M
-  depends_on:
-    - group-service
-    - user-service
   ports:
     - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
   environment:
@@ -38,3 +36,7 @@ transaction-service:
     retries: 3
     start_period: 90s
   restart: unless-stopped
+
+networks:
+  stockfellow-prod:
+    external: true

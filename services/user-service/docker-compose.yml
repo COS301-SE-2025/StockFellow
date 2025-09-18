@@ -1,6 +1,7 @@
+services:
 user-service:
   build:
-    context: ./services/user-service
+    context: .
     dockerfile: Dockerfile
   container_name: user-service
   deploy:
@@ -11,9 +12,6 @@ user-service:
       reservations:
         cpus: '0.125'
         memory: 256M
-  depends_on:
-    - postgres
-    - keycloak
   ports:
     - "${USER_SERVICE_PORT:-4020}:4020"
   environment:
@@ -39,3 +37,7 @@ user-service:
     retries: 3
     start_period: 90s
   restart: unless-stopped
+  
+networks:
+  stockfellow-prod: 
+    external: true

@@ -1,7 +1,8 @@
 # MFA Service - Production optimized
+services:
   mfa-service:
     build:
-      context: ./services/mfa-service
+      context: .
       dockerfile: Dockerfile
     container_name: mfa-service
     deploy:
@@ -12,9 +13,6 @@
         reservations:
           cpus: '0.0625'
           memory: 128M
-    depends_on:
-      - keycloak
-      - user-service
     ports:
       - "${MFA_SERVICE_PORT:-8087}:8087"
     environment:
@@ -37,3 +35,7 @@
       retries: 3
       start_period: 90s
     restart: unless-stopped
+
+networks:
+  stockfellow-prod:
+    external: true
