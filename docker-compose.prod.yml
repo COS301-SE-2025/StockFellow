@@ -20,7 +20,7 @@ services:
       POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
-      - ./database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+      - ./deployment/database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
     networks:
       - stockfellow-prod
     healthcheck:
@@ -120,7 +120,7 @@ services:
       - stockfellow-prod
     volumes:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
-      - ./keycloak-extensions/:/opt/keycloak/providers/
+      - ./integrations/keycloak-extensions/:/opt/keycloak/providers/
     command: start --import-realm
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]

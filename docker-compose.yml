@@ -257,7 +257,7 @@ services:
       - stockfellow-net
     volumes:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
-      - ./keycloak-extensions/:/opt/keycloak/providers/
+      - ./integrations/keycloak-extensions/:/opt/keycloak/providers/
     command: start-dev --import-realm
 
   # API Gateway (Java Spring Boot)
