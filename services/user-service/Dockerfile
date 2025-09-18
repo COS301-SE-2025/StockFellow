@@ -1,7 +1,7 @@
 # Multi-stage build for user-service - Production Optimized
 
 # Build stage
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM amazoncorretto:17-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -Pprod -Dmaven.javadoc.skip=true -q
 
 # Production runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM amazoncorretto:17-alpine
 
 WORKDIR /app
 
@@ -49,11 +49,11 @@ HEALTHCHECK --interval=45s --timeout=5s --start-period=75s --retries=3 \
 
 # Simplified production JVM settings (avoiding JVM startup issues)
 ENV JAVA_OPTS="-XX:+UseContainerSupport \
-               -XX:MaxRAMPercentage=75.0 \
-               -XX:+UseG1GC \
-               -Djava.security.egd=file:/dev/./urandom \
-               -Dspring.profiles.active=prod \
-               -Dspring.jmx.enabled=false"
+  -XX:MaxRAMPercentage=75.0 \
+  -XX:+UseG1GC \
+  -Djava.security.egd=file:/dev/./urandom \
+  -Dspring.profiles.active=prod \
+  -Dspring.jmx.enabled=false"
 
 # Production entrypoint optimized for user management workloads
 CMD ["sh", "-c", "java $JAVA_OPTS $JVM_OPTS -jar app.jar"]
