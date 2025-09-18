@@ -5,7 +5,7 @@ This extension enable listening for user registration and update event from keyc
 * `cd keycloak-event-listener`
 * `mvn clean compile` to test if everything is setup correctly
 * `mvn clean package` to generate jar file
-* Move jar file from this directory to /keycloak-extension in root
+* Move jar file from this directory to ./integrations/keycloak-extension
 
 ## In keycloak
 * Add event listener to realm

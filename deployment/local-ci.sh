@@ -1,17 +1,19 @@
 #!/bin/bash
-# local-ci.sh - Run the same checks as GitHub Actions locally
+# local-ci.sh - Run the same checks as GitHub Actions locally for tests prior to pushing or PR to main
 
 set -e  # Exit on any error
 
-echo "🔍 Starting Local CI Checks..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
-# Colors for output
+echo "🔍 Starting Local CI Checks from $(pwd)..."
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to print colored output
 print_status() {
     echo -e "${GREEN}✓${NC} $1"
 }
@@ -24,13 +26,13 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
-# Check if Maven is installed
+# Check Maven install
 if ! command -v mvn &> /dev/null; then
     print_error "Maven is not installed. Please install Maven first."
     exit 1
 fi
 
-# Check if Docker is running (for later steps)
+# Check Docker is running
 if ! docker info &> /dev/null; then
     print_warning "Docker is not running. Some tests may fail."
 fi
@@ -42,7 +44,7 @@ echo ""
 echo "🔨 Step 1: Compilation Check (mirrors GitHub Actions quick validation)"
 echo "=================================================="
 
-# Mirror the exact compilation check from your GitHub Actions
+# Mirror compilation check from GitHub Actions
 compilation_failed=false
 for service_dir in services/*/; do
     if [ -f "$service_dir/pom.xml" ]; then
@@ -69,19 +71,17 @@ echo ""
 echo "🧪 Step 2: Test Dependencies Check"
 echo "=================================="
 
-# Check for common missing dependencies
+# Check for missing dependencies
 for service_dir in services/*/; do
     if [ -f "$service_dir/pom.xml" ]; then
         service_name=$(basename "$service_dir")
         
-        # Check if JaCoCo plugin exists when jacoco:report is called in CI
         if grep -r "jacoco:report" .github/workflows/ &> /dev/null; then
             if ! grep -q "jacoco-maven-plugin" "$service_dir/pom.xml"; then
                 print_warning "$service_name: Missing JaCoCo plugin but CI tries to run jacoco:report"
             fi
         fi
         
-        # Check for missing @Value import if @Value annotation is used
         find "$service_dir/src" -name "*.java" -exec grep -l "@Value" {} \; 2>/dev/null | while read -r file; do
             if ! grep -q "import org.springframework.beans.factory.annotation.Value" "$file"; then
                 print_warning "$service_name: $file uses @Value but missing import"
@@ -122,37 +122,40 @@ echo ""
 echo "📝 Step 4: Configuration Validation"
 echo "==================================="
 
-# Check for common configuration issues
+# Check configuration issues
 if [ -f ".github/workflows/ci.yml" ] || [ -f ".github/workflows/main.yml" ]; then
     echo "Validating GitHub Actions workflow..."
     
     # Check if all services in docker-compose are also in CI matrix
     if [ -f "docker-compose.prod.yml" ]; then
         echo "Extracting services from docker-compose.prod.yml..."
+    
+        compose_services=$(sed -n '/^services:/,/^[a-zA-Z]/p' docker-compose.prod.yml | \
+                        grep '^  [a-zA-Z]' | \
+                        sed 's/^  //' | \
+                        sed 's/:.*$//' | \
+                        grep -v -E '^(postgres|redis|keycloak|activemq|resource-monitor)$' | \
+                        sort -u | \
+                        tr '\n' ' ')
         
-        # Better parsing: look for services under the 'services:' section only
-        # and exclude Docker Compose configuration keys
-        compose_services=$(awk '
-        /^services:/ { in_services=1; next }
-        /^[a-zA-Z]/ && in_services==0 { next }
-        /^[^ ]/ && !/^services:/ && in_services==1 { in_services=0 }
-        in_services==1 && /^  [a-zA-Z0-9][a-zA-Z0-9_-]*:/ {
-            gsub(/^  /, "")
-            gsub(/:.*$/, "")
-            if ($1 !~ /^(volumes|networks|configs|secrets)$/) print $1
-        }' docker-compose.prod.yml | grep -v -E "^(postgres|redis|keycloak|activemq|resource-monitor)$")
-        
-        echo "Found services: $compose_services"
+        echo "Found services: '$compose_services'"
         
         if [ -n "$compose_services" ]; then
+            matrix_line=$(grep -A 5 "matrix:" .github/workflows/*.yml | grep "service:" | head -1)
+    
+            matrix_services=$(echo "$matrix_line" | \
+                            sed 's/.*service: *\[//' | \
+                            sed 's/\].*//' | \
+                            sed 's/,/ /g' | \
+                            xargs)
+            
+            echo "Matrix services found: '$matrix_services'"
+            
             for service in $compose_services; do
-                # Check if service exists in CI workflow matrix
-                if ls .github/workflows/*.yml 1> /dev/null 2>&1; then
-                    if ! grep -r "matrix:" .github/workflows/ | grep -q "$service"; then
-                        print_warning "Service '$service' in docker-compose.prod.yml but not in CI matrix"
-                    else
-                        print_status "Service '$service' found in CI matrix"
-                    fi
+                if echo " $matrix_services " | grep -q " $service "; then
+                    print_status "Service '$service' found in CI matrix"
+                else
+                    print_warning "Service '$service' in docker-compose.prod.yml but not in CI matrix"
                 fi
             done
         else
@@ -169,7 +172,6 @@ echo ""
 echo "🔍 Step 5: Pre-commit Simulation"
 echo "==============================="
 
-# Run a subset of what would run in CI
 echo "Running quick test suite..."
 
 test_failed=false
@@ -195,18 +197,7 @@ echo "=========="
 
 if [ "$compilation_failed" = true ] || [ "$test_failed" = true ]; then
     print_error "Local CI checks failed! Please fix the issues before pushing."
-    echo ""
-    echo "Common fixes:"
-    echo "• Add missing imports (especially @Value)"
-    echo "• Add missing Maven plugins (JaCoCo, etc.)"
-    echo "• Fix compilation errors"
-    echo "• Ensure all tests pass"
     exit 1
 else
     print_status "All local CI checks passed! Ready to push."
-    echo ""
-    echo "Next steps:"
-    echo "• git add ."
-    echo "• git commit -m 'Your message'"
-    echo "• git push"
 fi

@@ -6,12 +6,11 @@ set -e
 ENVIRONMENT=${1:-"dev"}
 ACTION=${2:-"up"}
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 function print_usage() {
     echo "Usage: $0 [environment] [action]"
@@ -73,7 +72,7 @@ function check_prerequisites() {
     if [ ! -f "./database/init-multiple-databases.sh" ]; then
         log_warning "Database init script not found. Creating directory..."
         mkdir -p ./database
-        log_info "Please ensure the init-multiple-databases.sh script is in ./database/ directory"
+        log_info "Please ensure the init-multiple-databases.sh script is in ./deployment/database/ directory"
     fi
     
     # Check if .env file exists
@@ -103,8 +102,8 @@ function check_keycloak_files() {
         log_warning "Realm exports directory not found: ./services/api-gateway/realm-exports"
     fi
     
-    if [ -d "./keycloak-extensions" ]; then
-        local ext_files=$(find ./keycloak-extensions -name "*.jar" | wc -l)
+    if [ -d "./integrations/keycloak-extensions" ]; then
+        local ext_files=$(find ./integrations/keycloak-extensions -name "*.jar" | wc -l)
         if [ $ext_files -gt 0 ]; then
             log_success "Found $ext_files Keycloak extension(s)"
         else
@@ -124,24 +123,15 @@ function monitor_keycloak_startup() {
     local env=$1
     local compose_file
     
-    case $env in
-        "dev")
-            compose_file="docker-compose.dev.yml"
-            ;;
-        "prod")
-            compose_file="docker-compose.prod.yml"
-            ;;
-    esac
+
+    compose_file="./docker-compose.prod.yml"
     
     log_info "Monitoring Keycloak startup and realm import..."
     
     # Wait for container to start
     sleep 5
     
-    local container_name="keycloak-${env}"
-    if [ "$env" = "prod" ]; then
-        container_name="keycloak-prod"
-    fi
+    local container_name="keycloak"
     
     # Check if container is running
     if ! docker ps | grep -q "$container_name"; then
@@ -186,7 +176,7 @@ function debug_keycloak() {
     
     local container_name="keycloak-${env}"
     if [ "$env" = "prod" ]; then
-        container_name="keycloak-prod"
+        container_name="keycloak"
     fi
     
     # Check if container exists and is running
@@ -255,7 +245,7 @@ function show_keycloak_logs() {
     local env=$1
     local container_name="keycloak-${env}"
     if [ "$env" = "prod" ]; then
-        container_name="keycloak-prod"
+        container_name="keycloak"
     fi
     
     log_info "Showing Keycloak logs with import/realm filtering..."
