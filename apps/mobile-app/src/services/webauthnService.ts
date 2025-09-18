@@ -1,6 +1,7 @@
 // src/services/webAuthnService.ts
 
 import authService from './authService';
+import { PasskeyCreateRequest, PasskeyGetRequest } from 'react-native-passkey';
 
 // Request & Response interfaces
 interface RegistrationStartRequest {
@@ -90,17 +91,36 @@ interface ApiResponse<T> {
 class WebAuthnService {
   private baseUrl = '/webauthn';
 
-  async getServiceInfo(): Promise<any> {
-    try {
-      const response = await authService.apiRequest(this.baseUrl);
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting WebAuthn service info:', error);
-      throw error;
-    }
+  private convertToPasskeyCreateRequest(response: RegistrationStartResponse): PasskeyCreateRequest {
+    return {
+      challenge: response.challenge,
+      rp: {
+        id: response.rpId,
+        name: response.rpName
+      },
+      user: {
+        id: response.user.id,
+        name: response.user.name,
+        displayName: response.user.displayName
+      },
+      pubKeyCredParams: response.pubKeyCredParams,
+      authenticatorSelection: response.authenticatorSelection,
+      timeout: response.timeout,
+      attestation: response.attestation
+    };
   }
 
-  async startRegistration(request: RegistrationStartRequest): Promise<RegistrationStartResponse> {
+  private convertToPasskeyGetRequest(response: AuthenticationStartResponse): PasskeyGetRequest {
+    return {
+      challenge: response.challenge,
+      rpId: response.rpId,
+      allowCredentials: response.allowCredentials,
+      userVerification: response.userVerification,
+      timeout: response.timeout
+    } as PasskeyGetRequest;  // Type assertion since we know the structure matches
+  }
+
+  async startRegistration(request: RegistrationStartRequest): Promise<PasskeyCreateRequest> {
     try {
       const response = await authService.apiRequest(`${this.baseUrl}/register/start`, {
         method: 'POST',
@@ -109,7 +129,7 @@ class WebAuthnService {
       const data: ApiResponse<RegistrationStartResponse> = await response.json();
       
       if (data.success && data.data) {
-        return data.data;
+        return this.convertToPasskeyCreateRequest(data.data);
       } else {
         throw new Error(data.error || 'Registration start failed');
       }
@@ -138,7 +158,7 @@ class WebAuthnService {
     }
   }
 
-  async startAuthentication(request: AuthenticationStartRequest): Promise<AuthenticationStartResponse> {
+  async startAuthentication(request: AuthenticationStartRequest): Promise<PasskeyGetRequest> {
     try {
       const response = await authService.apiRequest(`${this.baseUrl}/authenticate/start`, {
         method: 'POST',
@@ -147,7 +167,7 @@ class WebAuthnService {
       const data: ApiResponse<AuthenticationStartResponse> = await response.json();
       
       if (data.success && data.data) {
-        return data.data;
+        return this.convertToPasskeyGetRequest(data.data);
       } else {
         throw new Error(data.error || 'Authentication start failed');
       }

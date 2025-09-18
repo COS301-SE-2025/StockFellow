@@ -268,7 +268,7 @@ const SignUp = () => {
             } else {
               // No MFA required - login successful
               console.log('Login successful, navigating to home');
-              router.replace('/(tabs)/home');
+              router.replace('/biometricRegistration');
             }
           } else {
             // Handle login failure

@@ -29,6 +29,12 @@ const AuthLayout = () => {
             headerShown: false
           }}
         />
+        <Stack.Screen
+          name='biometricRegistration'
+          options={{
+            headerShown: false
+          }}
+        />
       </Stack>
     </>
   )
