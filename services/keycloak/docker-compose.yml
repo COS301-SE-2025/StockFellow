@@ -1,4 +1,5 @@
 # Keycloak - Production
+services:
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
@@ -10,9 +11,6 @@
         reservations:
           cpus: '0.125'
           memory: 256M
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       KC_DB: ${KC_DB}
       KC_DB_URL: ${KC_DB_URL}
@@ -32,8 +30,8 @@
     networks:
       - stockfellow-prod
     volumes:
-      - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
-      - ./integrations/keycloak-extensions/:/opt/keycloak/providers/
+      - ../api-gateway/realm-exports:/opt/keycloak/data/import
+      - ../../integrations/keycloak-extensions/:/opt/keycloak/providers/
     command: start --import-realm
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
@@ -42,3 +40,7 @@
       retries: 3
       start_period: 120s
     restart: unless-stopped
+
+networks:
+  stockfellow-prod:
+    external: true

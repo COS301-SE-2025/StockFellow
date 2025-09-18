@@ -1,7 +1,8 @@
 # API Gateway - Production
+services:
   api-gateway:
     build:
-      context: ./services/api-gateway
+      context: .
       dockerfile: Dockerfile
     container_name: api-gateway
     deploy:
@@ -12,9 +13,6 @@
         reservations:
           cpus: '0.125'
           memory: 256M
-    depends_on:
-      - keycloak
-      - redis
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
     environment:
@@ -43,3 +41,7 @@
       retries: 3
       start_period: 90s
     restart: unless-stopped
+
+networks:
+  stockfellow-prod:
+    external: true
