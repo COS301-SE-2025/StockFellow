@@ -1,0 +1,45 @@
+# Notification Service - Production optimized
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - postgres
+      - activemq
+      - group-service
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-4050}:4050"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_USER_SERVICE_URL=http://user-service:4020
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=notification_db
+    networks:
+      - stockfellow-prod
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4050/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
