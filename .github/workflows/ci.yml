@@ -2,9 +2,9 @@ name: Optimized CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main ]
+    branches: [main, dev]
   workflow_dispatch:
 
 env:
@@ -13,16 +13,48 @@ env:
   MAVEN_CLI_OPTS: '--batch-mode --errors --fail-at-end --show-version'
 
 jobs:
-  # For PRs
-  validate:
-    name: Quick Validation
+  # Linting validation for PRs and main/dev branches
+  lint:
+    name: Code Quality Check
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1 # Shallow clone
+          fetch-depth: 1
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run strict linting
+        run: |
+          # Enable strict linting for main and dev branches, PRs
+          if [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/dev" || "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Running strict linting with failure on violations"
+            mvn ${{ env.MAVEN_CLI_OPTS }} checkstyle:check -Pstrict-linting -T 2C
+          else
+            echo "Running standard linting"
+            mvn ${{ env.MAVEN_CLI_OPTS }} checkstyle:check -T 2C
+          fi
+
+  # For PRs - quick validation
+  validate:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [lint]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -42,6 +74,7 @@ jobs:
     name: Backend CI/CD
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [lint]
     
     strategy:
       fail-fast: false
@@ -60,6 +93,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: maven
+
+      - name: Run strict linting for service
+        run: |
+          cd services/${{ matrix.service }}
+          mvn ${{ env.MAVEN_CLI_OPTS }} checkstyle:check -Pstrict-linting
 
       - name: Cache Maven dependencies (per service)
         uses: actions/cache@v4

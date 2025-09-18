@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <groupId>com.stockfellow</groupId>
     <artifactId>stockfellow-parent</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
-    
+
     <modules>
         <module>services/user-service</module>
         <module>services/group-service</module>
@@ -18,10 +17,49 @@
         <module>services/mfa-service</module>
         <module>services/api-gateway</module>
     </modules>
-    
+
     <properties>
+        <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
+        <checkstyle.configLocation>google_checks.xml</checkstyle.configLocation>
+        <checkstyle.violationSeverity>error</checkstyle.violationSeverity>
+        <checkstyle.includeTestSourceDirectory>true</checkstyle.includeTestSourceDirectory>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <configLocation>${checkstyle.configLocation}</configLocation>
+                    <failOnViolation>${checkstyle.failOnViolation}</failOnViolation>
+                    <violationSeverity>${checkstyle.violationSeverity}</violationSeverity>
+                    <includeTestSourceDirectory>${checkstyle.includeTestSourceDirectory}</includeTestSourceDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>checkstyle-validation</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>strict-linting</id>
+            <properties>
+                <checkstyle.failOnViolation>true</checkstyle.failOnViolation>
+            </properties>
+        </profile>
+    </profiles>
 </project>
