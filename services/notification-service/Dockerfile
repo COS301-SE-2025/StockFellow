@@ -1,7 +1,7 @@
 # Multi-stage build for notification-service - Production Optimized
 
 # Build stage
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM amazoncorretto:17-alpine AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -Pprod -Dmaven.javadoc.skip=true -q
 
 # Production runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM amazoncorretto:17-alpine
 
 WORKDIR /app
 
@@ -45,21 +45,21 @@ HEALTHCHECK --interval=60s --timeout=5s --start-period=90s --retries=2 \
 
 # Production-optimized JVM settings for notification service
 ENV JAVA_OPTS="-server \
-               -XX:+UseContainerSupport \
-               -XX:MaxRAMPercentage=75.0 \
-               -XX:InitialRAMPercentage=50.0 \
-               -XX:+UseG1GC \
-               -XX:MaxGCPauseMillis=200 \
-               -XX:+UseStringDeduplication \
-               -XX:+OptimizeStringConcat \
-               -XX:+TieredCompilation \
-               -XX:TieredStopAtLevel=4 \
-               -Xss256k \
-               -Djava.awt.headless=true \
-               -Djava.security.egd=file:/dev/./urandom \
-               -Dspring.profiles.active=prod \
-               -Dspring.jmx.enabled=false \
-               -Dmanagement.endpoints.jmx.exposure.exclude=*"
+  -XX:+UseContainerSupport \
+  -XX:MaxRAMPercentage=75.0 \
+  -XX:InitialRAMPercentage=50.0 \
+  -XX:+UseG1GC \
+  -XX:MaxGCPauseMillis=200 \
+  -XX:+UseStringDeduplication \
+  -XX:+OptimizeStringConcat \
+  -XX:+TieredCompilation \
+  -XX:TieredStopAtLevel=4 \
+  -Xss256k \
+  -Djava.awt.headless=true \
+  -Djava.security.egd=file:/dev/./urandom \
+  -Dspring.profiles.active=prod \
+  -Dspring.jmx.enabled=false \
+  -Dmanagement.endpoints.jmx.exposure.exclude=*"
 
 # Production entrypoint with JVM optimizations
 CMD ["sh", "-c", "java $JAVA_OPTS $JVM_OPTS -jar app.jar"]
