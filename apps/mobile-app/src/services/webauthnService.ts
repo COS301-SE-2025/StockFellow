@@ -1,7 +1,24 @@
-// src/services/webAuthnService.ts
+// src/services/webauthnService.ts
 
 import authService from './authService';
 import { PasskeyCreateRequest, PasskeyGetRequest } from 'react-native-passkey';
+
+// Base64URL utility functions (critical for React Native Passkey compatibility)
+const base64url = {
+  toBase64: (base64url: string): string => {
+    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    // Add padding if needed
+    const padding = base64.length % 4;
+    if (padding) {
+      base64 += '='.repeat(4 - padding);
+    }
+    return base64;
+  },
+  
+  fromBase64: (base64: string): string => {
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+};
 
 // Request & Response interfaces
 interface RegistrationStartRequest {
@@ -93,13 +110,15 @@ class WebAuthnService {
 
   private convertToPasskeyCreateRequest(response: RegistrationStartResponse): PasskeyCreateRequest {
     return {
-      challenge: response.challenge,
+      // Convert challenge from base64url to base64 for react-native-passkey
+      challenge: base64url.toBase64(response.challenge),
       rp: {
         id: response.rpId,
         name: response.rpName
       },
       user: {
-        id: response.user.id,
+        // Convert user ID from base64url to base64
+        id: base64url.toBase64(response.user.id),
         name: response.user.name,
         displayName: response.user.displayName
       },
@@ -112,12 +131,39 @@ class WebAuthnService {
 
   private convertToPasskeyGetRequest(response: AuthenticationStartResponse): PasskeyGetRequest {
     return {
-      challenge: response.challenge,
+      // Convert challenge from base64url to base64
+      challenge: base64url.toBase64(response.challenge),
       rpId: response.rpId,
-      allowCredentials: response.allowCredentials,
+      allowCredentials: response.allowCredentials.map(cred => ({
+        ...cred,
+        // Convert credential ID from base64url to base64
+        id: base64url.toBase64(cred.id)
+      })),
       userVerification: response.userVerification,
       timeout: response.timeout
-    } as PasskeyGetRequest;  // Type assertion since we know the structure matches
+    } as PasskeyGetRequest; 
+  }
+
+  private convertRegistrationResponse(result: any): RegistrationCompleteRequest {
+    return {
+      // Convert all base64 values back to base64url for the backend
+      credentialId: base64url.fromBase64(result.id),
+      credentialType: result.type ?? "public-key",
+      clientDataJSON: base64url.fromBase64(result.response.clientDataJSON),
+      attestationObject: base64url.fromBase64(result.response.attestationObject),
+    };
+  }
+
+  private convertAuthenticationResponse(result: any): AuthenticationCompleteRequest {
+    return {
+      // Convert all base64 values back to base64url for the backend
+      credentialId: base64url.fromBase64(result.id),
+      credentialType: result.type ?? "public-key",
+      clientDataJSON: base64url.fromBase64(result.response.clientDataJSON),
+      authenticatorData: base64url.fromBase64(result.response.authenticatorData),
+      signature: base64url.fromBase64(result.response.signature),
+      userHandle: result.response.userHandle ? base64url.fromBase64(result.response.userHandle) : undefined,
+    };
   }
 
   async startRegistration(request: RegistrationStartRequest): Promise<PasskeyCreateRequest> {
@@ -139,8 +185,11 @@ class WebAuthnService {
     }
   }
 
-  async completeRegistration(challenge: string, request: RegistrationCompleteRequest): Promise<{ message: string }> {
+  async completeRegistration(challenge: string, passkeyResult: any): Promise<{ message: string }> {
     try {
+      // Convert the passkey result to the correct format
+      const request = this.convertRegistrationResponse(passkeyResult);
+      
       const response = await authService.apiRequest(`${this.baseUrl}/register/complete/${challenge}`, {
         method: 'POST',
         body: JSON.stringify(request),
@@ -177,8 +226,11 @@ class WebAuthnService {
     }
   }
 
-  async completeAuthentication(challenge: string, request: AuthenticationCompleteRequest): Promise<AuthenticationResponse> {
+  async completeAuthentication(challenge: string, passkeyResult: any): Promise<AuthenticationResponse> {
     try {
+      // Convert the passkey result to the correct format
+      const request = this.convertAuthenticationResponse(passkeyResult);
+      
       const response = await authService.apiRequest(`${this.baseUrl}/authenticate/complete/${challenge}`, {
         method: 'POST',
         body: JSON.stringify(request),

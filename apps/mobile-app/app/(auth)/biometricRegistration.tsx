@@ -41,25 +41,23 @@ export default function PasskeyScreen() {
     }
 
     try {
-      // Ask backend to start registration with correct user info
-      const startResp = await webAuthnService.startRegistration({
+      console.log('Starting registration for user:', userInfo.username);
+
+      // Step 1: Get registration options from backend (converted to base64 format)
+      const createRequest = await webAuthnService.startRegistration({
         userId: userInfo.id,
         username: userInfo.username,
         authenticatorName: Platform.OS === "ios" ? "Face ID" : "Fingerprint",
       });
 
-      // Call native passkey registration
-      const result = await Passkey.create(startResp);
+      console.log('Registration options received:', JSON.stringify(createRequest, null, 2));
+
+      // Step 2: Call native passkey registration (expects base64 format)
+      const result = await Passkey.create(createRequest);
       console.log("Passkey.create result:", JSON.stringify(result, null, 2));
 
-
-      // Send attestation result back to backend
-      await webAuthnService.completeRegistration(startResp.challenge, {
-        credentialId: result.id,
-        credentialType: result.type ?? "public-key",
-        clientDataJSON: result.response.clientDataJSON,
-        attestationObject: result.response.attestationObject,
-      });
+      // Step 3: Send attestation result back to backend (service converts back to base64url)
+      await webAuthnService.completeRegistration(createRequest.challenge, result);
 
       Alert.alert(
         "Success", 
@@ -67,6 +65,7 @@ export default function PasskeyScreen() {
         [{ text: "OK", onPress: () => router.replace("/(tabs)/home") }]
       );
     } catch (err: any) {
+      console.error('Registration error:', err);
       Alert.alert("Error", err.message || "Registration failed");
     }
   };
@@ -78,24 +77,21 @@ export default function PasskeyScreen() {
     }
 
     try {
-      // Start authentication with correct username
-      const startResp = await webAuthnService.startAuthentication({
+      console.log('Starting authentication for user:', userInfo.username);
+
+      // Step 1: Get authentication options from backend (converted to base64 format)
+      const getRequest = await webAuthnService.startAuthentication({
         username: userInfo.username
       });
 
-      // Call native passkey authentication
-      const result = await Passkey.get(startResp);
+      console.log('Authentication options received:', JSON.stringify(getRequest, null, 2));
+
+      // Step 2: Call native passkey authentication (expects base64 format)
+      const result = await Passkey.get(getRequest);
       console.log("Passkey.get result:", JSON.stringify(result, null, 2));
 
-      // Complete authentication
-      const authResp = await webAuthnService.completeAuthentication(startResp.challenge, {
-        credentialId: result.id,
-        credentialType: result.type ?? "public-key",
-        clientDataJSON: result.response.clientDataJSON,
-        authenticatorData: result.response.authenticatorData,
-        signature: result.response.signature,
-        userHandle: result.response.userHandle,
-      });
+      // Step 3: Complete authentication (service converts back to base64url)
+      const authResp = await webAuthnService.completeAuthentication(getRequest.challenge, result);
 
       Alert.alert(
         "Success", 
@@ -103,7 +99,8 @@ export default function PasskeyScreen() {
         [{ text: "OK", onPress: () => router.replace("/(tabs)/home") }]
       );
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Login failed");
+      console.error('Authentication error:', err);
+      Alert.alert("Error", err.message || "Authentication failed");
     }
   };
 
