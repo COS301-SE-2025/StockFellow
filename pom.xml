@@ -24,7 +24,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
-        <checkstyle.configLocation>google_checks.xml</checkstyle.configLocation>
+        <checkstyle.configLocation>config/checkstyle/checkstyle.xml</checkstyle.configLocation>
         <checkstyle.violationSeverity>error</checkstyle.violationSeverity>
         <checkstyle.includeTestSourceDirectory>true</checkstyle.includeTestSourceDirectory>
     </properties>
@@ -36,7 +36,9 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <configLocation>${checkstyle.configLocation}</configLocation>
+                    <configLocation>./config/checkstyle/checkstyle.xml</configLocation>
+                    <encoding>UTF-8</encoding>
+                    <consoleOutput>true</consoleOutput>
                     <failOnViolation>${checkstyle.failOnViolation}</failOnViolation>
                     <violationSeverity>${checkstyle.violationSeverity}</violationSeverity>
                     <includeTestSourceDirectory>${checkstyle.includeTestSourceDirectory}</includeTestSourceDirectory>
