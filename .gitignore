@@ -55,4 +55,8 @@ Thumbs.db
 *.tmp 
 *~
 .env
+.env.drop*
 .turbo
+
+# deployment
+deploy-config.sh
