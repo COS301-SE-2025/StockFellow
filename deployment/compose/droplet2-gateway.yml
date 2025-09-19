@@ -1,0 +1,131 @@
+# droplet2-gateway.yml
+# Authentication and Gateway services: Keycloak, API Gateway, MFA Service
+version: '3.8'
+
+services:
+  # Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    environment:
+      KC_DB: ${KC_DB}
+      KC_DB_URL: jdbc:postgresql://${DROPLET1_IP}:5432/keycloak_db
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_PROXY: edge
+      KC_LOG_LEVEL: WARN
+      KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://${DROPLET3_IP}:4020
+
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - ./realm-exports:/opt/keycloak/data/import
+      - ./keycloak-extensions/:/opt/keycloak/providers/
+    command: start --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  # API Gateway - Production optimized
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    depends_on:
+      - keycloak
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - KEYCLOAK_AUTH_SERVER_URL=http://localhost:8080
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
+      - KEYCLOAK_GATEWAY_CLIENT_ID=${KEYCLOAK_GATEWAY_CLIENT_ID}
+      - KEYCLOAK_GATEWAY_CLIENT_SECRET=${KEYCLOAK_GATEWAY_CLIENT_SECRET}
+      - KEYCLOAK_FRONTEND_CLIENT_ID=${KEYCLOAK_FRONTEND_CLIENT_ID}
+      - KEYCLOAK_FRONTEND_REDIRECT_URI=${KEYCLOAK_FRONTEND_REDIRECT_URI}
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
+      - REDIS_HOST=${DROPLET1_IP}
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+      # Service URLs
+      - USER_SERVICE_URL=http://${DROPLET3_IP}:4020
+      - GROUP_SERVICE_URL=http://${DROPLET3_IP}:4040
+      - TRANSACTION_SERVICE_URL=http://${DROPLET3_IP}:4080
+      - NOTIFICATION_SERVICE_URL=http://${DROPLET3_IP}:4050
+      - MFA_SERVICE_URL=http://localhost:8087
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # MFA Service
+  mfa-service:
+    build:
+      context: ./mfa-service
+      dockerfile: Dockerfile
+    container_name: mfa-service
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    depends_on:
+      - keycloak
+    ports:
+      - "${MFA_SERVICE_PORT:-8087}:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - KEYCLOAK_ISSUER=http://localhost:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://localhost:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://${DROPLET3_IP}:4020
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
+      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
+      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
+      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
