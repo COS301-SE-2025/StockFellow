@@ -1,7 +1,20 @@
 {
   "compilerOptions": {
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "extends": "expo/tsconfig.base"
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/web-app"
+    },
+    {
+      "path": "./apps/mobile-app"
+    }
+  ]
 }

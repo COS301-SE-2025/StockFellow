@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
 import TopBar from '../../src/components/TopBar';
+import AutoJoinPrompt from '../../src/components/AutoJoinPrompt'; // Add this import
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
@@ -28,13 +29,23 @@ const Stokvels = () => {
   const [stokvels, setStokvels] = useState<Stokvel[]>([]);
   const [publicStokvels, setPublicStokvels] = useState<Stokvel[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [showAutoJoinPrompt, setShowAutoJoinPrompt] = useState(false);
+  const [userTier, setUserTier] = useState<number | null>(null);
   const { colors } = useTheme();
 
-  // Fetch user groups, else create/auto join by system based on tier
+  // Tier names mapping
+  const tierNames = [
+    "Essential Savers",
+    "Steady Builders", 
+    "Balanced Savers",
+    "Growth Investors",
+    "Premium Accumulators",
+    "Elite Circle"
+  ];
+
   useEffect(() => {
     const fetchStokvels = async () => {
       try {
-        // First try to fetch user's existing groups
         const response = await authService.apiRequest('/groups/user', {
           method: 'GET'
         });
@@ -43,55 +54,8 @@ const Stokvels = () => {
           throw new Error('Failed to fetch stokvels');
         }
 
-        let data = await response.json();
-
-        console.debug("FIRST CHECK, user groups: " + data);
-        // If user has no groups, check their tier and auto-join/create
-        if (data.length === 0) {
-          try {
-            // Try to get user's affordability tier from backend
-            let tier;
-            try {
-              const profileResponse = await userService.getProfile();
-              tier = profileResponse.affordability?.tier;
-              console.debug("Retrieved user tier from backend:", tier);
-            } catch (error) {
-              console.warn("Could not fetch user tier, generating random tier:", error);
-            }
-
-            // If tier not available from backend, generate random tier (1-6)
-            if (!tier) {
-              tier = Math.floor(Math.random() * 6) + 1; // Random number between 1-6
-              console.debug("Using randomly generated tier:", tier);
-            }
-
-            // Auto-create/join group based on tier
-            console.debug("Attempting to join/create stokvel for tier:", tier);
-            const joinResult = await groupService.joinOrCreateStokvel(tier);
-
-            // After joining, refetch user's groups
-            const newResponse = await authService.apiRequest('/groups/user', {
-              method: 'GET'
-            });
-
-            if (newResponse.ok) {
-              data = await newResponse.json();
-              const tierName = [
-                "Essential Savers",
-                "Steady Builders",
-                "Balanced Savers",
-                "Growth Investors",
-                "Premium Accumulators",
-                "Elite Circle"
-              ][tier - 1];
-
-              Alert.alert('Success', `You've been added to a ${tierName} stokvel`);
-            }
-          } catch (tierError) {
-            console.error('Error joining stokvel:', tierError);
-            Alert.alert('Info', 'Could not automatically join a stokvel. Please create one manually.');
-          }
-        }
+        const data = await response.json();
+        console.debug("User groups:", data);
 
         const transformedStokvels = data.map((group: any) => ({
           id: group._id || group.id,
@@ -104,6 +68,26 @@ const Stokvels = () => {
         }));
 
         setStokvels(transformedStokvels);
+
+        // Check if user has no groups and we should show the prompt
+        if (data.length === 0) {
+          // Get user tier for the prompt
+          let tier: number | null = null; // Initialize as null
+          try {
+            const profileResponse = await userService.getProfile();
+            tier = profileResponse.affordability?.tier ?? null; // Use null coalescing
+            console.debug("Retrieved user tier from backend:", tier);
+          } catch (error) {
+            console.warn("Could not fetch user tier:", error);
+            // Generate random tier for the prompt
+            tier = Math.floor(Math.random() * 6) + 1;
+          }
+          
+          setUserTier(tier); // Now this accepts number | null
+          if (tier !== null) {
+            setShowAutoJoinPrompt(true);
+          }
+        }
       } catch (error) {
         console.error('Error fetching stokvels:', error);
         if (error instanceof Error && error.message.includes('Authentication failed')) {
@@ -120,6 +104,61 @@ const Stokvels = () => {
 
     fetchStokvels();
   }, []);
+
+  const handleAutoJoinAccept = async () => {
+    try {
+      if (!userTier) {
+        Alert.alert('Error', 'Unable to determine your tier');
+        return;
+      }
+
+      setShowAutoJoinPrompt(false);
+      setLoading(true);
+
+      console.debug("Attempting to join/create stokvel for tier:", userTier);
+      const joinResult = await groupService.joinOrCreateStokvel(userTier);
+
+      // Refetch user's groups after joining
+      const response = await authService.apiRequest('/groups/user', {
+        method: 'GET'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const transformedStokvels = data.map((group: any) => ({
+          id: group._id || group.id,
+          groupId: group.groupId,
+          name: group.name,
+          memberCount: group.members?.length || 0,
+          balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
+          profileImage: group.profileImage || null,
+          visibility: group.visibility
+        }));
+
+        setStokvels(transformedStokvels);
+        
+        Alert.alert('Success', `You've been added to a ${tierNames[userTier - 1]} stokvel`);
+      }
+    } catch (error) {
+      console.error('Error joining stokvel:', error);
+      Alert.alert('Error', 'Failed to join stokvel automatically');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAutoJoinDecline = () => {
+    setShowAutoJoinPrompt(false);
+    Alert.alert(
+      'No Problem!',
+      'You can create your own stokvel or join public ones anytime.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleClosePrompt = () => {
+    setShowAutoJoinPrompt(false);
+  };
 
   // Search for public groups with debounce
   useEffect(() => {
@@ -193,6 +232,15 @@ const Stokvels = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} className="pt-0">
       <TopBar title="Stokvels" />
+
+      <AutoJoinPrompt
+        visible={showAutoJoinPrompt}
+        onAccept={handleAutoJoinAccept}
+        onDecline={handleAutoJoinDecline}
+        onClose={handleClosePrompt}
+        tierName={userTier ? tierNames[userTier - 1] : 'Recommended'}
+      />
+
 
       <View className="px-6 pt-4">
         <SearchBar
