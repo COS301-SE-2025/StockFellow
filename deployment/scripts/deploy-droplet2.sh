@@ -25,12 +25,12 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -i "${SSH_KEY_PATH}" ${DROPLET2_US
     exit 1
 fi
 
-echo "Deploying Infrastructure Services to Droplet 1 (${DROPLET1_IP})..."
+echo "Deploying Infrastructure Services to Droplet 2 (${DROPLET2_IP})..."
 
 ssh ${DROPLET2_USER}@${DROPLET2_IP} "mkdir -p /opt/stockfellow"
 
-scp -i ${SSH_KEY_PATH} droplet2-gateway.yml ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
-scp -i ${SSH_KEY_PATH} .env.droplet2 ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/.env
+scp -i ${SSH_KEY_PATH} ./deployment/compose/droplet2-gateway.yml ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
+scp -i ${SSH_KEY_PATH} ./deployment/scripts/.env.droplet2 ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/.env
 scp -i ${SSH_KEY_PATH} -r services/api-gateway/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
 scp -i ${SSH_KEY_PATH} -r services/mfa-service/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
 scp -i ${SSH_KEY_PATH} -r services/api-gateway/realm-exports/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
@@ -43,5 +43,7 @@ docker-compose -f droplet2-gateway.yml build
 docker-compose -f droplet2-gateway.yml up -d
 docker-compose -f droplet2-gateway.yml ps
 ENDSSH
+
+trap "ssh-agent -k" EXIT
 
 echo "Droplet 2 deployment completed"

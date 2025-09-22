@@ -60,3 +60,7 @@ Thumbs.db
 
 # deployment
 deploy-config.sh
+start.sh
+stop.sh
+.env.drop*
+nginx.conf

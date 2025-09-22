@@ -1,7 +1,5 @@
 # droplet3-services.yml
 # Business services: User, Group, Transaction, Notification services
-version: '3.8'
-
 services:
   user-service:
     build:
