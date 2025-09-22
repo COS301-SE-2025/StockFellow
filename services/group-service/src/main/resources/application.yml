@@ -1,0 +1,21 @@
+server:
+  port: ${GROUP_SERVICE_PORT:4040}
+
+spring:
+  application:
+    name: group-service
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+logging:
+  level:
+    org.springframework: ${LOG_LEVEL_SPRING:INFO}
+    com.stockfellow: ${LOG_LEVEL_APP:INFO}
+  file:
+    name: ${LOG_FILE:group-service.log}
+
+keycloak:
+  jwks:
+    uri: ${KEYCLOAK_JWKS_URI}
+  issuer: ${KEYCLOAK_ISSUER}

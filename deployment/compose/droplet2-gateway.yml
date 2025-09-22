@@ -1,8 +1,21 @@
 # droplet2-gateway.yml
-# Authentication and Gateway services: Keycloak, API Gateway, MFA Service
-version: '3.8'
-
+# Authentication and Gateway services with HTTPS via nip.io
 services:
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - keycloak
+      - api-gateway
+    restart: unless-stopped
+
   # Keycloak
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -23,15 +36,16 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       
-      KC_HOSTNAME: ${KC_HOSTNAME}
-      KC_HOSTNAME_STRICT: false
-      KC_HTTP_ENABLED: true
+      # HTTPS Configuration
+      KC_HOSTNAME: ${KC_HOSTNAME} 
+      KC_HOSTNAME_STRICT: true
+      KC_HTTP_ENABLED: false
       KC_PROXY: edge
+      KC_PROXY_HEADERS: xforwarded
       KC_LOG_LEVEL: WARN
       KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://${DROPLET3_IP}:4020
-
-    ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
+    expose:
+      - "8080"
     volumes:
       - ./realm-exports:/opt/keycloak/data/import
       - ./keycloak-extensions/:/opt/keycloak/providers/
@@ -44,7 +58,7 @@ services:
       start_period: 120s
     restart: unless-stopped
 
-  # API Gateway - Production optimized
+  # API Gateway
   api-gateway:
     build:
       context: ./api-gateway
@@ -60,11 +74,11 @@ services:
           memory: 512M
     depends_on:
       - keycloak
-    ports:
-      - "${API_GATEWAY_PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - KEYCLOAK_AUTH_SERVER_URL=http://localhost:8080
+      - KEYCLOAK_AUTH_SERVER_URL=https://${KC_HOSTNAME} 
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
       - KEYCLOAK_GATEWAY_CLIENT_ID=${KEYCLOAK_GATEWAY_CLIENT_ID}
       - KEYCLOAK_GATEWAY_CLIENT_SECRET=${KEYCLOAK_GATEWAY_CLIENT_SECRET}
@@ -79,12 +93,11 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
-      # Service URLs
       - USER_SERVICE_URL=http://${DROPLET3_IP}:4020
       - GROUP_SERVICE_URL=http://${DROPLET3_IP}:4040
       - TRANSACTION_SERVICE_URL=http://${DROPLET3_IP}:4080
       - NOTIFICATION_SERVICE_URL=http://${DROPLET3_IP}:4050
-      - MFA_SERVICE_URL=http://localhost:8087
+      - MFA_SERVICE_URL=http://mfa-service:8087
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/actuator/health || exit 1"]
       interval: 60s
@@ -109,12 +122,12 @@ services:
           memory: 256M
     depends_on:
       - keycloak
-    ports:
-      - "${MFA_SERVICE_PORT:-8087}:8087"
+    expose:
+      - "8087"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - KEYCLOAK_ISSUER=http://localhost:8080/realms/stockfellow
-      - KEYCLOAK_JWKS_URI=http://localhost:8080/realms/stockfellow/protocol/openid_connect/certs
+      - KEYCLOAK_ISSUER=https://${KC_HOSTNAME}/realms/stockfellow 
+      - KEYCLOAK_JWKS_URI=https://${KC_HOSTNAME}/realms/stockfellow/protocol/openid_connect/certs
       - USER_SERVICE_URL=http://${DROPLET3_IP}:4020
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO

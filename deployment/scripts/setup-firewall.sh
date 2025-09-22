@@ -7,13 +7,13 @@ source $(dirname "$0")/deploy-config.sh
 setup_droplet1_firewall() {    
     ufw allow ssh
     
-    ufw allow from $DROPLET2_IP to any port 5432
-    ufw allow from $DROPLET3_IP to any port 5432
+    ufw allow from $DROPLET2_PRIV_IP to any port 5432
+    ufw allow from $DROPLET3_PRIV_IP to any port 5432
     
-    ufw allow from $DROPLET2_IP to any port 6379
-    ufw allow from $DROPLET3_IP to any port 6379
+    ufw allow from $DROPLET2_PRIV_IP to any port 6379
+    ufw allow from $DROPLET3_PRIV_IP to any port 6379
     
-    ufw allow from $DROPLET3_IP to any port 61616
+    ufw allow from $DROPLET3_PRIV_IP to any port 61616
     
     ufw allow 61208
     
@@ -29,7 +29,7 @@ setup_droplet2_firewall() {
     ufw allow 8080  
     ufw allow 8087  
     
-    ufw allow from $DROPLET3_IP to any port 8080
+    ufw allow from $DROPLET3_PRIV_IP to any port 8080
     
     ufw --force enable
 }
@@ -37,10 +37,10 @@ setup_droplet2_firewall() {
 setup_droplet3_firewall() {
     ufw allow ssh
     
-    ufw allow from $DROPLET2_IP to any port 4020
-    ufw allow from $DROPLET2_IP to any port 4040   
-    ufw allow from $DROPLET2_IP to any port 4080
-    ufw allow from $DROPLET2_IP to any port 4050
+    ufw allow from $DROPLET2_PRIV_IP to any port 4020
+    ufw allow from $DROPLET2_PRIV_IP to any port 4040   
+    ufw allow from $DROPLET2_PRIV_IP to any port 4080
+    ufw allow from $DROPLET2_PRIV_IP to any port 4050
     
     ufw --force enable
 }

@@ -2,9 +2,9 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://notification-postgres:5432/notification_db
-    username: notification_user
-    password: notification_pass
+    url: jdbc:postgresql://${DROPLET1_IP}:${POSTGRES_PORT:5432}/notification_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,9 +15,9 @@ spring:
       hibernate:
         format_sql: true
   activemq:
-    broker-url: tcp://localhost:61616
-    user: admin
-    password: admin
+    broker-url: tcp://${DROPLET1_IP}:${ACTIVEMQ_PORT:61616}
+    user: ${ACTIVEMQ_USER}
+    password: ${ACTIVEMQ_PASSWORD}
     packages:
       trust-all: true
   jms:
@@ -30,30 +30,20 @@ spring:
 server:
   port: 4050
 
-# services:
-#   user-service:
-#     url: http://localhost:4020
-#   group-service:
-#     url: http://localhost:4040
-
 services:
   user-service:
     url: ${USER_SERVICE_URL:http://user-service:4020}
-    group-service:
-      url: ${GROUP_SERVICE_URL:http://group-service:4040}
+  group-service:
+    url: ${GROUP_SERVICE_URL:http://group-service:4040}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info
   endpoint:
     health:
       show-details: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
 
 logging:
   level:

@@ -1,0 +1,74 @@
+# User Service Configuration
+spring:
+  application:
+    name: user-service
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DROPLET1_IP:postgres}:${DATABASE_PORT:5432}/userservice_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: ${JPA_SHOW_SQL:false}
+    
+  # File Upload
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # For Alresco which is commented out for now
+  # http:
+  #   client:
+  #     connection-timeout: 5000ms
+  #     read-timeout: 30000ms
+
+# Server Configuration
+server:
+  port: ${USER_SERVICE_PORT:4020}
+
+# Security (comment out for now)
+# spring:
+#   security:
+#     oauth2:
+#       resourceserver:
+#         jwt:
+#           issuer-uri: ${KEYCLOAK_ISSUER:http://keycloak:8080/realms/stockfellow}
+#           jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs}
+
+# Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging 
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.stockfellow: ${LOGGING_LEVEL_APP:DEBUG}
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+# alfresco:
+#   base-url: ${ALFRESCO_BASE_URL:http://alfresco:8081/alfresco}
+#   username: ${ALFRESCO_USERNAME:admin}
+#   password: ${ALFRESCO_PASSWORD:admin}
+#   site-name: ${ALFRESCO_SITE_NAME:stockfellow}
+#   api:
+#     version: ${ALFRESCO_API_VERSION:1}
+#     timeout: ${ALFRESCO_TIMEOUT:30000}
+#   storage:
+#     user-documents: /Sites/${alfresco.site-name}/documentLibrary/Users
+#     group-documents: /Sites/${alfresco.site-name}/documentLibrary/Groups
+#     transaction-receipts: /Sites/${alfresco.site-name}/documentLibrary/Transactions
+#     compliance-docs: /Sites/${alfresco.site-name}/documentLibrary/Compliance
