@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: jdbc:postgresql://notification-postgres:5432/notification_db
+    username: notification_user
+    password: notification_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+    packages:
+      trust-all: true
+  jms:
+    listener:
+      auto-startup: true
+      acknowledge-mode: auto
+      concurrency: 1
+      max-concurrency: 10
+
+server:
+  port: 4050
+
+# services:
+#   user-service:
+#     url: http://localhost:4020
+#   group-service:
+#     url: http://localhost:4040
+
+services:
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:4020}
+    group-service:
+      url: ${GROUP_SERVICE_URL:http://group-service:4040}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.stockfellow: INFO
+    org.springframework.jms: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

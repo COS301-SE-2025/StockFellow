@@ -1,0 +1,341 @@
+# docker-compose.dev.yml
+# Development environment with debugging capabilities and no resource limits
+
+version: '3.8'
+
+services:
+  # Single PostgreSQL instance for all databases
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-dev
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+      - ./database/init-scripts:/docker-entrypoint-initdb.d/scripts:ro
+    networks:
+      - stockfellow-dev
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis-dev
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - stockfellow-dev
+    volumes:
+      - redis_dev_data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ActiveMQ for messaging
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: activemq-dev
+    ports:
+      - "61616:61616"  # OpenWire protocol
+      - "8161:8161"    # Web console (exposed for dev)
+      - "5672:5672"    # AMQP
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    networks:
+      - stockfellow-dev
+    volumes:
+      - activemq_dev_data:/var/lib/artemis-instance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: ${KC_DB:-postgresql}
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://user-service:4020
+      KC_LOG_LEVEL: DEBUG
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
+      - ./keycloak-extensions/:/opt/keycloak/providers/
+    command: start-dev --import-realm
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile.dev
+    container_name: api-gateway-dev
+    depends_on:
+      - keycloak
+      - redis
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+      - "${API_GATEWAY_DEBUG_PORT:-5007}:5007"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
+      - KEYCLOAK_GATEWAY_CLIENT_ID=${KEYCLOAK_GATEWAY_CLIENT_ID}
+      - KEYCLOAK_GATEWAY_CLIENT_SECRET=${KEYCLOAK_GATEWAY_CLIENT_SECRET}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/api-gateway/src:/app/src:ro
+      - ./services/api-gateway/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile.dev
+    container_name: user-service-dev
+    depends_on:
+      - postgres
+      - keycloak
+    ports:
+      - "${USER_SERVICE_PORT:-4020}:4020"
+      - "${USER_SERVICE_DEBUG_PORT:-5005}:5005"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/userservice_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/user-service/src:/app/src:ro
+      - ./services/user-service/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4020/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Group Service
+  group-service:
+    build:
+      context: ./services/group-service
+      dockerfile: Dockerfile.dev
+    container_name: group-service-dev
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${GROUP_SERVICE_PORT:-4040}:4040"
+      - "${GROUP_SERVICE_DEBUG_PORT:-5006}:5006"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/group-service/src:/app/src:ro
+      - ./services/group-service/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Transaction Service
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile.dev
+    container_name: transaction-service-dev
+    depends_on:
+      - group-service
+      - user-service
+    ports:
+      - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
+      - "${TRANSACTION_SERVICE_DEBUG_PORT:-5009}:5009"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
+      - TRANSACTIONDB_USER=${TRANSACTIONDB_USER}
+      - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
+      - PAYSTACK_API_URL=${PAYSTACK_API_URL}
+      - PAYSTACK_TEST_API_KEY=${PAYSTACK_TEST_API_KEY}
+      - CALLBACK_BASE_URL=${PAYSTACK_CALLBACK_URL}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - GROUP_SERVICE_URL=http://group-service:4040
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5009
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/transaction-service/src:/app/src:ro
+      - ./services/transaction-service/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile.dev
+    container_name: notification-service-dev
+    depends_on:
+      - postgres
+      - activemq
+      - group-service
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-4050}:4050"
+      - "${NOTIFICATION_SERVICE_DEBUG_PORT:-5008}:5008"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - SERVICES_GROUP_SERVICE_URL=http://group-service:4040
+      - SERVICES_USER_SERVICE_URL=http://user-service:4020
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/notification-service/src:/app/src:ro
+      - ./services/notification-service/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4050/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # MFA Service
+  mfa-service:
+    build:
+      context: ./services/mfa-service
+      dockerfile: Dockerfile.dev
+    container_name: mfa-service-dev
+    depends_on:
+      - keycloak
+      - user-service
+    ports:
+      - "${MFA_SERVICE_PORT:-8087}:8087"
+      - "${MFA_SERVICE_DEBUG_PORT:-5010}:5010"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid_connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5010
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_COM_STOCKFELLOW=DEBUG
+      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
+      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
+      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
+      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+    networks:
+      - stockfellow-dev
+    volumes:
+      - ./services/mfa-service/src:/app/src:ro
+      - ./services/mfa-service/target:/app/target
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Development tools
+  adminer:
+    image: adminer:latest
+    container_name: adminer-dev
+    ports:
+      - "8081:8080"
+    networks:
+      - stockfellow-dev
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+
+networks:
+  stockfellow-dev:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  activemq_dev_data:

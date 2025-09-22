@@ -1,43 +1,45 @@
+# MINIMAL CONFIG - Let Docker/Environment handle most settings
 server:
   port: 3000
 
 spring:
   application:
     name: api-gateway
-  # Redic Config
+
   redis:
-    host: ${REDIS_HOST:localhost}
+    host: ${REDIS_HOST:redis}
     port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
     timeout: 2000ms
     lettuce:
       pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
-        max-wait: -1ms
+        max-active: 4
+        max-idle: 2
+        min-idle: 1
+        max-wait: 1000ms
+
+  jackson:
+    default-property-inclusion: NON_NULL
+
+  cache:
+    type: redis
 
 keycloak:
   realm: ${KEYCLOAK_REALM:stockfellow}
-  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://localhost:8080/}
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://keycloak:8080/}
   ssl-required: external
   resource: ${KEYCLOAK_FRONTEND_CLIENT_ID:frontend-client}
   public-client: true
   confidential-port: 0
 
-# Admin configuration
 app:
   keycloak:
-    # Gateway client (confidential)
     gateway:
       client-id: ${KEYCLOAK_GATEWAY_CLIENT_ID:api-gateway-client}
-      client-secret: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:}
-
-    # Frontend client (public)
+      client-secret: ${KEYCLOAK_GATEWAY_CLIENT_SECRET}
     frontend:
       client-id: ${KEYCLOAK_FRONTEND_CLIENT_ID:public-client}
       redirect-uri: ${KEYCLOAK_FRONTEND_REDIRECT_URI:http://localhost:3000/auth/callback}
-
-    # Admin configuration
     admin:
       username: ${KEYCLOAK_ADMIN_USERNAME:admin}
       password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
@@ -46,20 +48,22 @@ app:
   mfa:
     enabled: true
 
-mfa:
-  service:
-    url: http://localhost:8087
+# mfa:
+#   service:
+#     url: ${MFA_SERVICE_URL:http://mfa-service:8087}
 
-# Logging configuration (replaces morgan)
-logging:
-  level:
-    org.springframework.web: DEBUG
-    com.stockfellow.gateway: DEBUG
-    com.stockfellow.gateway.service: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+services:
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:4020}
+  group-service:
+    url: ${GROUP_SERVICE_URL:http://group-service:4040}
+  transaction-service:
+    url: ${TRANSACTION_SERVICE_URL:http://transaction-service:4060}
+  notification-service:
+    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:4080}
+  mfa-service:
+    url: ${MFA_SERVICE_URL:http://mfa-service:8087}
 
-# CORS configuration
 cors:
   allowed-origins: "*"
   allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"

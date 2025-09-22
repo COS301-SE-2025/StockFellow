@@ -16,7 +16,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
@@ -29,7 +28,10 @@ public class PaystackService {
     
     private final RestTemplate restTemplate;
     private final String apiKey;
-    private static final String PAYSTACK_BASE_URL = "https://api.paystack.co";
+   
+    @Value("${paystack.base-url}")
+    private String PAYSTACK_BASE_URL;
+    
 
     public PaystackService(
             RestTemplate restTemplate,
