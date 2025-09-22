@@ -1,12 +1,15 @@
 #!/bin/bash
 
-# Admin Service API Test Script
-# This script tests all endpoints of the admin service
+# Admin Service API Test Script with Token Authentication
+# This script gets a token from Keycloak then tests all admin service endpoints
 
 # Configuration
-BASE_URL="http://localhost:8080"  # Change this to your actual service URL
-ADMIN_USER_ID="admin-user-123"
-SESSION_ID="admin-session-456"
+KEYCLOAK_URL="http://localhost:8080"
+REALM="stockfellow"
+CLIENT_ID="admin-service-client"
+CLIENT_SECRET="r0cnwJ21La93AwhfOup3c9Ma4CtsLcXC"  # YOU MUST SET THIS - Get from Keycloak client credentials tab
+BASE_URL="http://localhost:4060"
+ADMIN_USER_ID="admin_user"
 
 # Colors for output
 RED='\033[0;31m'
@@ -32,6 +35,57 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
+# Check if client secret is set
+if [ -z "$CLIENT_SECRET" ]; then
+    print_error "CLIENT_SECRET is not set!"
+    echo "Please:"
+    echo "1. Go to Keycloak Admin Console: http://localhost:8080"
+    echo "2. Navigate to Clients > admin-service-client > Credentials tab"
+    echo "3. Copy the Client Secret"
+    echo "4. Set CLIENT_SECRET variable in this script"
+    echo "   CLIENT_SECRET=\"your-secret-here\""
+    exit 1
+fi
+
+# Function to get access token from Keycloak
+get_access_token() {
+    print_status "Getting access token from Keycloak..."
+    
+    token_response=$(curl -s -w "\n%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "grant_type=client_credentials" \
+        -d "client_id=$CLIENT_ID" \
+        -d "client_secret=$CLIENT_SECRET" \
+        "$KEYCLOAK_URL/realms/$REALM/protocol/openid-connect/token")
+    
+    # Extract HTTP status code and response
+    http_code=$(echo "$token_response" | tail -n1)
+    response_body=$(echo "$token_response" | head -n -1)
+    
+    if [[ $http_code == "200" ]]; then
+        access_token=$(echo "$response_body" | jq -r '.access_token // empty' 2>/dev/null)
+        
+        if [[ -n "$access_token" && "$access_token" != "null" ]]; then
+            print_success "Access token obtained successfully"
+            
+            # Decode token to show content
+            print_status "Token payload:"
+            echo "$access_token" | cut -d. -f2 | base64 -d 2>/dev/null | jq . || echo "Failed to decode token payload"
+            
+            return 0
+        else
+            print_error "No access token in response"
+            echo "Response: $response_body"
+            return 1
+        fi
+    else
+        print_error "Failed to get access token (HTTP $http_code)"
+        echo "Response: $response_body"
+        return 1
+    fi
+}
+
 # Function to make authenticated requests
 make_request() {
     local method=$1
@@ -47,16 +101,14 @@ make_request() {
             -X "$method" \
             -H "Content-Type: application/json" \
             -H "X-User-Id: $ADMIN_USER_ID" \
-            -H "X-Session-Id: $SESSION_ID" \
-            -H "Authorization: Bearer fake-admin-jwt-token" \
+            -H "Authorization: Bearer $access_token" \
             "$BASE_URL$endpoint")
     else
         response=$(curl -s -w "\n%{http_code}" \
             -X "$method" \
             -H "Content-Type: application/json" \
             -H "X-User-Id: $ADMIN_USER_ID" \
-            -H "X-Session-Id: $SESSION_ID" \
-            -H "Authorization: Bearer fake-admin-jwt-token" \
+            -H "Authorization: Bearer $access_token" \
             -d "$data" \
             "$BASE_URL$endpoint")
     fi
@@ -72,7 +124,15 @@ make_request() {
     if [[ $http_code -ge 200 && $http_code -lt 300 ]]; then
         print_success "Request successful"
     elif [[ $http_code -ge 400 && $http_code -lt 500 ]]; then
-        print_warning "Client error (might be expected for auth/validation)"
+        if [[ $http_code == "403" ]]; then
+            print_warning "Access forbidden - check if token has ADMIN role"
+        elif [[ $http_code == "401" ]]; then
+            print_warning "Unauthorized - token may be invalid or expired"
+        elif [[ $http_code == "404" ]]; then
+            print_warning "Resource not found (may be expected for test data)"
+        else
+            print_warning "Client error"
+        fi
     else
         print_error "Server error"
     fi
@@ -83,9 +143,23 @@ make_request() {
 
 # Start testing
 echo "=========================================="
-echo "Admin Service API Test Suite"
-echo "Base URL: $BASE_URL"
-echo "Admin User ID: $ADMIN_USER_ID"
+echo "Admin Service API Test Suite with Auth"
+echo "Keycloak: $KEYCLOAK_URL"
+echo "Realm: $REALM"
+echo "Client ID: $CLIENT_ID"
+echo "Admin Service: $BASE_URL"
+echo "=========================================="
+echo
+
+# Step 1: Get access token
+if ! get_access_token; then
+    print_error "Cannot proceed without valid access token"
+    exit 1
+fi
+
+echo
+echo "=========================================="
+echo "Testing Admin Service Endpoints"
 echo "=========================================="
 echo
 
@@ -154,17 +228,23 @@ echo "=========================================="
 echo "Test Suite Completed"
 echo "=========================================="
 echo
-print_status "Notes:"
-echo "- Many requests may return 401/403 errors due to missing proper JWT authentication"
-echo "- Some endpoints may return 404 errors for non-existent resources (expected)"
-echo "- 500 errors might indicate actual service issues that need investigation"
-echo "- Success responses (200-299) indicate the endpoints are properly configured"
+
+print_status "Results Summary:"
+echo "- 200-299: Endpoints working correctly"
+echo "- 401: Token invalid or expired"
+echo "- 403: Token missing ADMIN role or access denied"
+echo "- 404: Resource not found (expected for test data)"
+echo "- 500: Server errors that need investigation"
+
 echo
-print_warning "To run with proper authentication:"
-echo "1. Replace 'fake-admin-jwt-token' with a real JWT token"
-echo "2. Ensure your JWT token has ADMIN role"
-echo "3. Configure proper CORS and security settings"
+print_status "If you're getting 403 errors:"
+echo "1. Verify your Keycloak client has 'Service accounts roles' enabled"
+echo "2. Assign ADMIN realm role to the service account:"
+echo "   - Go to Clients > admin-service-client > Service accounts roles"
+echo "   - Click 'Assign role' and add 'ADMIN' role"
+echo "3. Create ADMIN realm role if it doesn't exist:"
+echo "   - Go to Realm roles > Create role > Name: 'ADMIN'"
+
 echo
-print_status "Sample usage with real auth:"
-echo 'export ADMIN_JWT="your-real-jwt-token-here"'
-echo 'sed -i "s/fake-admin-jwt-token/\$ADMIN_JWT/g" this-script.sh'
+print_status "Token obtained and used for all requests"
+print_status "Check the decoded token payload above to verify it contains required roles"

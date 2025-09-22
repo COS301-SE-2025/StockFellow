@@ -86,7 +86,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  
+
   # PostgreSQL Database for Admin Service
   admin-postgres:
     image: postgres:15
@@ -624,6 +624,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 
 networks:
   stockfellow-net:
