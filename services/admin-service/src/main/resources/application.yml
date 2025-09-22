@@ -60,6 +60,13 @@ management:
     health:
       show-details: always
 
+keycloak:
+  auth-server-url: http://keycloak:8080
+  realm: stockfellow
+  resource: admin-service-client
+  credentials:
+    secret: q03cb0bMVy672D6UWU485vWLe55ndX75
+
 # Service URLs for inter-service communication
 services:
   user-service:
