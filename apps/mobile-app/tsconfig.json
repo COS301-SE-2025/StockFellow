@@ -3,10 +3,7 @@
     "allowJs": true,
     "strict": true,
     "jsx": "react-native",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
+    "lib": ["dom", "esnext"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "skipLibCheck": true,
@@ -15,21 +12,20 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      "@/*": ["src/*"]
     },
-    "types": [
-      "expo",
-      "node",
-      "jest"
-    ],
-    "noEmit": true
+    "types": ["expo", "node", "jest"],
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
   },
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "../web-app/**/*"
   ],
   "include": [
     "**/*.ts",

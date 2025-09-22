@@ -420,7 +420,7 @@ services:
     ports:
       - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
-      - SERVER_PORT=4080  # Fixed: Use consistent internal port
+      - SERVER_PORT=4080 
       - SPRING_PROFILES_ACTIVE=${TRANSACTION_SERVICE_SPRING_PROFILE}
       - TRANSACTIONDB_URI=${TRANSACTIONDB_URI}
       - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
@@ -435,7 +435,6 @@ services:
       - JVM_OPTS=${TRANSACTION_SERVICE_JVM_OPTS}
       - LOGGING_LEVEL_ROOT=${ROOT_LOG_LEVEL:-WARN}
       - LOGGING_LEVEL_COM_STOCKFELLOW=${LOG_LEVEL:-INFO}
-      # Add JVM options for Java 21
       - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     networks:
       - stockfellow-net
@@ -523,7 +522,6 @@ services:
     environment:
       - SERVER_PORT=8087  
       - SPRING_PROFILES_ACTIVE=${MFA_SERVICE_SPRING_PROFILE}
-      - MONGODB_URI=${MFA_SERVICE_MONGODB_URI}
       - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=${USER_SERVICE_URL}

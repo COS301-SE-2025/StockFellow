@@ -65,10 +65,10 @@ public class KeycloakService {
     private String adminClientId;
 
     // Add MFA service configuration
-    @Value("http://mfa-service:8087")
+    @Value("${services.mfa-service.url}")
     private String mfaServiceUrl;
 
-    @Value("${app.mfa.enabled:true}")
+    @Value("${app.mfa.enabled}")
     private boolean mfaEnabled;
 
     public KeycloakService(RestTemplate restTemplate,

@@ -20,10 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 
 @Component
 public class PaymentScheduler {
