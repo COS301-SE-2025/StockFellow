@@ -10,7 +10,7 @@ const Input: React.FC<InputProps> = ({ label, ...props }) => {
       {label && <label className="text-sm font-medium">{label}</label>}
       <input
         {...props}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200"
+        className="w-full rounded-3xl border border-gray-300 px-6 py-3 focus:border-blue-500 focus:ring focus:ring-blue-200"
       />
     </div>
   );
