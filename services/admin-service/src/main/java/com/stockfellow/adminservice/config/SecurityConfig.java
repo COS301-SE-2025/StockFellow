@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult; 
+import org.springframework.security.oauth2.core.OAuth2Error; 
 import org.springframework.security.web.SecurityFilterChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +34,31 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Bean
+    // @Bean
+    // public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    //     http
+    //         .authorizeHttpRequests(auth -> auth
+    //                 .requestMatchers("/actuator/**").permitAll()
+    //                 .requestMatchers("/api/admin/auth/**").permitAll()
+    //                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+    //                 .anyRequest().authenticated()
+    //         )
+    //         .oauth2ResourceServer(oauth2 -> oauth2
+    //                 .jwt(jwt -> jwt
+    //                         .jwtAuthenticationConverter(jwtAuthenticationConverter())
+    //                         .decoder(jwtDecoder())
+    //                 ));
+
+    //     return http.build();
+    // }
+
+     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf.disable()) // ✅ ADD THIS: Disable CSRF for API endpoints
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/**").permitAll()
-                    .requestMatchers("/api/admin/auth/**").permitAll()
+                    .requestMatchers("/api/admin/auth/**").permitAll() // ✅ This should permit login
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
@@ -64,18 +85,54 @@ public class SecurityConfig {
         
     //     return jwtDecoder;
     // }
-    @Bean
+    // @Bean
+    // public JwtDecoder jwtDecoder() {
+    //     logger.debug("Configuring JwtDecoder with custom JWK Set URI");
+    //     NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
+    //             .withJwkSetUri("http://localhost:8080/realms/stockfellow/protocol/openid-connect/certs")
+    //             .build();
+        
+    //     OAuth2TokenValidator<Jwt> validator = JwtValidators.createDefault();  // Only timestamp validation
+    //     jwtDecoder.setJwtValidator(validator);
+        
+    //     return jwtDecoder;
+    // }
+
+   @Bean
     public JwtDecoder jwtDecoder() {
         logger.debug("Configuring JwtDecoder with custom JWK Set URI");
+        
+        // Use localhost to match your test environment
+        String jwkSetUri = "http://localhost:8080/realms/stockfellow/protocol/openid-connect/certs";
+        logger.info("JWK Set URI: {}", jwkSetUri);
+        
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
-                .withJwkSetUri("http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs")
+                .withJwkSetUri(jwkSetUri)
                 .build();
         
-        OAuth2TokenValidator<Jwt> validator = JwtValidators.createDefault();  // Only timestamp validation
-        jwtDecoder.setJwtValidator(validator);
+        // Create a custom validator that accepts multiple issuers
+        OAuth2TokenValidator<Jwt> validator = new OAuth2TokenValidator<Jwt>() {
+            @Override
+            public OAuth2TokenValidatorResult validate(Jwt jwt) {
+                // Accept both 'keycloak' and 'localhost' as valid issuers
+                String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : "";
+                if (issuer.equals("http://keycloak:8080/realms/stockfellow") || 
+                    issuer.equals("http://localhost:8080/realms/stockfellow")) {
+                    logger.debug("Issuer validation passed for: {}", issuer);
+                    return OAuth2TokenValidatorResult.success();
+                }
+                logger.warn("Issuer validation failed for: {}", issuer);
+                
+                // ✅ CORRECTED: Use OAuth2Error instead of Exception
+                OAuth2Error error = new OAuth2Error("invalid_issuer", "Invalid token issuer: " + issuer, null);
+                return OAuth2TokenValidatorResult.failure(error);
+            }
+        };
         
+        jwtDecoder.setJwtValidator(validator);
         return jwtDecoder;
     }
+
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
