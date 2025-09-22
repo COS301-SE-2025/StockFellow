@@ -7,7 +7,7 @@
 KEYCLOAK_URL="http://localhost:8080"
 REALM="stockfellow"
 CLIENT_ID="admin-service-client"
-CLIENT_SECRET="r0cnwJ21La93AwhfOup3c9Ma4CtsLcXC"  # YOU MUST SET THIS - Get from Keycloak client credentials tab
+CLIENT_SECRET="q03cb0bMVy672D6UWU485vWLe55ndX75"  # YOU MUST SET THIS - Get from Keycloak client credentials tab
 BASE_URL="http://localhost:4060"
 ADMIN_USER_ID="admin_user"
 
