@@ -64,3 +64,4 @@ start.sh
 stop.sh
 .env.drop*
 nginx.conf
+stockfellow-9e*.json
