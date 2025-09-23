@@ -31,18 +31,15 @@ ssh ${DROPLET2_USER}@${DROPLET2_IP} "mkdir -p /opt/stockfellow"
 
 scp -i ${SSH_KEY_PATH} ./deployment/compose/droplet2-gateway.yml ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
 scp -i ${SSH_KEY_PATH} ./deployment/scripts/.env.droplet2 ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/.env
-scp -i ${SSH_KEY_PATH} -r services/api-gateway/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
 scp -i ${SSH_KEY_PATH} -r services/mfa-service/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
-scp -i ${SSH_KEY_PATH} -r services/api-gateway/realm-exports/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
-scp -i ${SSH_KEY_PATH} -r integrations/keycloak-extensions/ ${DROPLET2_USER}@${DROPLET2_IP}:/opt/stockfellow/
 
-ssh -i ${SSH_KEY_PATH} ${DROPLET2_USER}@${DROPLET2_IP} << 'ENDSSH'
-cd /opt/stockfellow
-docker-compose -f droplet2-gateway.yml down
-docker-compose -f droplet2-gateway.yml build
-docker-compose -f droplet2-gateway.yml up -d
-docker-compose -f droplet2-gateway.yml ps
-ENDSSH
+# ssh -i ${SSH_KEY_PATH} ${DROPLET2_USER}@${DROPLET2_IP} << 'ENDSSH'
+# cd /opt/stockfellow
+# docker-compose -f droplet2-gateway.yml down
+# docker-compose -f droplet2-gateway.yml build
+# docker-compose -f droplet2-gateway.yml up -d
+# docker-compose -f droplet2-gateway.yml ps
+# ENDSSH
 
 trap "ssh-agent -k" EXIT
 

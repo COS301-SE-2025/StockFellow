@@ -131,10 +131,11 @@ services:
       - USER_SERVICE_URL=http://${DROPLET3_IP}:4020
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
-      - MFA_MAIL_HOST=${MFA_MAIL_HOST}
-      - MFA_MAIL_PORT=${MFA_MAIL_PORT}
-      - MFA_MAIL_USERNAME=${MFA_MAIL_USERNAME}
-      - MFA_MAIL_PASSWORD=${MFA_MAIL_PASSWORD}
+      - MFA_MAIL_FROM=${MFA_MAIL_FROM}
+      - GMAIL_KEY_PATH=/app/config/stockfellow-9e3503d49f16.json
+      - GOOGLE_SERVICE_ACCOUNT_USER=${GOOGLE_SERVICE_ACCOUNT_USER:-}
+    volumes:
+      - ${GMAIL_KEY_PATH}:/app/config/stockfellow-9e3503d49f16.json:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1"]
       interval: 60s
