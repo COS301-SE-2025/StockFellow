@@ -24,17 +24,22 @@ public class TokenValidationService {
 
     // Endpoints that don't require authentication
     private final Set<String> PUBLIC_ENDPOINTS = Set.of(
-            "/api/auth/login",
-            "/api/auth/test/login",
-            "/api/auth/verify-mfa",
-            "/api/auth/register",
-            "/api/auth/refresh",
-            "/api/health",
-            "/actuator/health",
-            "/actuator/info",
-            "/health",
-            "/favicon.ico",
-            "/error");
+        "/api/auth/login",
+        "/api/auth/test/login", 
+        "/api/auth/verify-mfa",
+        "/api/auth/register",
+        "/api/auth/refresh",
+        "/auth/login",          
+        "/auth/test/login",
+        "/auth/verify-mfa", 
+        "/auth/register",      
+        "/auth/refresh",
+        "/api/health",
+        "/actuator/health",
+        "/actuator/info",
+        "/health",
+        "/favicon.ico",
+        "/error");
 
     public TokenValidationService(KeycloakService keycloakService,
             RedisTemplate<String, String> redisTemplate,
@@ -88,7 +93,37 @@ public class TokenValidationService {
     }
 
     private boolean isPublicEndpoint(String path) {
-        return PUBLIC_ENDPOINTS.stream().anyMatch(path::startsWith);
+        logger.info("Checking if path '{}' is public", path);
+        
+        // Check exact matches first
+        if (PUBLIC_ENDPOINTS.contains(path)) {
+            logger.info("Path '{}' found in public endpoints", path);
+            return true;
+        }
+        
+        // Check if path starts with any public endpoint
+        boolean isPublic = PUBLIC_ENDPOINTS.stream().anyMatch(endpoint -> {
+            boolean matches = path.startsWith(endpoint) || endpoint.startsWith(path);
+            if (matches) {
+                logger.info("Path '{}' matches public endpoint '{}'", path, endpoint);
+            }
+            return matches;
+        });
+        
+        // Also check without /api prefix if path starts with /api
+        if (!isPublic && path.startsWith("/api")) {
+            String pathWithoutApi = path.substring(4); // Remove "/api"
+            isPublic = PUBLIC_ENDPOINTS.stream().anyMatch(endpoint -> {
+                boolean matches = pathWithoutApi.startsWith(endpoint) || endpoint.contains(pathWithoutApi);
+                if (matches) {
+                    logger.info("Path '{}' (without /api: '{}') matches public endpoint '{}'", path, pathWithoutApi, endpoint);
+                }
+                return matches;
+            });
+        }
+        
+        logger.info("Path '{}' is public: {}", path, isPublic);
+        return isPublic;
     }
 
     private boolean isTokenBlacklisted(String token) {
