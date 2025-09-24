@@ -6,14 +6,14 @@ WORKDIR /app
 # Copy pom.xml first for better Docker layer caching
 COPY pom.xml .
 
-# Download dependencies (this layer will be cached if pom.xml doesn't change)
+# Download dependencies (cached if pom.xml doesn't change)
 RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
 # Build the application
-RUN mvn clean package -DskipTests
+RUN mvn clean package -Dmaven.test.skip=true
 
 # Runtime stage
 FROM openjdk:17-jdk-slim
@@ -38,7 +38,7 @@ USER appuser
 # Expose the port
 EXPOSE 8087
 
-# Add health check
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:8087/actuator/health || exit 1
 
