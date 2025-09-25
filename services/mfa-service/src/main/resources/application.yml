@@ -1,46 +1,22 @@
 server:
-  port: 8087
+  port: ${MFA_SERVICE_PORT:8087}
 
 spring:
   application:
     name: mfa-service
 
-#   mail:
-#     host: ${MFA_MAIL_HOST:smtp.gmail.com}
-#     port: ${MFA_MAIL_PORT:587}
-#     username: ${MFA_MAIL_USERNAME}
-#     password: ${MFA_MAIL_PASSWORD}
-#     properties:
-#       mail:
-#         transport:
-#           protocol: smtp
-#         smtp:
-#           auth: true
-#           starttls:
-#             enable: ${MFA_MAIL_STARTTLS:true}
-#           ssl:
-#             enable: ${MFA_MAIL_SSL:false}
-#           connectiontimeout: 5000
-#           timeout: 3000
-#           writetimeout: 5000
-#         debug: false
-
 app:
   mail:
-    from: ${MFA_MAIL_FROM:stockfellow-mfa@stockfellow.iam.gserviceaccount.com}
+    from: ${MFA_MAIL_FROM}
+    provider: sendgrid
+    sendgrid:
+      api-key: ${SENDGRID_API_KEY} # <-- add this
   mfa:
     otp:
       length: 6
       expiry-minutes: 5
 
-google:
-    service:
-        account:
-            user: ${GOOGLE_SERVICE_ACCOUNT_USER:}
-            key:
-                path: /app/config/stockfellow-9e3503d49f16.json
 logging:
   level:
     com.stockfellow.mfa: DEBUG
-    # org.springframework.mail: INFO
-    com.google.api: INFO
+    root: ${ROOT_LOG_LEVEL:WARN}
