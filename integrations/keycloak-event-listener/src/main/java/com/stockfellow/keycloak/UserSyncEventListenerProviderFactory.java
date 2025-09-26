@@ -17,9 +17,9 @@ public class UserSyncEventListenerProviderFactory implements EventListenerProvid
     }
 
     @Override
-    public void init(Config.Scope config) {
-        userServiceUrl = config.get("userServiceUrl", "http://user-service:4020");
-        transactionServiceUrl = config.get("transactionServiceUrl", "http://transaction-service:4080");
+        public void init(Config.Scope config) {
+        userServiceUrl = config.get("userServiceUrl", "http://10.114.0.2:4020");
+        transactionServiceUrl = config.get("transactionServiceUrl", "http://10.114.0.2:4080");
         System.out.println("UserSync EventListener initialized with URLs: " + userServiceUrl + " and " + transactionServiceUrl);
     }
 

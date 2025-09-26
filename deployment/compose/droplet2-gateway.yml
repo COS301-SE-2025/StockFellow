@@ -46,6 +46,8 @@ services:
       KC_SPI_EVENTS_LISTENER_USER_SYNC_EVENT_LISTENER_USER_SERVICE_URL: http://${DROPLET3_IP}:4020
     expose:
       - "8080"
+    ports:
+      - "8080:8080" # This is for drop3 services to fetch JWKs token
     volumes:
       - ./realm-exports:/opt/keycloak/data/import
       - ./keycloak-extensions/:/opt/keycloak/providers/
@@ -78,7 +80,7 @@ services:
       - "3000"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - KEYCLOAK_AUTH_SERVER_URL=${KC_HOSTNAME} 
+      - KEYCLOAK_AUTH_SERVER_URL=${KEYCLOAK_AUTH_SERVER_URL} 
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
       - KEYCLOAK_GATEWAY_CLIENT_ID=${KEYCLOAK_GATEWAY_CLIENT_ID}
       - KEYCLOAK_GATEWAY_CLIENT_SECRET=${KEYCLOAK_GATEWAY_CLIENT_SECRET}

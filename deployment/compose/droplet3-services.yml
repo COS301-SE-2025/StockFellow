@@ -21,8 +21,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://${DROPLET1_IP}:5432/userservice_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - KEYCLOAK_JWKS_URI=http://${DROPLET2_IP}:8080/realms/stockfellow/protocol/openid_connect/certs
-      - KEYCLOAK_ISSUER=http://${DROPLET2_IP}:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
@@ -58,8 +58,8 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
-      - KEYCLOAK_ISSUER=http://${DROPLET2_IP}:8080/realms/stockfellow
-      - KEYCLOAK_JWKS_URI=http://${DROPLET2_IP}:8080/realms/stockfellow/protocol/openid_connect/certs
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=http://localhost:4020
       - LOGGING_LEVEL_ROOT=WARN
       - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
@@ -96,8 +96,8 @@ services:
       - TRANSACTIONDB_PASS=${TRANSACTIONDB_PASS}
       - PAYSTACK_TEST_API_KEY=${PAYSTACK_TEST_API_KEY}
       - CALLBACK_BASE_URL=${PAYSTACK_CALLBACK_URL}
-      - KEYCLOAK_ISSUER=http://${DROPLET2_IP}:8080/realms/stockfellow
-      - KEYCLOAK_JWKS_URI=http://${DROPLET2_IP}:8080/realms/stockfellow/protocol/openid_connect/certs
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=http://localhost:4020
       - GROUP_SERVICE_URL=http://localhost:4040
       - LOGGING_LEVEL_ROOT=WARN
