@@ -416,7 +416,7 @@ services:
     depends_on:
       - group-service
       - user-service
-      - ngrok
+      #- ngrok
     ports:
       - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
@@ -449,22 +449,22 @@ services:
     restart: unless-stopped
   
   # Used to expose local hosted port online for paystack callback
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    command:
-      - "start"
-      - "--all"
-      - "--config"
-      - "/etc/ngrok.yml"
-    volumes:
-      - ./ngrok.yml:/etc/ngrok.yml
-    ports:
-      - 4041:4041  
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    networks:
-      - stockfellow-net
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   restart: unless-stopped
+  #   command:
+  #     - "start"
+  #     - "--all"
+  #     - "--config"
+  #     - "/etc/ngrok.yml"
+  #   volumes:
+  #     - ./ngrok.yml:/etc/ngrok.yml
+  #   ports:
+  #     - 4041:4041  
+  #   environment:
+  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  #   networks:
+  #     - stockfellow-net
 
   # Notification Service
   notification-service:
