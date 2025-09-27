@@ -63,12 +63,14 @@ const Dashboard: React.FC = () => {
         loading: false,
         error: error.message || 'Failed to load dashboard data'
       }));
-
+      
+      console.log('we are here');
+      console.error('Error details:', error);
       // If authentication failed, redirect to login
-      if (error.message === 'Authentication required') {
-        adminService.logout();
-        return;
-      }
+      // if (error.message === 'Authentication required') {
+      //   adminService.logout();
+      //   return;
+      // }
     }
   };
 

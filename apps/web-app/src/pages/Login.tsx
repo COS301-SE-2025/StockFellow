@@ -18,10 +18,13 @@ const Login: React.FC = () => {
   // Get the page user was trying to access, default to dashboard
   const from = (location.state as any)?.from?.pathname || "/dashboard";
 
-  // If already authenticated, redirect to dashboard
+  //If already authenticated, redirect to dashboard
   if (isAuthenticated) {
+    console.log('Already authenticated, redirecting to:', from);
     return <Navigate to={from} replace />;
   }
+  
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

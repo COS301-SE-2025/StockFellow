@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check if user is already authenticated on app startup
+   // Check if user is already authenticated on app startup
     const checkAuth = () => {
       const authenticated = adminService.isAuthenticated();
       setIsAuthenticated(authenticated);

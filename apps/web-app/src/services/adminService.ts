@@ -89,6 +89,8 @@ class TokenManager {
       const expiryTime = Date.now() + (expiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
     }
+    console.log('token key', this.TOKEN_KEY);
+    console.log('Stored token:', localStorage.getItem(this.TOKEN_KEY));
   }
 
   static getToken(): string | null {
@@ -145,6 +147,7 @@ class AdminHttpClient {
       // Extract user ID from token payload (assuming JWT)
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Token payload:', payload);
         if (payload.userId || payload.sub) {
           headers['X-User-Id'] = payload.userId || payload.sub;
         }
@@ -212,7 +215,7 @@ class AdminHttpClient {
     } catch (error: any) {
       if (error.response?.status === 401) {
         // Token expired or invalid
-        TokenManager.clearTokens();
+        //TokenManager.clearTokens();
         window.location.href = '/admin/login';
         throw new Error('Authentication required');
       }
@@ -307,12 +310,15 @@ class AdminService {
   }
 
   isAuthenticated(): boolean {
+    console.log('Token present:', TokenManager.getToken());
+    //token is returning null
     return TokenManager.getToken() !== null;
   }
 
   // Dashboard endpoints
   async getDashboardSummary(): Promise<DashboardSummary> {
     const response = await this.client.get<DashboardSummary>('/api/admin/dashboard/summary');
+    console.log('Dashboard summary response:', response.data);
     return response.data;
   }
 
@@ -320,6 +326,7 @@ class AdminService {
     const response = await this.client.get<AnalyticsDashboard>(
       `/api/admin/analytics/dashboard?timeRange=${timeRange}`
     );
+    console.log('Analytics dashboard response:', response.data);
     return response.data;
   }
 
