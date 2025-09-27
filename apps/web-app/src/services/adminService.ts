@@ -72,13 +72,19 @@ interface RevenueAnalytics {
   }>;
 }
 
-// Token management
+// Token management with debugging
 class TokenManager {
   private static readonly TOKEN_KEY = 'admin_access_token';
   private static readonly REFRESH_TOKEN_KEY = 'admin_refresh_token';
   private static readonly TOKEN_EXPIRY_KEY = 'admin_token_expiry';
 
   static setToken(token: string, refreshToken?: string, expiresIn?: number): void {
+    console.log('Setting token:', { 
+      tokenLength: token?.length, 
+      hasRefreshToken: !!refreshToken, 
+      expiresIn 
+    });
+    
     localStorage.setItem(this.TOKEN_KEY, token);
     
     if (refreshToken) {
@@ -88,18 +94,25 @@ class TokenManager {
     if (expiresIn) {
       const expiryTime = Date.now() + (expiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+      console.log('Token expires at:', new Date(expiryTime).toISOString());
     }
-    console.log('token key', this.TOKEN_KEY);
-    console.log('Stored token:', localStorage.getItem(this.TOKEN_KEY));
   }
 
   static getToken(): string | null {
     const token = localStorage.getItem(this.TOKEN_KEY);
     const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
     
+    console.log('Getting token:', { 
+      hasToken: !!token, 
+      tokenLength: token?.length,
+      expiry: expiry ? new Date(parseInt(expiry)).toISOString() : null,
+      isExpired: expiry ? Date.now() > parseInt(expiry) : false
+    });
+    
     if (!token) return null;
     
     if (expiry && Date.now() > parseInt(expiry)) {
+      console.log('Token expired, clearing tokens');
       this.clearTokens();
       return null;
     }
@@ -112,6 +125,7 @@ class TokenManager {
   }
 
   static clearTokens(): void {
+    console.log('Clearing all tokens');
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
@@ -126,6 +140,24 @@ class TokenManager {
     
     return expiryTime < fiveMinutesFromNow;
   }
+
+  // Debug method to inspect token payload
+  static debugToken(): void {
+    const token = this.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Token payload:', payload);
+        console.log('Token roles:', payload.realm_access?.roles);
+        console.log('Token issuer:', payload.iss);
+        console.log('Token expiry:', new Date(payload.exp * 1000).toISOString());
+      } catch (e) {
+        console.error('Failed to decode token:', e);
+      }
+    } else {
+      console.log('No token found');
+    }
+  }
 }
 
 // HTTP client with authentication
@@ -137,23 +169,17 @@ class AdminHttpClient {
     this.baseURL = baseURL;
   }
 
-  private async getAuthHeaders(): Promise<{ Authorization?: string; 'X-User-Id'?: string }> {
+  private async getAuthHeaders(): Promise<{ Authorization?: string; 'Content-Type': string }> {
     const token = TokenManager.getToken();
-    const headers: { Authorization?: string; 'X-User-Id'?: string } = {};
+    const headers: { Authorization?: string; 'Content-Type': string } = {
+      'Content-Type': 'application/json'
+    };
     
     if (token) {
       headers.Authorization = `Bearer ${token}`;
-      
-      // Extract user ID from token payload (assuming JWT)
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('Token payload:', payload);
-        if (payload.userId || payload.sub) {
-          headers['X-User-Id'] = payload.userId || payload.sub;
-        }
-      } catch (e) {
-        console.warn('Could not extract user ID from token');
-      }
+      console.log('Added Authorization header:', `Bearer ${token.substring(0, 20)}...`);
+    } else {
+      console.warn('No token available for request');
     }
     
     return headers;
@@ -181,6 +207,7 @@ class AdminHttpClient {
 
   private async performTokenRefresh(refreshToken: string): Promise<string> {
     try {
+      console.log('Refreshing token...');
       const response = await axios.post(`${this.baseURL}/api/admin/auth/refresh`, {
         refreshToken
       });
@@ -188,8 +215,10 @@ class AdminHttpClient {
       const { access_token, refresh_token, expires_in } = response.data;
       TokenManager.setToken(access_token, refresh_token || refreshToken, expires_in);
       
+      console.log('Token refreshed successfully');
       return access_token;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Token refresh failed:', error.response?.data || error.message);
       TokenManager.clearTokens();
       throw new Error('Token refresh failed');
     }
@@ -204,18 +233,56 @@ class AdminHttpClient {
       ...config,
       baseURL: this.baseURL,
       headers: {
-        'Content-Type': 'application/json',
         ...authHeaders,
         ...config.headers,
       },
     };
 
+    console.log('Making request:', {
+      method: requestConfig.method,
+      url: requestConfig.url,
+      baseURL: requestConfig.baseURL,
+      hasAuth: !!requestConfig.headers?.Authorization
+    });
+
     try {
-      return await axios(requestConfig);
+      const response = await axios(requestConfig);
+      console.log('Request successful:', response.status, response.statusText);
+      return response;
     } catch (error: any) {
+      console.error('Request failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: `${requestConfig.baseURL}${requestConfig.url}`
+      });
+
       if (error.response?.status === 401) {
-        // Token expired or invalid
-        //TokenManager.clearTokens();
+        console.log('Authentication failed, debugging token...');
+        TokenManager.debugToken();
+        
+        // Try refresh token once
+        const refreshToken = TokenManager.getRefreshToken();
+        if (refreshToken && !this.refreshPromise) {
+          try {
+            await this.performTokenRefresh(refreshToken);
+            // Retry the original request
+            const retryHeaders = await this.getAuthHeaders();
+            const retryConfig = {
+              ...requestConfig,
+              headers: {
+                ...retryHeaders,
+                ...config.headers,
+              }
+            };
+            console.log('Retrying request with new token...');
+            return await axios(retryConfig);
+          } catch (refreshError) {
+            console.error('Retry after refresh failed:', refreshError);
+          }
+        }
+        
+        TokenManager.clearTokens();
         window.location.href = '/admin/login';
         throw new Error('Authentication required');
       }
@@ -270,6 +337,10 @@ class AdminService {
       
       const { access_token, refresh_token, expires_in } = response.data;
       TokenManager.setToken(access_token, refresh_token, expires_in);
+      
+      // Debug the token after setting it
+      TokenManager.debugToken();
+      
     } catch (error: any) {
       console.error('Login request failed:', {
         status: error.response?.status,
@@ -295,13 +366,11 @@ class AdminService {
     try {
       const refreshToken = TokenManager.getRefreshToken();
       if (refreshToken) {
-        // Call backend logout endpoint to invalidate tokens on Keycloak
         await axios.post('http://localhost:4060/api/admin/auth/logout', {
           refreshToken
         });
       }
     } catch (error) {
-      // Even if backend logout fails, we still clear local tokens
       console.warn('Backend logout failed, but clearing local tokens:', error);
     } finally {
       TokenManager.clearTokens();
@@ -310,17 +379,20 @@ class AdminService {
   }
 
   isAuthenticated(): boolean {
-    console.log('Token present:', TokenManager.getToken());
-    //token is returning null
-    return TokenManager.getToken() !== null;
+    const token = TokenManager.getToken();
+    const isAuthenticated = token !== null;
+    console.log('Authentication check:', { isAuthenticated, hasToken: !!token });
+    return isAuthenticated;
   }
 
   // Dashboard endpoints
   async getDashboardSummary(): Promise<DashboardSummary> {
+    console.log('Fetching dashboard summary...');
     const response = await this.client.get<DashboardSummary>('/api/admin/dashboard/summary');
     console.log('Dashboard summary response:', response.data);
     return response.data;
   }
+
 
   async getAnalyticsDashboard(timeRange: '7d' | '30d' = '7d'): Promise<AnalyticsDashboard> {
     const response = await this.client.get<AnalyticsDashboard>(

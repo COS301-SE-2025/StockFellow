@@ -2,9 +2,12 @@ package com.stockfellow.adminservice.service;
 
 import com.stockfellow.adminservice.model.AuditLog;
 import com.stockfellow.adminservice.repository.AuditLogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,13 +16,35 @@ import java.util.*;
 @Service
 public class AuditLogService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuditLogService.class);
+
     @Autowired
     private AuditLogRepository auditLogRepository;
 
-    public AuditLog createAuditLog(AuditLog auditLog) {
-        // Calculate risk score before saving
-        auditLog.setRiskScore(calculateRiskScore(auditLog));
-        return auditLogRepository.save(auditLog);
+    public void createAuditLog(AuditLog auditLog) {
+        try {
+            // Ensure timestamp is set
+            if (auditLog.getTimestamp() == null) {
+                auditLog.setTimestamp(LocalDateTime.now());
+            }
+            
+            // Validate required fields
+            if (auditLog.getEndpoint() == null || auditLog.getHttpMethod() == null) {
+                logger.warn("Skipping audit log creation - missing required fields");
+                return;
+            }
+            
+            // Calculate risk score before saving
+            Integer riskScore = calculateRiskScore(auditLog);
+            auditLog.setRiskScore(riskScore);
+            
+            auditLogRepository.save(auditLog);
+            logger.debug("Audit log created successfully for endpoint: {}", auditLog.getEndpoint());
+            
+        } catch (Exception e) {
+            logger.error("Failed to create audit log: {}", e.getMessage());
+            // Don't rethrow - we don't want audit logging failures to break main functionality
+        }
     }
 
     public Page<AuditLog> getAuditLogs(String userId, String endpoint, LocalDateTime startDate, 
@@ -30,7 +55,9 @@ public class AuditLogService {
     }
 
     public List<AuditLog> getSuspiciousActivity() {
-        return auditLogRepository.findByRiskScoreGreaterThanEqualOrderByRiskScoreDesc(70, null)
+        // Use a pageable with a reasonable size for suspicious activities
+        Pageable pageable = PageRequest.of(0, 100);
+        return auditLogRepository.findByRiskScoreGreaterThanEqualOrderByRiskScoreDesc(70, pageable)
                 .getContent();
     }
 
@@ -41,13 +68,15 @@ public class AuditLogService {
         );
     }
 
-    public void markForInvestigation(String logId, String reason) {
+    public void markForInvestigation(UUID logId, String reason) {
         Optional<AuditLog> logOpt = auditLogRepository.findById(logId);
         if (logOpt.isPresent()) {
             AuditLog log = logOpt.get();
             log.setFlaggedForReview(true);
-            log.setRiskFactors(log.getRiskFactors() + "; MANUAL_REVIEW: " + reason);
+            String currentRiskFactors = log.getRiskFactors() != null ? log.getRiskFactors() : "";
+            log.setRiskFactors(currentRiskFactors + "; MANUAL_REVIEW: " + reason);
             auditLogRepository.save(log);
+            logger.info("Audit log {} marked for investigation: {}", logId, reason);
         }
     }
 
@@ -76,7 +105,9 @@ public class AuditLogService {
             riskFactors.add("HIGH_FREQUENCY_ACCESS");
         }
 
-        auditLog.setRiskFactors(String.join(", ", riskFactors));
+        if (!riskFactors.isEmpty()) {
+            auditLog.setRiskFactors(String.join(", ", riskFactors));
+        }
         return score;
     }
 
@@ -86,6 +117,8 @@ public class AuditLogService {
     }
 
     private boolean isSuspiciousEndpoint(String endpoint) {
+        if (endpoint == null) return false;
+        
         String[] sensitiveEndpoints = {"/admin/", "/users/stats", "/affordability/", "/verifyID"};
         return Arrays.stream(sensitiveEndpoints)
                 .anyMatch(endpoint::contains);
@@ -103,10 +136,50 @@ public class AuditLogService {
         if (userId == null) return false;
         
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
-        long recentRequests = auditLogRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(
+        // Use the existing repository method with a custom query
+        List<AuditLog> recentLogs = auditLogRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(
             userId, oneHourAgo, LocalDateTime.now()
-        ).size();
+        );
         
-        return recentRequests > 50; // More than 50 requests per hour
+        return recentLogs.size() > 50; // More than 50 requests per hour
+    }
+
+    public void flagForInvestigation(String logIdString, String reason) {
+        try {
+            // Convert string to UUID properly
+            UUID logId = UUID.fromString(logIdString);
+            
+            logger.info("Flagging log {} for investigation: {}", logId, reason);
+            
+            AuditLog log = auditLogRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("Audit log not found: " + logId));
+            
+            log.setFlaggedForReview(true);
+            String currentRiskFactors = log.getRiskFactors() != null ? log.getRiskFactors() : "";
+            log.setRiskFactors(currentRiskFactors + " | Investigation: " + reason);
+            
+            auditLogRepository.save(log);
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid UUID format for log ID: {}", logIdString);
+            throw new IllegalArgumentException("Invalid log ID format", e);
+        } catch (Exception e) {
+            logger.error("Error flagging log for investigation: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to flag log for investigation", e);
+        }
+    }
+    
+    // Overloaded method that accepts UUID directly
+    public void flagForInvestigation(UUID logId, String reason) {
+        logger.info("Flagging log {} for investigation: {}", logId, reason);
+        
+        AuditLog log = auditLogRepository.findById(logId)
+            .orElseThrow(() -> new IllegalArgumentException("Audit log not found: " + logId));
+        
+        log.setFlaggedForReview(true);
+        String currentRiskFactors = log.getRiskFactors() != null ? log.getRiskFactors() : "";
+        log.setRiskFactors(currentRiskFactors + " | Investigation: " + reason);
+        
+        auditLogRepository.save(log);
     }
 }
