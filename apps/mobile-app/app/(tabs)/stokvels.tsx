@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import SearchBar from '../../src/components/SearchBar';
 import StokvelCard from '../../src/components/StokvelCard';
 import TopBar from '../../src/components/TopBar';
-import AutoJoinPrompt from '../../src/components/AutoJoinPrompt'; // Add this import
+import AutoJoinPrompt from '../../src/components/AutoJoinPrompt';
 import { icons } from '../../src/constants';
 import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
