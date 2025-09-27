@@ -66,3 +66,4 @@ stop.sh
 nginx.conf
 stockfellow-9e*.json
 save/
+.env.save
