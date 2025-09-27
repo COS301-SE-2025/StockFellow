@@ -1,6 +1,9 @@
 package com.stockfellow.mfa.service;
 
-import com.sendgrid.*;
+import com.sendgrid.SendGrid;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.Method;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Email;
 import com.sendgrid.helpers.mail.objects.Content;
@@ -23,13 +26,13 @@ public class EmailService {
         Email to = new Email(toEmail);
 
         String htmlBody = String.format(
-                "<html><body>" +
-                        "<p>Hi %s,</p>" +
-                        "<p>Your StockFellow verification code is: <b>%s</b></p>" +
-                        "<p>This code will expire in 5 minutes.</p>" +
-                        "<p>If you didn't request this code, please ignore this email.</p>" +
-                        "<p>Best regards,<br/>StockFellow Team</p>" +
-                        "</body></html>",
+                "<html><body>" 
+                        + "<p>Hi %s,</p>" 
+                        + "<p>Your StockFellow verification code is: <b>%s</b></p>" 
+                        + "<p>This code will expire in 5 minutes.</p>" 
+                        + "<p>If you didn't request this code, please ignore this email.</p>" 
+                        + "<p>Best regards,<br/>StockFellow Team</p>" 
+                        + "</body></html>",
                 userName != null ? userName : "", otpCode);
 
         Content content = new Content("text/html", htmlBody);

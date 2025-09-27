@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from "../components/layout/Sidebar";
-import { ChevronDown, ChevronUp, User, AlertTriangle, Shield, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, User } from 'lucide-react';
 
 interface FraudEntry {
   id: string;
@@ -176,7 +176,7 @@ const FraudDetection: React.FC = () => {
 
               {/* Table Rows */}
               <div className="divide-y divide-gray-200">
-                {fraudData.map((entry, index) => (
+                {fraudData.map((entry) => (
                   <div key={entry.id}>
                     {/* Main Row */}
                     <div className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50">

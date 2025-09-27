@@ -10,7 +10,7 @@ app:
     from: ${MFA_MAIL_FROM}
     provider: sendgrid
     sendgrid:
-      api-key: ${SENDGRID_API_KEY} # <-- add this
+      api-key: ${SENDGRID_API_KEY}
   mfa:
     otp:
       length: 6

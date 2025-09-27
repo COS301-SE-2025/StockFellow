@@ -70,7 +70,7 @@ const Dashboard = () => {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={tierStats} dataKey="value" nameKey="name" outerRadius={80} label>
-                    {tierStats.map((entry, index) => (
+                    {tierStats.map((_ , index) => (
                       <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                     ))}
                   </Pie>

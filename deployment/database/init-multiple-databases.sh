@@ -74,6 +74,9 @@ if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
             "notification_db")
                 create_user_and_database "$db" "notification_user" "notification_pass"
                 ;;
+            "admin_db")
+                create_user_and_database "$db" "admin_user" "admin_pass"
+                ;;
             *)
                 create_database_only "$db"
                 ;;

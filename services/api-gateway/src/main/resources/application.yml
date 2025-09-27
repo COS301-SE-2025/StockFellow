@@ -58,9 +58,9 @@ services:
   group-service:
     url: ${GROUP_SERVICE_URL:http://group-service:4040}
   transaction-service:
-    url: ${TRANSACTION_SERVICE_URL:http://transaction-service:4060}
+    url: ${TRANSACTION_SERVICE_URL:http://transaction-service:4080}
   notification-service:
-    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:4080}
+    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:4050}
   mfa-service:
     url: ${MFA_SERVICE_URL:http://mfa-service:8087}
 

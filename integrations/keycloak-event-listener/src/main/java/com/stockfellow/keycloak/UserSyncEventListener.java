@@ -38,8 +38,8 @@ public class UserSyncEventListener implements EventListenerProvider {
 
     @Override
     public void onEvent(AdminEvent event, boolean includeRepresentation) {
-        if (event.getOperationType().name().equals("CREATE") && 
-            event.getResourceType().name().equals("USER")) {
+        if (event.getOperationType().name().equals("CREATE") 
+            && event.getResourceType().name().equals("USER")) {
             String resourcePath = event.getResourcePath();
             if (resourcePath != null && resourcePath.startsWith("users/")) {
                 String userId = resourcePath.substring(6);
@@ -101,9 +101,11 @@ public class UserSyncEventListener implements EventListenerProvider {
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println("Successfully synced to " + serviceName);
             } else {
-                System.err.println("Failed to sync to " + serviceName + 
-                                 ". Status: " + response.statusCode() + 
-                                 ", Body: " + response.body());
+                System.err.println(
+                    "Failed to sync to " + serviceName 
+                    + ". Status: " + response.statusCode() 
+                    + ", Body: " + response.body()
+                );
             }
             
         } catch (Exception e) {
