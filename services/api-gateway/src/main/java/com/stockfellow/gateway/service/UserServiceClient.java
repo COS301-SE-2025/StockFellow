@@ -265,40 +265,40 @@ public class UserServiceClient {
             return username;
         }
 
-        public void setUsername(String username) {
-            this.username = username;
+        public void setUsername(final String uname) {
+            this.username = uname;
         }
 
         public String getPassword() {
             return password;
         }
 
-        public void setPassword(String password) {
-            this.password = password;
+        public void setPassword(final String pass) {
+            this.password = pass;
         }
 
         public String getEmail() {
             return email;
         }
 
-        public void setEmail(String email) {
-            this.email = email;
+        public void setEmail(final String emailIn) {
+            this.email = emailIn;
         }
 
         public String getFirstName() {
             return firstName;
         }
 
-        public void setFirstName(String firstName) {
-            this.firstName = firstName;
+        public void setFirstName(final String fName) {
+            this.firstName = fName;
         }
 
         public String getLastName() {
             return lastName;
         }
 
-        public void setLastName(String lastName) {
-            this.lastName = lastName;
+        public void setLastName(final String lName) {
+            this.lastName = lName;
         }
     }
 }

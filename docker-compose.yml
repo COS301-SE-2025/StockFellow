@@ -87,6 +87,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL Database for Admin Service
+  admin-postgres:
+    image: postgres:15
+    container_name: admin-postgres
+    volumes:
+      - admin_postgres_data:/var/lib/postgresql/data
+      - ./services/admin-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_DB: admin_db
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: admin_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5450:5432"
+    networks:
+      - stockfellow-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -d admin_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   # PostgreSQL Database for Alfresco
   # alfresco-postgres:
   #   image: postgres:15
@@ -257,7 +280,7 @@ services:
       - stockfellow-net
     volumes:
       - ./services/api-gateway/realm-exports:/opt/keycloak/data/import
-      - ./keycloak-extensions/:/opt/keycloak/providers/
+      - ./integrations/keycloak-extensions/:/opt/keycloak/providers/
     command: start-dev --import-realm
 
   # API Gateway (Java Spring Boot)
@@ -393,7 +416,7 @@ services:
     depends_on:
       - group-service
       - user-service
-      - ngrok
+      #- ngrok
     ports:
       - "${TRANSACTION_SERVICE_PORT:-4080}:4080"
     environment:
@@ -426,22 +449,22 @@ services:
     restart: unless-stopped
   
   # Used to expose local hosted port online for paystack callback
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    command:
-      - "start"
-      - "--all"
-      - "--config"
-      - "/etc/ngrok.yml"
-    volumes:
-      - ./ngrok.yml:/etc/ngrok.yml
-    ports:
-      - 4041:4041  
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    networks:
-      - stockfellow-net
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   restart: unless-stopped
+  #   command:
+  #     - "start"
+  #     - "--all"
+  #     - "--config"
+  #     - "/etc/ngrok.yml"
+  #   volumes:
+  #     - ./ngrok.yml:/etc/ngrok.yml
+  #   ports:
+  #     - 4041:4041  
+  #   environment:
+  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  #   networks:
+  #     - stockfellow-net
 
   # Notification Service
   notification-service:
@@ -564,6 +587,42 @@ services:
   #     retries: ${HEALTH_CHECK_RETRIES:-3}
   #     start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
   #   restart: unless-stopped
+  
+  admin-service:
+    build:
+      context: ./services/admin-service
+      dockerfile: Dockerfile
+    container_name: admin-service
+    depends_on:
+      - admin-postgres
+      - keycloak
+      - user-service
+      - group-service
+      - transaction-service
+    ports:
+      - "4060:4060"
+      - "5010:5010"  # Debug port
+    environment:
+      - SERVER_PORT=4060
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://admin-postgres:5432/admin_db
+      - SPRING_DATASOURCE_USERNAME=admin_user
+      - SPRING_DATASOURCE_PASSWORD=admin_pass
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+      - USER_SERVICE_URL=http://user-service:4020
+      - GROUP_SERVICE_URL=http://group-service:4040
+      - TRANSACTION_SERVICE_URL=http://transaction-service:4080
+      - JVM_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5010
+    networks:
+      - stockfellow-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4060/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 
 networks:
   stockfellow-net:
@@ -579,3 +638,4 @@ volumes:
   #alfresco_acs_data:
   #alfresco_search_data:
   #alfresco_share_data:
+  admin_postgres_data:

@@ -58,7 +58,7 @@ public class PaystackTransferResponse {
         public void setId(Long id) { this.id = id; }
 
         public String getReference() { return reference; }
-        public void setId(String reference) { this.reference = reference; }
+        public void setReference(String reference) { this.reference = reference; }
 
         public String getTransferCode() { return transferCode; }
         public void setTransferCode(String transferCode) { this.transferCode = transferCode; }

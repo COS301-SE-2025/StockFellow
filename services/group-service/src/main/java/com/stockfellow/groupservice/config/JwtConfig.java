@@ -1,14 +1,5 @@
 package com.stockfellow.groupservice.config;
 
-import com.auth0.jwk.Jwk;
-import com.auth0.jwk.JwkException;
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.JwkProviderBuilder;
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.JWTVerifier;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,92 +9,94 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Collections;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class JwtConfig {
-    @Value("${keycloak.jwks.uri}")
-    private String jwksUrl;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/groups").permitAll()
+                .requestMatchers("/actuator/**").permitAll() // Health check endpoints
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(new JwtFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new HeaderAuthFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    public class JwtFilter extends OncePerRequestFilter {
-        private final JwkProvider provider;
-
-        public JwtFilter() {
-            this.provider = new JwkProviderBuilder(jwksUrl)
-                    .cached(10, java.time.Duration.ofHours(1))
-                    .build();
-        }
+    /**
+     * Simple filter that trusts the API Gateway's authentication
+     * The gateway validates JWT tokens and passes user information via headers
+     */
+    public class HeaderAuthFilter extends OncePerRequestFilter {
 
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                 throws ServletException, IOException {
-            String authHeader = request.getHeader("Authorization");
-
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            try {
-                String token = authHeader.substring(7);
-                DecodedJWT decodedJWT = JWT.decode(token);
-                String kid = decodedJWT.getKeyId();
-
-                Jwk jwk = provider.get(kid);
-                RSAPublicKey publicKey = (RSAPublicKey) jwk.getPublicKey();
-
-                Algorithm algorithm = Algorithm.RSA256(publicKey, null);
-                JWTVerifier verifier = JWT.require(algorithm).build();
-
-                DecodedJWT verifiedJWT = verifier.verify(token);
-
-                // Extract the subject (user ID) from the JWT
-                String userId = verifiedJWT.getSubject();
+            
+            // Check if request came through API Gateway (has forwarded headers)
+            String forwardedFor = request.getHeader("X-Forwarded-For");
+            String forwardedProto = request.getHeader("X-Forwarded-Proto");
+            
+            if (forwardedFor != null || forwardedProto != null) {
+                // Request came through API Gateway - trust it
+                // Extract user ID from Authorization header if present (for logging/context)
+                String authHeader = request.getHeader("Authorization");
+                String userId = "anonymous";
                 
-                // Create authentication with the user ID as principal
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    // You could optionally decode the JWT here just to extract user ID
+                    // without validating it (since gateway already did that)
+                    userId = extractUserIdFromToken(authHeader.substring(7));
+                }
+                
+                // Create authenticated user context
                 List<SimpleGrantedAuthority> authorities = Collections.singletonList(
                     new SimpleGrantedAuthority("ROLE_USER")
                 );
                 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                        userId, // Use the subject as principal
-                        null, 
+                        userId,
+                        null,
                         authorities
                 );
                 
-                // Store the decoded JWT in the authentication for later access if needed
-                auth.setDetails(verifiedJWT);
-                
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                filterChain.doFilter(request, response);
-            } catch (JWTVerificationException | JwkException e) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid token: " + e.getMessage());
             }
+            // If no forwarded headers, request might be direct - let it through for health checks
+            
+            filterChain.doFilter(request, response);
+        }
+        
+        private String extractUserIdFromToken(String token) {
+            try {
+                // Just decode without verification (gateway already verified)
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+                    // Simple extraction - you could use a JSON library here
+                    if (payload.contains("\"sub\":")) {
+                        int start = payload.indexOf("\"sub\":\"") + 7;
+                        int end = payload.indexOf("\"", start);
+                        return payload.substring(start, end);
+                    }
+                }
+            } catch (Exception e) {
+                // If we can't extract user ID, use anonymous
+                System.err.println("Could not extract user ID from token: " + e.getMessage());
+            }
+            return "anonymous";
         }
     }
 }

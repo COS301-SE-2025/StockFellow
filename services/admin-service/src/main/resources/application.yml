@@ -1,0 +1,77 @@
+server:
+  port: 4060
+
+spring:
+  application:
+    name: admin-service
+  
+  profiles:
+    active: docker
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://admin-postgres:5432/admin_db}
+    username: ${SPRING_DATASOURCE_USERNAME:admin_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin_pass}
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+  
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          #   THIS NEEDS TO BE keycloak URL
+          issuer-uri: ${KEYCLOAK_ISSUER:http://keycloak:8080/realms/stockfellow}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Africa/Johannesburg
+
+logging:
+  level:
+    com.stockfellow.adminservice: DEBUG
+    com.stockfellow.adminservice.config: TRACE
+    # org.springframework.security: TRACE
+    # org.springframework.security.oauth2: TRACE
+    org.springframework.web: DEBUG
+    # org.springframework.web.filter: DEBUG
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+keycloak:
+  auth-server-url: http://keycloak:8080
+  realm: stockfellow
+  resource: admin-service-client
+  credentials:
+    secret: "q03cb0bMVy672D6UWU485vWLe55ndX75"
+
+# Service URLs for inter-service communication
+services:
+  user-service:
+    url: ${USER_SERVICE_URL:http://user-service:4020}
+  group-service:
+    url: ${GROUP_SERVICE_URL:http://group-service:4040}
+  transaction-service:
+    url: ${TRANSACTION_SERVICE_URL:http://transaction-service:4080}

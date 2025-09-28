@@ -20,7 +20,11 @@ export default function SplashPage() {
 
   return (
     <View className="flex-1 justify-center items-center">
-      <Text className="text-2xl">Loading...</Text>
+      <Image
+        source={images.logo}
+        style={{ width: 180}}
+        resizeMode="contain"
+      />
     </View>
   );
 }

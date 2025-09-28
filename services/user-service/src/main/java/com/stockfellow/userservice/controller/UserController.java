@@ -10,18 +10,25 @@ import com.stockfellow.userservice.dto.AffordabilityTierResult;
 import com.stockfellow.userservice.dto.BankStatementUploadRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -62,7 +69,11 @@ public class UserController {
                             "GET /api/users/search?name={name} - Search users by name",
                             "GET /api/users/verified - Get verified users",
                             "GET /api/users/stats - Get user statistics",
-                            "GET /api/users/affordability/stats - Get affordability statistics")));
+                            "GET /api/users/affordability/stats - Get affordability statistics",
+                            "GET /api/users/admin/analytics - Get user analytics (admin only)",
+                            "POST /api/users/admin/requests/leave-group - Request to leave group (creates admin request)",
+                            "POST /api/users/admin/requests/delete-card - Request to delete card (creates admin request)"
+                            )));
         } catch (Exception e) {
             logger.error("Error getting service info", e);
             return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
@@ -452,9 +463,20 @@ public class UserController {
     public ResponseEntity<?> getUserStats(HttpServletRequest request) {
         try {
             String userRoles = request.getHeader("X-User-Roles");
-            if (userRoles == null || !userRoles.contains("admin")) {
-                return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
-            }
+            // if (userRoles == null || !userRoles.contains("admin")) {
+            //     return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+            // }
+
+            // String userRoles = request.getHeader("X-User-Roles");
+            // String serviceOrigin = request.getHeader("X-Service-Origin");
+            
+            // // Allow admin-service to access without user roles
+            // boolean isAuthorized = (userRoles != null && userRoles.contains("admin")) ||
+            //                     "admin-service".equals(serviceOrigin);
+                                
+            // if (!isAuthorized) {
+            //     return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+            // }
 
             List<User> allUsers = userService.getAllUsers();
             List<User> verifiedUsers = userService.getVerifiedUsers();
@@ -663,6 +685,229 @@ public class UserController {
         }
     }
 
+    // Admin-only analytics endpoint
+    @GetMapping("/admin/analytics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserAnalytics() {
+        try {
+            List<User> allUsers = userService.getAllUsers();
+            List<User> verifiedUsers = userService.getVerifiedUsers();
+            
+            // Calculate registration trends (last 30 days)
+            Map<String, Long> registrationTrends = calculateRegistrationTrends(allUsers);
+            
+            // Calculate verification rates by tier
+            Map<Integer, Map<String, Object>> tierAnalysis = calculateTierAnalysis(allUsers);
+            
+            // Get verification completion rates
+            Map<String, Object> verificationMetrics = calculateVerificationMetrics(allUsers);
+            
+            Map<String, Object> analytics = new HashMap<>();
+            analytics.put("totalUsers", allUsers.size());
+            analytics.put("verifiedUsers", verifiedUsers.size());
+            analytics.put("verificationRate", allUsers.size() > 0 ? 
+                (double) verifiedUsers.size() / allUsers.size() * 100 : 0);
+            analytics.put("registrationTrends", registrationTrends);
+            analytics.put("tierAnalysis", tierAnalysis);
+            analytics.put("verificationMetrics", verificationMetrics);
+            analytics.put("generatedAt", new Date());
+            
+            return ResponseEntity.ok(analytics);
+            
+        } catch (Exception e) {
+            logger.error("Error getting user analytics", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    // Request to leave group (creates admin request)
+    @PostMapping("/admin/requests/leave-group")
+    public ResponseEntity<?> requestLeaveGroup(@RequestBody LeaveGroupRequest request, HttpServletRequest httpRequest) {
+        try {
+            String userId = httpRequest.getHeader("X-User-Id");
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+
+            // Validate request
+            if (request.getGroupId() == null || request.getGroupId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid request",
+                    "message", "Group ID is required"
+                ));
+            }
+
+            // Create admin request via admin service
+            Map<String, Object> adminRequest = new HashMap<>();
+            adminRequest.put("userId", userId);
+            adminRequest.put("requestType", "LEAVE_GROUP");
+            adminRequest.put("groupId", request.getGroupId());
+            adminRequest.put("reason", request.getReason());
+
+            // Call admin service to create request
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "http://admin-service:4060/api/admin/requests/create",
+                    adminRequest,
+                    Map.class
+                );
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Leave group request submitted successfully",
+                        "requestId", response.getBody().get("requestId"),
+                        "status", "pending_admin_approval"
+                    ));
+                } else {
+                    return ResponseEntity.status(500).body(Map.of(
+                        "error", "Failed to create admin request"
+                    ));
+                }
+            } catch (Exception e) {
+                logger.error("Error calling admin service for leave group request", e);
+                return ResponseEntity.status(500).body(Map.of(
+                    "error", "Failed to submit request"
+                ));
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing leave group request", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    @PostMapping("/admin/requests/delete-card")
+    public ResponseEntity<?> requestDeleteCard(@RequestBody DeleteCardRequest request, HttpServletRequest httpRequest) {
+        try {
+            String userId = httpRequest.getHeader("X-User-Id");
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+            }
+
+            // Validate request
+            if (request.getCardId() == null || request.getCardId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid request",
+                    "message", "Card ID is required"
+                ));
+            }
+
+            // Create admin request
+            Map<String, Object> adminRequest = new HashMap<>();
+            adminRequest.put("userId", userId);
+            adminRequest.put("requestType", "DELETE_CARD");
+            adminRequest.put("cardId", request.getCardId());
+            adminRequest.put("reason", request.getReason());
+
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "http://admin-service:4060/api/admin/requests/create",
+                    adminRequest,
+                    Map.class
+                );
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Delete card request submitted successfully",
+                        "requestId", response.getBody().get("requestId"),
+                        "status", "pending_admin_approval"
+                    ));
+                } else {
+                    return ResponseEntity.status(500).body(Map.of(
+                        "error", "Failed to create admin request"
+                    ));
+                }
+            } catch (Exception e) {
+                logger.error("Error calling admin service for delete card request", e);
+                return ResponseEntity.status(500).body(Map.of(
+                    "error", "Failed to submit request"
+                ));
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing delete card request", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Internal server error"));
+        }
+    }
+
+    // Helper methods for analytics
+   // Helper methods for analytics
+    private Map<String, Long> calculateRegistrationTrends(List<User> users) {
+        Map<String, Long> trends = new HashMap<>();
+        LocalDate now = LocalDate.now();
+
+        for (int i = 0; i < 30; i++) {
+            LocalDate date = now.minusDays(i);
+            String dateKey = date.toString();
+
+            long count = users.stream()
+                .filter(user -> user.getCreatedAt() != null)
+                .filter(user -> {
+                    LocalDate userDate = user.getCreatedAt()
+                        .atZone(ZoneId.systemDefault()) // attach zone
+                        .toLocalDate();                 // strip time
+                    return userDate.equals(date);
+                })
+                .count();
+
+            trends.put(dateKey, count);
+        }
+
+        return trends;
+    }
+
+    private Map<Integer, Map<String, Object>> calculateTierAnalysis(List<User> users) {
+        Map<Integer, Map<String, Object>> tierAnalysis = new HashMap<>();
+        
+        
+        for (int tier = 1; tier <= 6; tier++) {
+            final int currentTier = tier;
+            List<User> tierUsers = users.stream()
+                .filter(user -> user.getAffordabilityTier() != null && user.getAffordabilityTier() == currentTier)
+                .collect(Collectors.toList());
+            
+            long verifiedCount = tierUsers.stream()
+                .filter(User::isIdVerified)
+                .count();
+            
+            Map<String, Object> tierData = new HashMap<>();
+            tierData.put("totalUsers", tierUsers.size());
+            tierData.put("verifiedUsers", verifiedCount);
+            tierData.put("verificationRate", tierUsers.size() > 0 ? 
+                (double) verifiedCount / tierUsers.size() * 100 : 0);
+            
+            tierAnalysis.put(tier, tierData);
+        }
+        
+        return tierAnalysis;
+    }
+
+    private Map<String, Object> calculateVerificationMetrics(List<User> users) {
+        Map<String, Object> metrics = new HashMap<>();
+        
+        long totalUsers = users.size();
+        long idVerified = users.stream().filter(User::isIdVerified).count();
+        long emailVerified = users.stream().filter(User::isEmailVerified).count();
+        long affordabilityAnalyzed = users.stream()
+            .filter(user -> user.getAffordabilityTier() != null && user.getAffordabilityTier() > 0)
+            .count();
+        
+        metrics.put("totalUsers", totalUsers);
+        metrics.put("idVerified", idVerified);
+        metrics.put("emailVerified", emailVerified);
+        metrics.put("affordabilityAnalyzed", affordabilityAnalyzed);
+        metrics.put("idVerificationRate", totalUsers > 0 ? (double) idVerified / totalUsers * 100 : 0);
+        metrics.put("emailVerificationRate", totalUsers > 0 ? (double) emailVerified / totalUsers * 100 : 0);
+        metrics.put("affordabilityAnalysisRate", totalUsers > 0 ? (double) affordabilityAnalyzed / totalUsers * 100 : 0);
+        
+        return metrics;
+    }
+
+
     // Helper methods for affordability functionality
     private String getTierName(Integer tier) {
         if (tier == null)
@@ -748,6 +993,29 @@ public class UserController {
         
         public String getLastName() { return lastName; }
         public void setLastName(String lastName) { this.lastName = lastName; }
+    }
+
+    // DTO classes for the new endpoints
+    public static class LeaveGroupRequest {
+        private String groupId;
+        private String reason;
+
+        public String getGroupId() { return groupId; }
+        public void setGroupId(String groupId) { this.groupId = groupId; }
+
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
+    public static class DeleteCardRequest {
+        private String cardId;
+        private String reason;
+
+        public String getCardId() { return cardId; }
+        public void setCardId(String cardId) { this.cardId = cardId; }
+
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
     }
    
 }
