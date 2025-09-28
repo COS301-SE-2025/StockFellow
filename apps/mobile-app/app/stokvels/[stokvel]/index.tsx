@@ -100,48 +100,48 @@ const Stokvel = () => {
             profileImage: null
           })) || [],
           activities: [
-            {
-              id: '1',
-              type: 'joined' as const,
-              memberName: 'John Doe',
-              stokvelName: data.group.name,
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-              profileImage: null
-            },
-            {
-              id: '2',
-              type: 'contribution' as const,
-              memberName: 'Jane Smith',
-              amount: 500,
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-              profileImage: null
-            },
-            {
-              id: '3',
-              type: 'contribution_change' as const,
-              memberName: 'Mike Johnson',
-              previousAmount: 300,
-              newAmount: 500,
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-              profileImage: null
-            },
-            {
-              id: '4',
-              type: 'payout' as const,
-              memberName: 'Mike Johnson',
-              amount: 2000,
-              recipientName: 'Sarah Williams',
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-              profileImage: null
-            },
-            {
-              id: '5',
-              type: 'missed_contribution' as const,
-              memberName: 'Robert Brown',
-              amount: 500,
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
-              profileImage: null
-            }
+            // {
+            //   id: '1',
+            //   type: 'joined' as const,
+            //   memberName: 'John Doe',
+            //   stokvelName: data.group.name,
+            //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+            //   profileImage: null
+            // },
+            // {
+            //   id: '2',
+            //   type: 'contribution' as const,
+            //   memberName: 'Jane Smith',
+            //   amount: 500,
+            //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
+            //   profileImage: null
+            // },
+            // {
+            //   id: '3',
+            //   type: 'contribution_change' as const,
+            //   memberName: 'Mike Johnson',
+            //   previousAmount: 300,
+            //   newAmount: 500,
+            //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+            //   profileImage: null
+            // },
+            // {
+            //   id: '4',
+            //   type: 'payout' as const,
+            //   memberName: 'Mike Johnson',
+            //   amount: 2000,
+            //   recipientName: 'Sarah Williams',
+            //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
+            //   profileImage: null
+            // },
+            // {
+            //   id: '5',
+            //   type: 'missed_contribution' as const,
+            //   memberName: 'Robert Brown',
+            //   amount: 500,
+            //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+            //   profileImage: null
+            // }
           ],
           userPermissions: data.userPermissions
         };
@@ -319,9 +319,15 @@ const Stokvel = () => {
               </Text>
 
               <View className="w-full">
-                {stokvel.activities.map((activity) => (
-                  <StokvelActivity key={activity.id} activity={activity} />
-                ))}
+                {stokvel.activities && stokvel.activities.length > 0 ? (
+                    stokvel.activities.map((activity) => (
+                    <StokvelActivity key={activity.id} activity={activity} />
+                    ))
+                ) : (
+                    <Text className="text-gray-500 text-center py-4 font-['PlusJakartaSans-Regular']">
+                    No recent activity
+                    </Text>
+                )}
               </View>
             </View>
           </View>
