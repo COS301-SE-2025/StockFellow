@@ -16,8 +16,8 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db, admin_db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db,admin_db
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
       - ./deployment/database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
@@ -428,84 +428,84 @@ services:
       timeout: 10s
       retries: 3
 
-  # Admin Front end
-  admin-frontend:
-    build:
-      context: ./apps/web-app
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
-        - VITE_KEYCLOAK_URL=${KEYCLOAK_AUTH_SERVER_URL}
-        - VITE_KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
-        - VITE_KEYCLOAK_CLIENT_ID=${KEYCLOAK_FRONTEND_CLIENT_ID}
-    container_name: admin-frontend
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 512M
-        reservations:
-          cpus: '0.125'
-          memory: 256M
-    depends_on:
-      - api-gateway
-      - admin-service
-    ports:
-      - "${ADMIN_FRONTEND_PORT:-3001}:80"
-    networks:
-      - stockfellow-prod
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
+  # # Admin Front end
+  # admin-frontend:
+  #   build:
+  #     context: ./apps/web-app
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
+  #       - VITE_KEYCLOAK_URL=${KEYCLOAK_AUTH_SERVER_URL}
+  #       - VITE_KEYCLOAK_REALM=${KEYCLOAK_REALM:-stockfellow}
+  #       - VITE_KEYCLOAK_CLIENT_ID=${KEYCLOAK_FRONTEND_CLIENT_ID}
+  #   container_name: admin-frontend
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.25'
+  #         memory: 512M
+  #       reservations:
+  #         cpus: '0.125'
+  #         memory: 256M
+  #   depends_on:
+  #     - api-gateway
+  #     - admin-service
+  #   ports:
+  #     - "${ADMIN_FRONTEND_PORT:-3001}:80"
+  #   networks:
+  #     - stockfellow-prod
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+  #     interval: 60s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+  #   restart: unless-stopped
   
-  webauthn-service:
-    build:
-      context: ./services/webauthn-service
-      dockerfile: Dockerfile
-    container_name: webauthn-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      keycloak:
-        condition: service_started
-    ports:
-      - "${WEBAUTHN_SERVICE_PORT}:4090"
-    environment:
-      - SERVER_PORT=4090
-      - SPRING_PROFILES_ACTIVE=${WEBAUTHN_SERVICE_SPRING_PROFILE}
-      - SPRING_DATASOURCE_URL=${KC_DB_URL}
-      - SPRING_DATASOURCE_USERNAME=${KC_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${KC_DB_PASSWORD}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
-      - KEYCLOAK_AUTH_SERVER_URL=${KEYCLOAK_AUTH_SERVER_URL}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
-      - KEYCLOAK_RESOURCE=webauthn-service
-      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - WEBAUTHN_RELYING_PARTY_NAME=${WEBAUTHN_RELYING_PARTY_NAME}
-      - WEBAUTHN_RELYING_PARTY_ID=${WEBAUTHN_RELYING_PARTY_ID}
-      - WEBAUTHN_ORIGIN=${WEBAUTHN_ORIGIN}
-      - WEBAUTHN_CHALLENGE_TIMEOUT=${WEBAUTHN_CHALLENGE_TIMEOUT}
-      - JVM_OPTS=${WEBAUTHN_SERVICE_JVM_OPTS}
-      - LOGGING_LEVEL_ROOT=WARN
-      - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
-    networks:
-      - stockfellow-prod
-    volumes:
-      - ./services/webauthn-service/src:/app/src
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4090/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+  # webauthn-service:
+  #   build:
+  #     context: ./services/webauthn-service
+  #     dockerfile: Dockerfile
+  #   container_name: webauthn-service
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     keycloak:
+  #       condition: service_started
+  #   ports:
+  #     - "${WEBAUTHN_SERVICE_PORT}:4090"
+  #   environment:
+  #     - SERVER_PORT=4090
+  #     - SPRING_PROFILES_ACTIVE=${WEBAUTHN_SERVICE_SPRING_PROFILE}
+  #     - SPRING_DATASOURCE_URL=${KC_DB_URL}
+  #     - SPRING_DATASOURCE_USERNAME=${KC_DB_USERNAME}
+  #     - SPRING_DATASOURCE_PASSWORD=${KC_DB_PASSWORD}
+  #     - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+  #     - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+  #     - KEYCLOAK_AUTH_SERVER_URL=${KEYCLOAK_AUTH_SERVER_URL}
+  #     - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+  #     - KEYCLOAK_RESOURCE=webauthn-service
+  #     - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+  #     - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+  #     - JWT_SECRET=${JWT_SECRET}
+  #     - JWT_EXPIRATION=${JWT_EXPIRATION}
+  #     - WEBAUTHN_RELYING_PARTY_NAME=${WEBAUTHN_RELYING_PARTY_NAME}
+  #     - WEBAUTHN_RELYING_PARTY_ID=${WEBAUTHN_RELYING_PARTY_ID}
+  #     - WEBAUTHN_ORIGIN=${WEBAUTHN_ORIGIN}
+  #     - WEBAUTHN_CHALLENGE_TIMEOUT=${WEBAUTHN_CHALLENGE_TIMEOUT}
+  #     - JVM_OPTS=${WEBAUTHN_SERVICE_JVM_OPTS}
+  #     - LOGGING_LEVEL_ROOT=WARN
+  #     - LOGGING_LEVEL_COM_STOCKFELLOW=INFO
+  #   networks:
+  #     - stockfellow-prod
+  #   volumes:
+  #     - ./services/webauthn-service/src:/app/src
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:4090/actuator/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
 
   # Resource Monitor - Monitor memory/CPU usage in production
   resource-monitor:
