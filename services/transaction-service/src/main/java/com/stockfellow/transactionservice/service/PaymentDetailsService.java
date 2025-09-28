@@ -220,7 +220,7 @@ public class PaymentDetailsService {
      * =                 PayerDetails                    =
      * ===================================================
      */
-    public PayerDetails addPayerDetails(CreatePayerDetailsDto createDto){
+    public PayerDetails addPayerDetails(CreatePayerDetailsDto createDto) {
         logger.info("Adding payer details for user: {}", createDto.getUserId());
 
         //Validate user exists
@@ -254,7 +254,7 @@ public class PaymentDetailsService {
         return pd;
     }
 
-    public List<PayerDetails> findPayerDetailsByUserId(UUID userId){
+    public List<PayerDetails> findPayerDetailsByUserId(UUID userId) {
         logger.info("Searching for payer details for user: {}", userId);
 
         List<PayerDetails> payerDetailsList = payerDetailsRepository.findByUserId(userId);
@@ -292,14 +292,14 @@ public class PaymentDetailsService {
      * - Add metadata to identify this as card authorization
      * - Stores pending authorization details
      */
-    public Map<String,Object> initializeCardAuth(InitializeCardAuthDto initDto){
+    public Map<String, Object> initializeCardAuth(InitializeCardAuthDto initDto) {
         try {
             String tempRef = generateAuthReference();
             PaystackTransactionRequest request = new PaystackTransactionRequest();
             request.setEmail(initDto.getEmail());
             request.setAmount(100); 
             request.setReference(tempRef);
-            request.setCallbackUrl(callbackBaseUrl+"/api/transaction/payment-methods/payer/callback");
+            request.setCallbackUrl(callbackBaseUrl + "/api/transaction/payment-methods/payer/callback");
             
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("purpose", "card_authorization");
@@ -350,7 +350,7 @@ public class PaymentDetailsService {
      * =                 PayoutDetails                   =
      * ===================================================
      */
-    public PayoutDetails addPayoutDetails(CreatePayoutDetailsDto createDto){
+    public PayoutDetails addPayoutDetails(CreatePayoutDetailsDto createDto) {
         logger.info("Adding payout details for user: {}", createDto.getUserId());
 
         //Validate user exists
@@ -393,7 +393,7 @@ public class PaymentDetailsService {
 
     }
 
-    public List<PayoutDetails> findPayoutDetailsByUserId(UUID userId){
+    public List<PayoutDetails> findPayoutDetailsByUserId(UUID userId) {
         logger.info("Searching for payout details for user: {}", userId);
 
         List<PayoutDetails> payoutDetailsList = payoutDetailsRepository.findByUserId(userId);
@@ -416,7 +416,9 @@ public class PaymentDetailsService {
     //Helpers
     public void validateNoDuplicatePayerDetails(CreatePayerDetailsDto createDto) {
         if (createDto.getSignature() != null) {
-            boolean signatureExists = payerDetailsRepository.existsByUserIdAndSignature(createDto.getUserId(), createDto.getSignature());
+            boolean signatureExists = payerDetailsRepository.existsByUserIdAndSignature(
+                    createDto.getUserId(), createDto.getSignature()
+                );
             if (signatureExists) {
                 throw new RuntimeException("This card is already saved to your account");
             }
@@ -429,11 +431,11 @@ public class PaymentDetailsService {
             }
         }
     }
-    public void validateNoDuplicatePayoutDetails(UUID userId){
+    public void validateNoDuplicatePayoutDetails(UUID userId) {
         Boolean pd = payoutDetailsRepository.existsByUserIdAndIsVerifiedTrue(userId);
 
-        if (pd){
-            throw new RuntimeException("User with ID: "+ userId + " already has payout details assigned");
+        if (pd) {
+            throw new RuntimeException("User with ID: " + userId + " already has payout details assigned");
         }
     }
 

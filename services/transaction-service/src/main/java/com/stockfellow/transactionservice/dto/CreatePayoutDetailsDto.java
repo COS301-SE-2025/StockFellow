@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class CreatePayoutDetailsDto {
     
     @NotNull(message = "User ID is required")
-    @JsonProperty("user_id")  // Add this
+    @JsonProperty("user_id")  
     private UUID userId;
     
     @NotNull(message = "Payout type is required")
@@ -16,19 +16,19 @@ public class CreatePayoutDetailsDto {
     
     @NotBlank(message = "Recipient name is required")
     @Size(max = 100, message = "Recipient name must not exceed 100 characters")
-    @JsonProperty("name")  // Add this
+    @JsonProperty("name")  
     private String recipientName;
     
     @NotBlank(message = "Account number is required")
-    @JsonProperty("account_number")  // Add this
+    @JsonProperty("account_number")  
     private String accountNumber;
     
     @NotBlank(message = "Bank code is required")
-    @JsonProperty("bank_code")  // Add this
+    @JsonProperty("bank_code")  
     private String bankCode;
     
     @NotBlank(message = "Bank name is required")
-    @JsonProperty("bank_name")  // Add this
+    @JsonProperty("bank_name")  
     private String bankName;
     
     // Optional fields
