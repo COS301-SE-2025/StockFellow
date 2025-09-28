@@ -460,6 +460,90 @@ class AdminService {
     return response.data;
   }
 
+
+ /**
+   * Mark a log entry for investigation (updated method name to match usage)
+   */
+  async markLogForInvestigation(logId: string, reason: string): Promise<{
+    success: boolean;
+    message: string;
+    logId: string;
+  }> {
+    console.log('Marking log for investigation:', { logId, reason });
+    
+    try {
+      const response = await this.client.post<{
+        success: boolean;
+        message: string;
+        logId: string;
+      }>('/api/admin/audit/fraud/investigate', {
+        logId,
+        reason
+      });
+      
+      console.log('Investigation response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error marking log for investigation:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('UUID')) {
+        throw new Error('Invalid log ID format. Please ensure the log ID is valid.');
+      }
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(`${error.response.data.error}: ${error.response.data.message || 'Failed to mark log for investigation'}`);
+      }
+      
+      throw new Error('Failed to mark log for investigation');
+    }
+  }
+
+  /**
+   * Get user activity for a specific user
+   */
+  async getUserActivity(userId: string): Promise<{
+    userId: string;
+    activities: any[];
+    count: number;
+    period: string;
+  }> {
+    console.log(`Fetching activity for user: ${userId}`);
+    
+    try {
+      const response = await this.client.get<{
+        userId: string;
+        activities: any[];
+        count: number;
+        period: string;
+      }>(`/api/admin/audit/user/${encodeURIComponent(userId)}/activity`);
+      
+      console.log('User activity response:', response.data);
+      
+      return {
+        userId: response.data.userId || userId,
+        activities: response.data.activities || [],
+        count: response.data.count || 0,
+        period: response.data.period || 'Last 30 days'
+      };
+    } catch (error: any) {
+      console.error(`Error fetching user activity for ${userId}:`, error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      throw new Error(`Failed to fetch activity for user ${userId}`);
+    }
+  }
+
+
+
+
   // Request management
   async getPendingRequests(params?: {
     requestType?: string;
