@@ -338,8 +338,7 @@ class AdminService {
       const { access_token, refresh_token, expires_in } = response.data;
       TokenManager.setToken(access_token, refresh_token, expires_in);
       
-      // Debug the token after setting it
-      TokenManager.debugToken();
+      console.log(TokenManager.getToken() ? 'Login successful, token stored' : 'Login failed, no token received');
       
     } catch (error: any) {
       console.error('Login request failed:', {

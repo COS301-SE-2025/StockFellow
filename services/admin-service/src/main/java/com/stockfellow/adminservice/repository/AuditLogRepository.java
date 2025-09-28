@@ -41,22 +41,37 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
         LocalDateTime endDate
     );
     
-    // Complex filtering query
+    // FIXED: Simplified complex filtering query - avoid null dates by using dynamic query logic
     @Query("""
         SELECT al FROM AuditLog al 
-        WHERE (:userId IS NULL OR al.userId = :userId)
-        AND (:endpoint IS NULL OR al.endpoint LIKE %:endpoint%)
-        AND (:startDate IS NULL OR al.timestamp >= :startDate)
-        AND (:endDate IS NULL OR al.timestamp <= :endDate)
-        AND (:flaggedOnly = false OR al.flaggedForReview = true)
+        WHERE (:userId IS NULL OR :userId = '' OR al.userId = :userId)
+        AND (:endpoint IS NULL OR :endpoint = '' OR UPPER(al.endpoint) LIKE UPPER(CONCAT('%', :endpoint, '%')))
+        AND (:flaggedOnly = FALSE OR al.flaggedForReview = TRUE)
         ORDER BY al.timestamp DESC
         """)
     Page<AuditLog> findAuditLogsWithFilters(
         @Param("userId") String userId,
         @Param("endpoint") String endpoint,
+        @Param("flaggedOnly") Boolean flaggedOnly,
+        Pageable pageable
+    );
+    
+    // Additional method with date range filtering
+    @Query("""
+        SELECT al FROM AuditLog al 
+        WHERE (:userId IS NULL OR :userId = '' OR al.userId = :userId)
+        AND (:endpoint IS NULL OR :endpoint = '' OR UPPER(al.endpoint) LIKE UPPER(CONCAT('%', :endpoint, '%')))
+        AND al.timestamp >= :startDate
+        AND al.timestamp <= :endDate
+        AND (:flaggedOnly = FALSE OR al.flaggedForReview = TRUE)
+        ORDER BY al.timestamp DESC
+        """)
+    Page<AuditLog> findAuditLogsWithDateFilters(
+        @Param("userId") String userId,
+        @Param("endpoint") String endpoint,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
-        @Param("flaggedOnly") boolean flaggedOnly,
+        @Param("flaggedOnly") Boolean flaggedOnly,
         Pageable pageable
     );
     

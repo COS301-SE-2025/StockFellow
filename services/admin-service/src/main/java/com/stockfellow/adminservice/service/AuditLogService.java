@@ -47,10 +47,22 @@ public class AuditLogService {
         }
     }
 
+     // FIXED: Updated method to handle date parameters properly
     public Page<AuditLog> getAuditLogs(String userId, String endpoint, LocalDateTime startDate, 
                                        LocalDateTime endDate, boolean flaggedOnly, Pageable pageable) {
+        
+        // If both start and end dates are provided, use the date filtering method
+        if (startDate != null && endDate != null) {
+            logger.debug("Using date filtering query with startDate: {}, endDate: {}", startDate, endDate);
+            return auditLogRepository.findAuditLogsWithDateFilters(
+                userId, endpoint, startDate, endDate, flaggedOnly, pageable
+            );
+        }
+        
+        // Otherwise use the simpler method without date constraints
+        logger.debug("Using basic filtering query without date constraints");
         return auditLogRepository.findAuditLogsWithFilters(
-            userId, endpoint, startDate, endDate, flaggedOnly, pageable
+            userId, endpoint, flaggedOnly, pageable
         );
     }
 
