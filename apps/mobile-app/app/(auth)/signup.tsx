@@ -250,34 +250,38 @@ const SignUp = () => {
         if (registrationResult.success) {
           console.log('Registration successful');
 
-          // Automatically login after successful registration
-          const result = await authService.login(form.username, form.password);
+          router.push({
+            pathname: '/login',
+          });
 
-          if (result.success) {
-            if (result.mfaRequired) {
-              // MFA is required - navigate to MFA verification
-              console.log('MFA required, navigating to verification');
-              router.push({
-                pathname: '/mfaVerification',
-                params: {
-                  email: result.email,
-                  tempSession: result.tempSession,
-                  message: result.message,
-                },
-              });
-            } else {
-              // No MFA required - login successful
-              console.log('Login successful, navigating to home');
-              router.replace('/(tabs)/home');
-            }
-          } else {
-            // Handle login failure
-            console.error('Login failed:', result.error);
-            setErrors({
-              ...errors,
-              username: result.error,
-            });
-          }
+          // // Automatically login after successful registration
+          // const result = await authService.login(form.username, form.password);
+
+          // if (result.success) {
+          //   if (result.mfaRequired) {
+          //     // MFA is required - navigate to MFA verification
+          //     console.log('MFA required, navigating to verification');
+          //     router.push({
+          //       pathname: '/mfaVerification',
+          //       params: {
+          //         email: result.email,
+          //         tempSession: result.tempSession,
+          //         message: result.message,
+          //       },
+          //     });
+          //   } else {
+          //     // No MFA required - login successful
+          //     console.log('Login successful, navigating to home');
+          //     router.replace('/(tabs)/home');
+          //   }
+          // } else {
+          //   // Handle login failure
+          //   console.error('Login failed:', result.error);
+          //   setErrors({
+          //     ...errors,
+          //     username: result.error,
+          //   });
+          // }
         } else {
           // Handle registration failure
           console.error('Registration failed:', registrationResult.error);
