@@ -1,0 +1,116 @@
+# droplet1-infrastructure.yml
+# Infrastructure services: PostgreSQL, Redis, ActiveMQ
+version: '3.8'
+
+services:
+  # Single PostgreSQL instance for all databases
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_MULTIPLE_DATABASES: keycloak_db,userservice_db,notification_db
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - /mnt/c/Users/deanr/Documents/University/2025/COS301/Capstone/StockFellow/deployment/database/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Redis 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 800M
+        reservations:
+          cpus: '0.5'
+          memory: 400M
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+    command: redis-server --appendonly yes --maxmemory 768mb --maxmemory-policy allkeys-lru ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ActiveMQ 
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: activemq
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 700M
+        reservations:
+          cpus: '0.125'
+          memory: 300M
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    ports:
+      - "61616:61616"  # JMS
+      - "8161:8161"    # Web console
+    volumes:
+      - activemq_prod_data:/var/lib/artemis-instance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8161/ || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # Resource Monitor
+  resource-monitor:
+    image: nicolargo/glances:latest
+    container_name: resource-monitor
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    ports:
+      - "61208:61208"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - GLANCES_OPT=-w
+    restart: unless-stopped
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+  activemq_prod_data:
+    driver: local

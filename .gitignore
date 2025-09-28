@@ -56,3 +56,13 @@ Thumbs.db
 *~
 .env
 .turbo
+.env.drop*
+.turbo
+
+# deployment
+deploy-config.sh
+start.sh
+stop.sh
+stockfellow-9e*.json
+save/
+.env.save

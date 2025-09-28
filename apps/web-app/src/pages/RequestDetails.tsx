@@ -1,11 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 import UserRequestForm from "../components/requests/UserRequestForm";
 
 const RequestDetails = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+//   const navigate = useNavigate();
 
   return (
     <div className="flex h-screen bg-gray-50">
