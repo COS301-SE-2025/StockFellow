@@ -1,4 +1,4 @@
-# Makefile for easier deployment
+# Makefile for easier deployment simulation in combination with the deployment/deply.sh script
 .PHONY: dev-up dev-down dev-build dev-logs dev-health prod-up prod-down prod-build prod-logs prod-health clean
 
 # Development commands

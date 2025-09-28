@@ -37,6 +37,7 @@ scheduler:
 paystack:
   secretKey: ${PAYSTACK_TEST_API_KEY}
   callback-base-url: ${CALLBACK_BASE_URL}
+  base-url: ${PAYSTACK_API_URL:https://api.paystack.co}
   
 server:
   port: 4080 # was 4042
@@ -68,6 +69,4 @@ springdoc:
   group-configs:
     - group: 'transaction-service'
       paths-to-match: '/api/**'
-
-paystack:
-  base-url: ${PAYSTACK_API_URL:https://api.paystack.co}
+  

@@ -65,11 +65,11 @@ public class PaystackService {
         //     throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to initiate transfer");
         // }
         PaystackTransferResponse.PaystackTransferData data = new PaystackTransferResponse.PaystackTransferData();
-        data.setAmount(null);
-        data.setId(PAYSTACK_BASE_URL);
-        data.setRecipient(null);
-        data.setStatus(PAYSTACK_BASE_URL);
-        data.setTransferCode(PAYSTACK_BASE_URL);
+        // data.setAmount(null);
+        // data.setId(PAYSTACK_BASE_URL);
+        // data.setRecipient(null);
+        // data.setStatus(PAYSTACK_BASE_URL);
+        // data.setTransferCode(PAYSTACK_BASE_URL);
         
 
         PaystackTransferResponse response = new PaystackTransferResponse();

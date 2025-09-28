@@ -1,35 +1,39 @@
 {
   "expo": {
-    "name": "mobile-app",
+    "name": "StockFellow",
     "slug": "mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/stockfellow_logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "mobile-app",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/stockfellow_logo.png",
+        "backgroundColor": "#00000000"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/icons/savings.png",
       "bundler": "metro"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/stockfellow_logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#00000000",
+          "imageWidth": 200
+        }
+      ]
     ]
   }
 }
