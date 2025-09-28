@@ -116,11 +116,11 @@
 
 | Link                   | Description                   |
 |------------------------|-------------------------------|
-| [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Stockfellow%20SRS.pdf) | Project Requirements            |
+| [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Stockfellow_SRS_v4.pdf) | Project Requirements            |
 | [Architectural Specification](https://docs.google.com/document/d/1XvB7P_vGG0pFHn_IjOlX8Cg9RFqJQHc_K1H3oE6slBU/edit?usp=drive_link) | Architectural Patterns, Strategies and Functional Requirements   |
 | [Coding Standard](https://docs.google.com/document/d/1JtcF5wKQR_0zuQ-hYQdeu_yoRJDwTwQZCLHr7yqKuU8/edit?usp=drive_link) | Coding best practices to follow and programming guidelines   |
 | [Service Contract](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/servicess_contract.md) | Service contracts and API specifications for system integration |
-| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/deployment_model.md) | Deployment architecture and infrastructure specifications |
+| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
 | [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/user_manual.pdf) | Step by step documentation on how to use the app |
 | [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/technical_installation_manual.pdf) | Guide to install and run project |
 
