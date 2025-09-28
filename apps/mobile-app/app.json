@@ -1,25 +1,37 @@
 {
   "expo": {
     "name": "StockFellow",
-    "slug": "mobile-app",
+    "slug": "stockfellow-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/stockfellow_logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "mobile-app",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "developmentClient": {
+      "silentLaunch": true
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/stockfellow_logo.png",
-        "backgroundColor": "#00000000"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.devopps.mobileapp",
+      "runtimeVersion": "1.0.0"
     },
     "web": {
-      "favicon": "./assets/icons/savings.png",
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -30,10 +42,19 @@
         {
           "image": "./assets/stockfellow_logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#00000000",
+          "backgroundColor": "#ffffff",
           "imageWidth": 200
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c5a8e985-a8d5-4a9b-a800-3dee659da0b4"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c5a8e985-a8d5-4a9b-a800-3dee659da0b4"
+    }
   }
 }
