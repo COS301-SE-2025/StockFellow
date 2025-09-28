@@ -1,0 +1,428 @@
+# # #!/bin/sh
+# # # Combined Load Testing Script for StockFellow Services
+# # # Requires 'hey' (https://github.com/rakyll/hey)
+
+# # WORKERS=10
+# # REQUESTS=50
+# # VERBOSE=0
+# # OUTPUT_FILE=""
+
+# # # Sample values for path parameters
+# # declare -A PARAM_SAMPLES
+# # PARAM_SAMPLES[groupId]="1"
+# # PARAM_SAMPLES[cycleId]="1"
+# # PARAM_SAMPLES[userId]="1"
+# # PARAM_SAMPLES[id]="1"
+# # PARAM_SAMPLES[transactionId]="1"
+# # PARAM_SAMPLES[notificationId]="1"
+# # PARAM_SAMPLES[adminId]="1"
+
+# # # Parse arguments
+# # while [ $# -gt 0 ]; do
+# #   case "$1" in
+# #     -w|--workers) WORKERS="$2"; shift 2 ;;
+# #     -r|--requests) REQUESTS="$2"; shift 2 ;;
+# #     -v|--verbose) VERBOSE=1; shift ;;
+# #     -o|--output-file) OUTPUT_FILE="$2"; shift 2 ;;
+# #     *) shift ;;
+# #   esac
+# # done
+
+# # # Check hey installation
+# # if ! command -v hey >/dev/null 2>&1; then
+# #   echo "Error: 'hey' is not installed. Install with: go install github.com/rakyll/hey@latest"
+# #   exit 1
+# # fi
+
+# # # Extract endpoints using Python extractor
+# # if [ $VERBOSE -eq 1 ]; then echo "Extracting endpoints..."; fi
+# # ENDPOINTS=$(python3 ./extract_endpoints.py --output-format txt 2>/dev/null | grep '^http')
+
+# # if [ -z "$ENDPOINTS" ]; then
+# #   echo "No endpoints found."
+# #   exit 1
+# # fi
+
+# # echo "Found $(echo "$ENDPOINTS" | wc -l) endpoints."
+
+# # # Substitute path parameters
+# # prepare_endpoint() {
+# #   URL="$1"
+# #   for PARAM in "${!PARAM_SAMPLES[@]}"; do
+# #     URL=$(echo "$URL" | sed "s/{${PARAM}}/${PARAM_SAMPLES[$PARAM]}/g")
+# #   done
+# #   echo "$URL"
+# # }
+
+# # # Function to run hey test
+# # run_test() {
+# #   URL="$1"
+# #   METHOD="GET"
+
+# #   CMD="hey -n $REQUESTS -c $WORKERS -m $METHOD $URL"
+# #   OUTPUT=$(eval "$CMD" 2>&1)
+
+# #   AVG=$(echo "$OUTPUT" | grep "Average:" | awk '{print $2}')
+# #   RPS=$(echo "$OUTPUT" | grep "Requests/sec:" | awk '{print $2}')
+
+# #   printf "%-50s Avg RT: %-6s RPS: %-6s\n" "$URL" "$AVG" "$RPS"
+# # }
+
+# # # Run tests in parallel
+# # for ENDPOINT in $ENDPOINTS; do
+# #   URL=$(prepare_endpoint "$ENDPOINT")
+# #   run_test "$URL" &
+# # done
+
+# # wait
+# # echo "Load testing complete."
+# #!/bin/bash
+# # Hey load testing for StockFellow endpoints
+# # All tests disable redirects
+
+# WORKERS=10
+# REQUESTS=100
+
+# # Sample values for path parameters
+# declare -A PARAM_SAMPLES
+# PARAM_SAMPLES[notificationId]="1"
+# PARAM_SAMPLES[userId]="1"
+# PARAM_SAMPLES[groupId]="1"
+# PARAM_SAMPLES[cycleId]="1"
+# PARAM_SAMPLES[entityType]="1"
+# PARAM_SAMPLES[entityId]="1"
+# PARAM_SAMPLES[transactionId]="1"
+# PARAM_SAMPLES[transferId]="1"
+# PARAM_SAMPLES[payerId]="1"
+# PARAM_SAMPLES[email]="test@example.com"
+# PARAM_SAMPLES[id]="1"
+
+# # List of endpoints
+# ENDPOINTS=(
+# "http://localhost:4050/api/notifications/{notificationId}"
+# "http://localhost:4050/api/notifications/bulk"
+# "http://localhost:4050/api/notifications"
+# "http://localhost:4050/api/notifications/send"
+# "http://localhost:4050/api/notifications/user/count"
+# "http://localhost:4050/api/notifications/user/unread"
+# "http://localhost:4050/api/notifications/user"
+# "http://localhost:4050/api/notifications/api/notifications"
+# "http://localhost:4050/api/notifications/{notificationId}/read"
+# "http://localhost:4050/api/notifications/user/read-all"
+# "http://localhost:3000/api/auth/login"
+# "http://localhost:3000/api/health"
+# "http://localhost:3000/api/api"
+# "http://localhost:3000/api/**"
+# "http://localhost:3000/api/auth/login"
+# "http://localhost:3000/api/auth/refresh"
+# "http://localhost:3000/api/auth/logout"
+# "http://localhost:3000/api/**"
+# "http://localhost:3000/api/**"
+# "http://localhost:3000/api/auth/register"
+# "http://localhost:3000/api/auth/api/auth"
+# "http://localhost:3000/api/auth/validate"
+# "http://localhost:3000/api/auth/logout"
+# "http://localhost:4060/api/admin/analytics/transactions/stats"
+# "http://localhost:3000/api/auth/register"
+# "http://localhost:3000/api/auth/verify-mfa"
+# "http://localhost:3000/api/routes"
+# "http://localhost:3000/api/auth/verify-id"
+# "http://localhost:3000/api/**"
+# "http://localhost:8087/api/mfa/status/{email}"
+# "http://localhost:8087/api/mfa/api/mfa"
+# "http://localhost:8087/api/mfa/invalidate/{email}"
+# "http://localhost:8087/api/mfa/verify-otp"
+# "http://localhost:8087/api/mfa/send-otp"
+# "http://localhost:4060/api/admin/requests/api/admin/requests"
+# "http://localhost:4060/api/admin/audit/user/{userId}/activity"
+# "http://localhost:4060/api/admin"
+# "http://localhost:4060/api/admin/analytics/api/admin/analytics"
+# "http://localhost:4060/api/admin/analytics/groups/stats"
+# "http://localhost:4060/api/admin/analytics/revenue"
+# "http://localhost:4060/api/admin/api/admin"
+# "http://localhost:4060/api/admin/audit/api/admin/audit"
+# "http://localhost:4060/api/admin/analytics/dashboard"
+# "http://localhost:4060/api/admin/analytics/users/stats"
+# "http://localhost:4060/api/admin/dashboard/summary"
+# "http://localhost:4060/api/admin/audit/fraud/investigate"
+# "http://localhost:4060/api/admin/requests/{requestId}/approve"
+# "http://localhost:4060/api/admin/audit/logs"
+# "http://localhost:4060/api/admin/audit/fraud/suspicious"
+# "http://localhost:4060/api/admin/requests/pending"
+# "http://localhost:4060/api/admin/requests/{requestId}/details"
+# "http://localhost:4060/api/admin/requests/{requestId}/reject"
+# "http://localhost:4060/api/admin/auth/logout"
+# "http://localhost:4060/api/admin/auth/login"
+# "http://localhost:4060/api/admin/auth/refresh"
+# "http://localhost:4060/api/admin/auth/validate"
+# "http://localhost:4060/api/admin/auth/api/admin/auth"
+# "http://localhost:4040/api/groups/{groupId}/record-payout"
+# "http://localhost:4080/api/activity-logs/entity/{entityType}/{entityId}"
+# "http://localhost:4040/api/groups/{groupId}/requests"
+# "http://localhost:4080/api/activity-logs/cycle/{cycleId}"
+# "http://localhost:4040/api/groups/{groupId}/next-payee"
+# "http://localhost:4040/api/groups/search"
+# "http://localhost:4040/api/groups/api/groups"
+# "http://localhost:4080/api/transactions/user"
+# "http://localhost:4040/api/groups/{groupId}"
+# "http://localhost:4040/api/groups"
+# "http://localhost:4080/api/cycles/group/{groupId}"
+# "http://localhost:4040/api/groups/create"
+# "http://localhost:4040/api/groups/join-tier"
+# "http://localhost:4080/api/activity-logs/entity/{entityType}"
+# "http://localhost:4040/api/groups/{groupId}/request"
+# "http://localhost:4040/api/groups/{groupId}/join"
+# "http://localhost:4040/api/groups/{groupId}/view"
+# "http://localhost:4040/api/groups/user"
+# "http://localhost:4080/api/cycles/{cycleId}/status"
+# "http://localhost:4080/api/transactions/cycle/{cycleId}"
+# "http://localhost:4080/api/transactions/charge-card"
+# "http://localhost:4080/api/transaction/payment-methods/payout/user"
+# "http://localhost:4080/api/users/sync"
+# "http://localhost:4080/api/transactions"
+# "http://localhost:4080/api/transaction/payment-methods/payout"
+# "http://localhost:4080/api/transaction/payment-methods/payer/user"
+# "http://localhost:4080/api/transactions/{transactionId}"
+# "http://localhost:4080/api/transaction/payment-methods/payer/callback"
+# "http://localhost:4080/api/transfers/cycle/{cycleId}"
+# "http://localhost:4080/api/activity-logs/user/{userId}"
+# "http://localhost:4080/api/cycles/{cycleId}"
+# "http://localhost:4080/api/users/{userId}"
+# "http://localhost:4080/api/transfers/{transferId}/process"
+# "http://localhost:4080/api/transaction/payment-methods/payer/initialize"
+# "http://localhost:4080/api/transaction/payment-methods/payer/{payerId}/deactivate"
+# "http://localhost:4080/api/transactions/{transactionId}/retry"
+# "http://localhost:4080/api/transfers/user/{userId}"
+# "http://localhost:4080/api/cycles"
+# "http://localhost:4080/api/transfers"
+# "http://localhost:4080/api/users/sync/batch"
+# "http://localhost:4080/api/webhook"
+# "http://localhost:4080/api/transfers/{transferId}"
+# "http://localhost:4080/api/transaction/payment-methods/api/transaction/payment-methods"
+# "http://localhost:4080/api/users/api/users"
+# "http://localhost:4080/api/transactions/api/transactions"
+# "http://localhost:4080/api/webhook/api/webhook"
+# "http://localhost:4080/api/activity-logs/api/activity-logs"
+# "http://localhost:4080/api/transfers/api/transfers"
+# "http://localhost:4080/api/cycles/api/cycles"
+# "http://localhost:4020/api/users"
+# "http://localhost:4020/api/users/verified"
+# "http://localhost:4020/api/users/{id}"
+# "http://localhost:4020/api/users/verifyID"
+# "http://localhost:4020/api/users/profile"
+# "http://localhost:4020/api/sync"
+# "http://localhost:4020/api/users/admin/requests/leave-group"
+# "http://localhost:4020/api/sync/api/sync"
+# "http://localhost:4020/auth/login"
+# "http://localhost:4020/api/users/register"
+# "http://localhost:4020/api/users/affordability/stats"
+# "http://localhost:4020/api/users/admin/requests/delete-card"
+# "http://localhost:4020/auth/logout"
+# "http://localhost:4020/api/users/affordability/analyze"
+# "http://localhost:4020/api/users/search"
+# "http://localhost:4020/api/users/api/users"
+# "http://localhost:4020/auth/auth"
+# "http://localhost:4020/api/sync/status/{userId}"
+# "http://localhost:4020/api/users/admin/analytics"
+# "http://localhost:4020/api/users/affordability"
+# "http://localhost:4020/api/users/stats"
+# )
+
+# # Replace path parameters
+# prepare_url() {
+#     URL="$1"
+#     for PARAM in "${!PARAM_SAMPLES[@]}"; do
+#         URL="${URL//\{$PARAM\}/${PARAM_SAMPLES[$PARAM]}}"
+#     done
+#     echo "$URL"
+# }
+
+# # Run hey tests
+# for EP in "${ENDPOINTS[@]}"; do
+#     URL=$(prepare_url "$EP")
+#     echo "Testing: $URL"
+#     hey -n $REQUESTS -c $WORKERS -m GET --disable-redirects "$URL"
+# done
+
+# echo "All tests completed."
+#!/bin/bash
+# Hey load testing for StockFellow endpoints
+# Only displays URL, Avg RT, and RPS
+# All tests disable redirects
+
+WORKERS=10
+REQUESTS=100
+
+# Sample values for path parameters
+declare -A PARAM_SAMPLES
+PARAM_SAMPLES[notificationId]="1"
+PARAM_SAMPLES[userId]="1"
+PARAM_SAMPLES[groupId]="1"
+PARAM_SAMPLES[cycleId]="1"
+PARAM_SAMPLES[entityType]="1"
+PARAM_SAMPLES[entityId]="1"
+PARAM_SAMPLES[transactionId]="1"
+PARAM_SAMPLES[transferId]="1"
+PARAM_SAMPLES[payerId]="1"
+PARAM_SAMPLES[email]="test@example.com"
+PARAM_SAMPLES[id]="1"
+
+# List of endpoints (shortened example; you can paste all)
+ENDPOINTS=(
+"http://localhost:4050/api/notifications/{notificationId}"
+"http://localhost:4050/api/notifications/bulk"
+"http://localhost:4050/api/notifications"
+"http://localhost:4050/api/notifications/send"
+"http://localhost:4050/api/notifications/user/count"
+"http://localhost:4050/api/notifications/user/unread"
+"http://localhost:4050/api/notifications/user"
+"http://localhost:4050/api/notifications/api/notifications"
+"http://localhost:4050/api/notifications/{notificationId}/read"
+"http://localhost:4050/api/notifications/user/read-all"
+"http://localhost:3000/api/auth/login"
+"http://localhost:3000/api/health"
+"http://localhost:3000/api/api"
+"http://localhost:3000/api/**"
+"http://localhost:3000/api/auth/login"
+"http://localhost:3000/api/auth/refresh"
+"http://localhost:3000/api/auth/logout"
+"http://localhost:3000/api/**"
+"http://localhost:3000/api/**"
+"http://localhost:3000/api/auth/register"
+"http://localhost:3000/api/auth/api/auth"
+"http://localhost:3000/api/auth/validate"
+"http://localhost:3000/api/auth/logout"
+"http://localhost:4060/api/admin/analytics/transactions/stats"
+"http://localhost:3000/api/auth/register"
+"http://localhost:3000/api/auth/verify-mfa"
+"http://localhost:3000/api/routes"
+"http://localhost:3000/api/auth/verify-id"
+"http://localhost:3000/api/**"
+"http://localhost:8087/api/mfa/status/{email}"
+"http://localhost:8087/api/mfa/api/mfa"
+"http://localhost:8087/api/mfa/invalidate/{email}"
+"http://localhost:8087/api/mfa/verify-otp"
+"http://localhost:8087/api/mfa/send-otp"
+"http://localhost:4060/api/admin/requests/api/admin/requests"
+"http://localhost:4060/api/admin/audit/user/{userId}/activity"
+"http://localhost:4060/api/admin"
+"http://localhost:4060/api/admin/analytics/api/admin/analytics"
+"http://localhost:4060/api/admin/analytics/groups/stats"
+"http://localhost:4060/api/admin/analytics/revenue"
+"http://localhost:4060/api/admin/api/admin"
+"http://localhost:4060/api/admin/audit/api/admin/audit"
+"http://localhost:4060/api/admin/analytics/dashboard"
+"http://localhost:4060/api/admin/analytics/users/stats"
+"http://localhost:4060/api/admin/dashboard/summary"
+"http://localhost:4060/api/admin/audit/fraud/investigate"
+"http://localhost:4060/api/admin/requests/{requestId}/approve"
+"http://localhost:4060/api/admin/audit/logs"
+"http://localhost:4060/api/admin/audit/fraud/suspicious"
+"http://localhost:4060/api/admin/requests/pending"
+"http://localhost:4060/api/admin/requests/{requestId}/details"
+"http://localhost:4060/api/admin/requests/{requestId}/reject"
+"http://localhost:4060/api/admin/auth/logout"
+"http://localhost:4060/api/admin/auth/login"
+"http://localhost:4060/api/admin/auth/refresh"
+"http://localhost:4060/api/admin/auth/validate"
+"http://localhost:4060/api/admin/auth/api/admin/auth"
+"http://localhost:4040/api/groups/{groupId}/record-payout"
+"http://localhost:4080/api/activity-logs/entity/{entityType}/{entityId}"
+"http://localhost:4040/api/groups/{groupId}/requests"
+"http://localhost:4080/api/activity-logs/cycle/{cycleId}"
+"http://localhost:4040/api/groups/{groupId}/next-payee"
+"http://localhost:4040/api/groups/search"
+"http://localhost:4040/api/groups/api/groups"
+"http://localhost:4080/api/transactions/user"
+"http://localhost:4040/api/groups/{groupId}"
+"http://localhost:4040/api/groups"
+"http://localhost:4080/api/cycles/group/{groupId}"
+"http://localhost:4040/api/groups/create"
+"http://localhost:4040/api/groups/join-tier"
+"http://localhost:4080/api/activity-logs/entity/{entityType}"
+"http://localhost:4040/api/groups/{groupId}/request"
+"http://localhost:4040/api/groups/{groupId}/join"
+"http://localhost:4040/api/groups/{groupId}/view"
+"http://localhost:4040/api/groups/user"
+"http://localhost:4080/api/cycles/{cycleId}/status"
+"http://localhost:4080/api/transactions/cycle/{cycleId}"
+"http://localhost:4080/api/transactions/charge-card"
+"http://localhost:4080/api/transaction/payment-methods/payout/user"
+"http://localhost:4080/api/users/sync"
+"http://localhost:4080/api/transactions"
+"http://localhost:4080/api/transaction/payment-methods/payout"
+"http://localhost:4080/api/transaction/payment-methods/payer/user"
+"http://localhost:4080/api/transactions/{transactionId}"
+"http://localhost:4080/api/transaction/payment-methods/payer/callback"
+"http://localhost:4080/api/transfers/cycle/{cycleId}"
+"http://localhost:4080/api/activity-logs/user/{userId}"
+"http://localhost:4080/api/cycles/{cycleId}"
+"http://localhost:4080/api/users/{userId}"
+"http://localhost:4080/api/transfers/{transferId}/process"
+"http://localhost:4080/api/transaction/payment-methods/payer/initialize"
+"http://localhost:4080/api/transaction/payment-methods/payer/{payerId}/deactivate"
+"http://localhost:4080/api/transactions/{transactionId}/retry"
+"http://localhost:4080/api/transfers/user/{userId}"
+"http://localhost:4080/api/cycles"
+"http://localhost:4080/api/transfers"
+"http://localhost:4080/api/users/sync/batch"
+"http://localhost:4080/api/webhook"
+"http://localhost:4080/api/transfers/{transferId}"
+"http://localhost:4080/api/transaction/payment-methods/api/transaction/payment-methods"
+"http://localhost:4080/api/users/api/users"
+"http://localhost:4080/api/transactions/api/transactions"
+"http://localhost:4080/api/webhook/api/webhook"
+"http://localhost:4080/api/activity-logs/api/activity-logs"
+"http://localhost:4080/api/transfers/api/transfers"
+"http://localhost:4080/api/cycles/api/cycles"
+"http://localhost:4020/api/users"
+"http://localhost:4020/api/users/verified"
+"http://localhost:4020/api/users/{id}"
+"http://localhost:4020/api/users/verifyID"
+"http://localhost:4020/api/users/profile"
+"http://localhost:4020/api/sync"
+"http://localhost:4020/api/users/admin/requests/leave-group"
+"http://localhost:4020/api/sync/api/sync"
+"http://localhost:4020/auth/login"
+"http://localhost:4020/api/users/register"
+"http://localhost:4020/api/users/affordability/stats"
+"http://localhost:4020/api/users/admin/requests/delete-card"
+"http://localhost:4020/auth/logout"
+"http://localhost:4020/api/users/affordability/analyze"
+"http://localhost:4020/api/users/search"
+"http://localhost:4020/api/users/api/users"
+"http://localhost:4020/auth/auth"
+"http://localhost:4020/api/sync/status/{userId}"
+"http://localhost:4020/api/users/admin/analytics"
+"http://localhost:4020/api/users/affordability"
+"http://localhost:4020/api/users/stats"
+)
+
+# Replace path parameters
+prepare_url() {
+    URL="$1"
+    for PARAM in "${!PARAM_SAMPLES[@]}"; do
+        URL="${URL//\{$PARAM\}/${PARAM_SAMPLES[$PARAM]}}"
+    done
+    echo "$URL"
+}
+
+# Run hey tests
+for EP in "${ENDPOINTS[@]}"; do
+    URL=$(prepare_url "$EP")
+    echo "Testing: $URL"
+
+    # Run hey and capture output
+    OUTPUT=$(hey -n $REQUESTS -c $WORKERS --disable-redirects "$URL" 2>/dev/null)
+
+    # Extract Avg Response Time and Requests/sec
+    AVG_RT=$(echo "$OUTPUT" | grep "Average:" | awk '{print $2}')
+    RPS=$(echo "$OUTPUT" | grep "Requests/sec:" | awk '{print $2}')
+
+    echo "URL: $URL"
+    echo "Avg RT: ${AVG_RT}s"
+    echo "RPS: $RPS"
+    echo "----------------------------"
+done
+
+echo "All tests completed."
