@@ -9,6 +9,8 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Linking } from 'react-native';
 import HelpMenu from '../../src/components/help/HelpMenu';
+import { useEffect } from 'react';
+import userService from '../../src/services/userService'; 
 
 const profile = () => {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -22,10 +24,15 @@ const profile = () => {
   
   // Edit Profile states
   const [profileData, setProfileData] = useState({
-    name: 'Son Goku',
-    email: 'songoku@dragonball.com',
+    name: '',
+    email: '',
     profileImage: null as string | null
   });
+
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [affordabilityInfo, setAffordabilityInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -88,6 +95,65 @@ const profile = () => {
       setProfileData({...profileData, profileImage: result.assets[0].uri});
     }
   };
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await userService.getProfile();
+        
+        // Update profile data with real data
+        setUserProfile(response.user);
+        setAffordabilityInfo(response.affordability);
+        
+        // Update local state for display
+        setProfileData({
+          name: `${response.user.firstName || ''} ${response.user.lastName || ''}`.trim() || response.user.username,
+          email: response.user.email,
+          profileImage: null 
+        });
+        
+      } catch (err: any) {
+        setError(err.message);
+        console.error('Failed to load profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <TopBar title="Your Profile" />
+        <View className="flex-1 justify-center items-center">
+          <Text>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <TopBar title="Your Profile" />
+        <View className="flex-1 justify-center items-center px-6">
+          <Text className="text-red-500 text-center">Error loading profile: {error}</Text>
+          <TouchableOpacity 
+            className="mt-4 bg-[#1DA1FA] px-6 py-3 rounded-full"
+            onPress={() => {
+              setError(null);
+              // fetchUserProfile();
+            }}
+          >
+            <Text className="text-white">Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
