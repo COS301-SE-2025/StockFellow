@@ -43,40 +43,6 @@ const Login = () => {
     return valid;
   };
 
-  // const handleLogin = async () => {
-  //   if (validateForm()) {
-  //     setIsSubmitting(true);
-  //     try {
-  //       console.log('Attempting login...');
-
-  //       // Auth service instead of direct KC call
-  //       const result = await authService.login(form.username, form.password);
-
-  //       if (result.success) {
-  //         console.log('Login successful');
-  //         router.push('/(tabs)/home');
-  //       } else {
-  //         // Handle login failure
-  //         console.error('Login failed:', result.error);
-  //         setErrors({
-  //           ...errors,
-  //           username: result.error,
-  //         });
-  //       }
-  //     } catch (error) {
-  //       console.error('Login error:', error);
-  //       setErrors({
-  //         ...errors,
-  //         username: error instanceof Error ?
-  //           error.message :
-  //           'Network error. Please check your connection.',
-  //       });
-  //     } finally {
-  //       setIsSubmitting(false);
-  //     }
-  //   }
-  // };
-
   const handleLogin = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
@@ -92,9 +58,9 @@ const Login = () => {
             router.push({
               pathname: '/mfaVerification',
               params: {
-                email: result.email,
-                tempSession: result.tempSession,
-                message: result.message,
+                email: result.email || form.username, // Fallback to username if email is undefined
+                tempSession: result.tempSession || '', // Provide empty string fallback
+                message: result.message || 'MFA verification required',
               },
             });
           } else {
@@ -107,7 +73,7 @@ const Login = () => {
           console.error('Login failed:', result.error);
           setErrors({
             ...errors,
-            username: result.error,
+            username: result.error || 'Login failed. Please try again.',
           });
         }
       } catch (error) {

@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult; 
+import org.springframework.security.oauth2.core.OAuth2Error; 
 import org.springframework.security.web.SecurityFilterChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +36,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers("/api/admin/auth/**").permitAll()
@@ -50,42 +52,57 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // @Bean
-    // public JwtDecoder jwtDecoder() {
-    //     // Use the JWK Set URI directly - this will work regardless of issuer mismatch
-    //     logger.debug("Configuring JwtDecoder with custom JWK Set URI");
-    //     NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
-    //             .withJwkSetUri("http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs")
-    //             .build();
-        
-    //     // Create a minimal validator that skips issuer validation for now
-    //     OAuth2TokenValidator<Jwt> withoutIssuer = JwtValidators.createDefaultWithIssuer("");
-    //     jwtDecoder.setJwtValidator(withoutIssuer);
-        
-    //     return jwtDecoder;
-    // }
     @Bean
     public JwtDecoder jwtDecoder() {
         logger.debug("Configuring JwtDecoder with custom JWK Set URI");
+        
+        String jwkSetUri = "http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs";
+        logger.info("JWK Set URI: {}", jwkSetUri);
+        
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
-                .withJwkSetUri("http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs")
+                .withJwkSetUri(jwkSetUri)
                 .build();
         
-        OAuth2TokenValidator<Jwt> validator = JwtValidators.createDefault();  // Only timestamp validation
-        jwtDecoder.setJwtValidator(validator);
+        // Use the default validators but with flexible issuer validation
+        OAuth2TokenValidator<Jwt> defaultValidator = JwtValidators.createDefault();
         
+        OAuth2TokenValidator<Jwt> customIssuerValidator = new OAuth2TokenValidator<Jwt>() {
+            @Override
+            public OAuth2TokenValidatorResult validate(Jwt jwt) {
+                String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : "";
+                logger.debug("Validating token with issuer: {}", issuer);
+                
+                // Accept both keycloak (internal) and localhost (external) as valid issuers
+                if (issuer.equals("http://keycloak:8080/realms/stockfellow") || 
+                    issuer.equals("http://localhost:8080/realms/stockfellow")) {
+                    logger.debug("Issuer validation passed for: {}", issuer);
+                    return OAuth2TokenValidatorResult.success();
+                }
+                
+                logger.warn("Invalid issuer: {}", issuer);
+                OAuth2Error error = new OAuth2Error("invalid_issuer", 
+                    "Token issuer is not valid: " + issuer, null);
+                return OAuth2TokenValidatorResult.failure(error);
+            }
+        };
+        
+        // Combine default validation with custom issuer validation
+        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
+            defaultValidator, customIssuerValidator);
+        
+        jwtDecoder.setJwtValidator(validator);
         return jwtDecoder;
     }
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-
         logger.debug("Configuring JwtAuthenticationConverter");
         JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
         
         jwtConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
             logger.debug("Processing JWT claims for authorities");
-            logger.debug("Full JWT claims: {}", jwt.getClaims());
+            logger.debug("JWT subject: {}", jwt.getSubject());
+            logger.debug("JWT issuer: {}", jwt.getIssuer());
             
             Collection<GrantedAuthority> authorities = new ArrayList<>();
             
@@ -97,18 +114,36 @@ public class SecurityConfig {
                 logger.debug("Found realm roles: {}", roles);
                 
                 for (String role : roles) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-                    logger.debug("Added authority: ROLE_{}", role);
+                    String authority = "ROLE_" + role;
+                    authorities.add(new SimpleGrantedAuthority(authority));
+                    logger.debug("Added authority: {}", authority);
                 }
+            } else {
+                logger.warn("No realm_access found in JWT claims");
             }
             
             // Also check resource_access for client-specific roles
             Map<String, Object> resourceAccess = jwt.getClaimAsMap("resource_access");
             if (resourceAccess != null) {
-                logger.debug("Resource access found: {}", resourceAccess.keySet());
+                logger.debug("Resource access found for clients: {}", resourceAccess.keySet());
+                
+                // Check for admin-service-client specific roles
+                @SuppressWarnings("unchecked")
+                Map<String, Object> clientAccess = (Map<String, Object>) resourceAccess.get("admin-service-client");
+                if (clientAccess != null && clientAccess.containsKey("roles")) {
+                    @SuppressWarnings("unchecked")
+                    List<String> clientRoles = (List<String>) clientAccess.get("roles");
+                    logger.debug("Found client roles: {}", clientRoles);
+                    
+                    for (String role : clientRoles) {
+                        String authority = "ROLE_" + role;
+                        authorities.add(new SimpleGrantedAuthority(authority));
+                        logger.debug("Added client authority: {}", authority);
+                    }
+                }
             }
             
-            logger.debug("Final authorities: {}", authorities);
+            logger.debug("Final authorities for user {}: {}", jwt.getSubject(), authorities);
             return authorities;
         });
         

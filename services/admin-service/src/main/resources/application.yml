@@ -30,7 +30,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # FIXED: Use localhost instead of keycloak hostname
+          #   THIS NEEDS TO BE keycloak URL
           issuer-uri: ${KEYCLOAK_ISSUER:http://keycloak:8080/realms/stockfellow}
           jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs}
 
@@ -65,7 +65,7 @@ keycloak:
   realm: stockfellow
   resource: admin-service-client
   credentials:
-    secret: q03cb0bMVy672D6UWU485vWLe55ndX75
+    secret: "**********"
 
 # Service URLs for inter-service communication
 services:

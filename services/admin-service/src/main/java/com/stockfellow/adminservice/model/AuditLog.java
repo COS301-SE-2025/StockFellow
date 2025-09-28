@@ -1,10 +1,9 @@
 package com.stockfellow.adminservice.model;
 
 import jakarta.persistence.*;
-// import io.hypersistence.utils.hibernate.type.json.JsonType;
-// import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -15,9 +14,11 @@ import java.util.UUID;
     @Index(name = "idx_risk_score", columnList = "risk_score")
 })
 public class AuditLog {
+    
     @Id
-    @Column(name = "log_id")
-    private String logId = UUID.randomUUID().toString();
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "log_id", columnDefinition = "UUID")
+    private UUID logId;
 
     @Column(name = "user_id")
     private String userId;
@@ -46,7 +47,7 @@ public class AuditLog {
     @Column(name = "session_id")
     private String sessionId;
 
-    
+    // Store headers as JSON string - this fixes the JSONB issue
     @Column(name = "headers", columnDefinition = "jsonb")
     private String headers;
 
@@ -65,9 +66,21 @@ public class AuditLog {
     // Constructors
     public AuditLog() {}
 
-    // Getters and Setters
-    public String getLogId() { return logId; }
-    public void setLogId(String logId) { this.logId = logId; }
+    public AuditLog(String userId, String endpoint, String httpMethod) {
+        this.userId = userId;
+        this.endpoint = endpoint;
+        this.httpMethod = httpMethod;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    // Getters and Setters - Fixed UUID handling
+    public UUID getLogId() { 
+        return logId; 
+    }
+    
+    public void setLogId(UUID logId) { 
+        this.logId = logId; 
+    }
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
