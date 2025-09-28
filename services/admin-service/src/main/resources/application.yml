@@ -65,7 +65,7 @@ keycloak:
   realm: stockfellow
   resource: admin-service-client
   credentials:
-    secret: "**********"
+    secret: "q03cb0bMVy672D6UWU485vWLe55ndX75"
 
 # Service URLs for inter-service communication
 services:

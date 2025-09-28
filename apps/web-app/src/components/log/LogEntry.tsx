@@ -1,10 +1,11 @@
 interface Log {
   id: string;
-  user: string;
-  address: string;
-  date: string;
-  type: "POST" | "GET" | "DELETE";
-  status: number;
+  userId: string;
+  endpoint: string;
+  timestamp: string;
+  method: "POST" | "GET" | "DELETE" | "PUT" | "PATCH";
+  statusCode: number;
+  flagged?: boolean;
 }
 
 interface LogEntryProps {
@@ -12,8 +13,8 @@ interface LogEntryProps {
 }
 
 const LogEntry = ({ log }: LogEntryProps) => {
-  const getTypeColor = (type: string) => {
-    switch (type) {
+  const getTypeColor = (method: string) => {
+    switch (method) {
       case "POST":
         return "text-green-700 bg-green-100";
       case "GET":
@@ -36,21 +37,31 @@ const LogEntry = ({ log }: LogEntryProps) => {
     return "text-gray-700 bg-gray-100";
   };
 
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <div className="px-6 py-4 hover:bg-gray-50 transition-colors duration-200">
       <div className="grid grid-cols-6 gap-4 items-center text-sm">
-        <div className="text-gray-900 font-medium">{log.id}</div>
-        <div className="text-gray-900">{log.user}</div>
-        <div className="text-gray-600 font-mono text-xs">{log.address}</div>
-        <div className="text-gray-600">{log.date}</div>
+        <div className="text-gray-900 font-mono text-xs">{log.id.slice(0, 8)}...</div>
+        <div className="text-gray-900 font-mono text-xs">{log.userId || 'N/A'}</div>
+        <div className="text-gray-600 font-mono text-xs truncate" title={log.endpoint}>
+          {log.endpoint}
+        </div>
+        <div className="text-gray-600 text-xs">{formatDate(log.timestamp)}</div>
         <div>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
-            {log.type}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(log.method)}`}>
+            {log.method}
           </span>
         </div>
         <div>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-            {log.status}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(log.statusCode)}`}>
+            {log.statusCode}
           </span>
         </div>
       </div>

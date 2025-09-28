@@ -338,8 +338,7 @@ class AdminService {
       const { access_token, refresh_token, expires_in } = response.data;
       TokenManager.setToken(access_token, refresh_token, expires_in);
       
-      // Debug the token after setting it
-      TokenManager.debugToken();
+      console.log(TokenManager.getToken() ? 'Login successful, token stored' : 'Login failed, no token received');
       
     } catch (error: any) {
       console.error('Login request failed:', {
@@ -461,12 +460,146 @@ class AdminService {
     return response.data;
   }
 
-  // Request management
+
+ /**
+   * Mark a log entry for investigation (updated method name to match usage)
+   */
+  async markLogForInvestigation(logId: string, reason: string): Promise<{
+    success: boolean;
+    message: string;
+    logId: string;
+  }> {
+    console.log('Marking log for investigation:', { logId, reason });
+    
+    try {
+      const response = await this.client.post<{
+        success: boolean;
+        message: string;
+        logId: string;
+      }>('/api/admin/audit/fraud/investigate', {
+        logId,
+        reason
+      });
+      
+      console.log('Investigation response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error marking log for investigation:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('UUID')) {
+        throw new Error('Invalid log ID format. Please ensure the log ID is valid.');
+      }
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(`${error.response.data.error}: ${error.response.data.message || 'Failed to mark log for investigation'}`);
+      }
+      
+      throw new Error('Failed to mark log for investigation');
+    }
+  }
+
+  /**
+   * Get user activity for a specific user
+   */
+  async getUserActivity(userId: string): Promise<{
+    userId: string;
+    activities: any[];
+    count: number;
+    period: string;
+  }> {
+    console.log(`Fetching activity for user: ${userId}`);
+    
+    try {
+      const response = await this.client.get<{
+        userId: string;
+        activities: any[];
+        count: number;
+        period: string;
+      }>(`/api/admin/audit/user/${encodeURIComponent(userId)}/activity`);
+      
+      console.log('User activity response:', response.data);
+      
+      return {
+        userId: response.data.userId || userId,
+        activities: response.data.activities || [],
+        count: response.data.count || 0,
+        period: response.data.period || 'Last 30 days'
+      };
+    } catch (error: any) {
+      console.error(`Error fetching user activity for ${userId}:`, error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      throw new Error(`Failed to fetch activity for user ${userId}`);
+    }
+  }
+
+
+
+
+  // // Request management
+  // async getPendingRequests(params?: {
+  //   requestType?: string;
+  //   page?: number;
+  //   size?: number;
+  // }): Promise<any> {
+  //   const queryParams = new URLSearchParams();
+  //   if (params) {
+  //     Object.entries(params).forEach(([key, value]) => {
+  //       if (value !== undefined) {
+  //         queryParams.append(key, value.toString());
+  //       }
+  //     });
+  //   }
+    
+  //   const response = await this.client.get(`/api/admin/requests/pending?${queryParams}`);
+  //   return response.data;
+  // }
+
+  // async approveRequest(requestId: string, adminNotes?: string): Promise<any> {
+  //   const response = await this.client.post(`/api/admin/requests/${requestId}/approve`, {
+  //     adminNotes
+  //   });
+  //   return response.data;
+  // }
+
+  // async rejectRequest(requestId: string, adminNotes?: string): Promise<any> {
+  //   const response = await this.client.post(`/api/admin/requests/${requestId}/reject`, {
+  //     adminNotes
+  //   });
+  //   return response.data;
+  // }
+
+  // async getRequestDetails(requestId: string): Promise<any> {
+  //   const response = await this.client.get(`/api/admin/requests/${requestId}/details`);
+  //   return response.data;
+  // }
+
+  // Request management methods with proper typing
+
+  /**
+   * Get pending requests with enhanced typing
+   */
   async getPendingRequests(params?: {
     requestType?: string;
     page?: number;
     size?: number;
-  }): Promise<any> {
+  }): Promise<{
+    content: any[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+    first: boolean;
+    last: boolean;
+  }> {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -476,27 +609,171 @@ class AdminService {
       });
     }
     
-    const response = await this.client.get(`/api/admin/requests/pending?${queryParams}`);
-    return response.data;
+    console.log('Fetching pending requests with params:', params);
+    
+    try {
+      const response = await this.client.get<{
+        content: any[];
+        totalElements: number;
+        totalPages: number;
+        size: number;
+        number: number;
+        first: boolean;
+        last: boolean;
+      }>(`/api/admin/requests/pending?${queryParams}`);
+      
+      console.log('Pending requests response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching pending requests:', error);
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      throw new Error('Failed to fetch pending requests');
+    }
   }
 
-  async approveRequest(requestId: string, adminNotes?: string): Promise<any> {
-    const response = await this.client.post(`/api/admin/requests/${requestId}/approve`, {
-      adminNotes
-    });
-    return response.data;
+  /**
+   * Approve a request with proper error handling
+   */
+  async approveRequest(requestId: string, adminNotes?: string): Promise<{
+    success: boolean;
+    message: string;
+    request: any;
+  }> {
+    console.log('Approving request:', { requestId, adminNotes });
+    
+    try {
+      const response = await this.client.post<{
+        success: boolean;
+        message: string;
+        request: any;
+      }>(`/api/admin/requests/${requestId}/approve`, {
+        adminNotes: adminNotes || ''
+      });
+      
+      console.log('Approval response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      
+      if (error.response?.status === 404) {
+        throw new Error('Request not found. It may have been deleted or processed already.');
+      }
+      
+      if (error.response?.status === 400) {
+        if (error.response?.data?.message?.includes('already been processed')) {
+          throw new Error('This request has already been processed.');
+        }
+        throw new Error(error.response.data.message || 'Invalid request data.');
+      }
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(`${error.response.data.error}: ${error.response.data.message || 'Failed to approve request'}`);
+      }
+      
+      throw new Error('Failed to approve request');
+    }
   }
 
-  async rejectRequest(requestId: string, adminNotes?: string): Promise<any> {
-    const response = await this.client.post(`/api/admin/requests/${requestId}/reject`, {
-      adminNotes
-    });
-    return response.data;
+  /**
+   * Reject a request with proper error handling
+   */
+  async rejectRequest(requestId: string, adminNotes?: string): Promise<{
+    success: boolean;
+    message: string;
+    request: any;
+  }> {
+    console.log('Rejecting request:', { requestId, adminNotes });
+    
+    // Require admin notes for rejection
+    if (!adminNotes || !adminNotes.trim()) {
+      throw new Error('Admin notes are required when rejecting a request');
+    }
+    
+    try {
+      const response = await this.client.post<{
+        success: boolean;
+        message: string;
+        request: any;
+      }>(`/api/admin/requests/${requestId}/reject`, {
+        adminNotes: adminNotes.trim()
+      });
+      
+      console.log('Rejection response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      
+      if (error.response?.status === 404) {
+        throw new Error('Request not found. It may have been deleted or processed already.');
+      }
+      
+      if (error.response?.status === 400) {
+        if (error.response?.data?.message?.includes('already been processed')) {
+          throw new Error('This request has already been processed.');
+        }
+        throw new Error(error.response.data.message || 'Invalid request data.');
+      }
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(`${error.response.data.error}: ${error.response.data.message || 'Failed to reject request'}`);
+      }
+      
+      throw new Error('Failed to reject request');
+    }
   }
 
-  async getRequestDetails(requestId: string): Promise<any> {
-    const response = await this.client.get(`/api/admin/requests/${requestId}/details`);
-    return response.data;
+  /**
+   * Get detailed information about a specific request
+   */
+  async getRequestDetails(requestId: string): Promise<{
+    request: any;
+    user?: any;
+    group?: any;
+    userError?: string;
+    groupError?: string;
+  }> {
+    console.log('Fetching request details for:', requestId);
+    
+    try {
+      const response = await this.client.get<{
+        request: any;
+        user?: any;
+        group?: any;
+        userError?: string;
+        groupError?: string;
+      }>(`/api/admin/requests/${requestId}/details`);
+      
+      console.log('Request details response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching request details:', error);
+      
+      if (error.response?.status === 404) {
+        throw new Error('Request not found. The request may have been deleted or the ID is invalid.');
+      }
+      
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(`${error.response.data.error}: ${error.response.data.message || 'Failed to fetch request details'}`);
+      }
+      
+      throw new Error('Failed to fetch request details');
+    }
   }
 }
 
