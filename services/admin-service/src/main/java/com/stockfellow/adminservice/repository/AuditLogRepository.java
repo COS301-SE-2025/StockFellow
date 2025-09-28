@@ -10,9 +10,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
+public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     
     // Find logs by user ID
     Page<AuditLog> findByUserIdOrderByTimestampDesc(String userId, Pageable pageable);
@@ -23,7 +24,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
     // Find flagged logs for review
     Page<AuditLog> findByFlaggedForReviewTrueOrderByTimestampDesc(Pageable pageable);
     
-    // Find high-risk logs
+    // Find high-risk logs (FIXED: Added Pageable parameter)
     Page<AuditLog> findByRiskScoreGreaterThanEqualOrderByRiskScoreDesc(Integer riskThreshold, Pageable pageable);
     
     // Find logs within date range
@@ -33,7 +34,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
         Pageable pageable
     );
     
-    // Find user activity within date range
+    // Find user activity within date range (FIXED: This method exists)
     List<AuditLog> findByUserIdAndTimestampBetweenOrderByTimestampDesc(
         String userId, 
         LocalDateTime startDate, 
@@ -78,4 +79,25 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
         WHERE al.timestamp >= :startDate AND al.riskScore > 0
         """)
     Double getAverageRiskScore(@Param("startDate") LocalDateTime startDate);
+
+    // Find suspicious activity (high risk score)
+    @Query("SELECT a FROM AuditLog a WHERE a.riskScore >= :minRiskScore ORDER BY a.timestamp DESC")
+    List<AuditLog> findSuspiciousActivity(@Param("minRiskScore") Integer minRiskScore);
+    
+    // Count flagged logs
+    long countByFlaggedForReviewTrue();
+    
+    // Recent high-risk activities
+    @Query("SELECT a FROM AuditLog a WHERE a.riskScore >= 70 AND a.timestamp >= :since ORDER BY a.timestamp DESC")
+    List<AuditLog> findRecentHighRiskActivity(@Param("since") LocalDateTime since);
+    
+    // User activity count in time period
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM AuditLog a WHERE a.timestamp >= :since")
+    long countActiveUsersInPeriod(@Param("since") LocalDateTime since);
+    
+    // ADDED: Count user activities in time period (for frequency calculation)
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.userId = :userId AND a.timestamp BETWEEN :startDate AND :endDate")
+    long countByUserIdAndTimestampBetween(@Param("userId") String userId, 
+                                         @Param("startDate") LocalDateTime startDate, 
+                                         @Param("endDate") LocalDateTime endDate);
 }

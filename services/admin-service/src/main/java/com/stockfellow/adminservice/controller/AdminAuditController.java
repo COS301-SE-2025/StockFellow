@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/audit")
@@ -87,7 +88,9 @@ public class AdminAuditController {
             logger.info("Marking log {} for investigation with reason: {}", 
                        request.getLogId(), request.getReason());
             
-            auditLogService.markForInvestigation(request.getLogId(), request.getReason());
+            // Convert String to UUID
+            UUID logId = UUID.fromString(request.getLogId());
+            auditLogService.markForInvestigation(logId, request.getReason());
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -95,6 +98,12 @@ public class AdminAuditController {
                 "logId", request.getLogId()
             ));
             
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid UUID format: {}", request.getLogId());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid log ID format",
+                "message", "Log ID must be a valid UUID"
+            ));
         } catch (Exception e) {
             logger.error("Error marking log for investigation: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(

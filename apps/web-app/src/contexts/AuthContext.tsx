@@ -1,15 +1,11 @@
 // src/contexts/AuthContext.tsx
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { adminService } from '../services/adminService';
 
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -28,34 +24,41 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock authentication - in a real app, this would be an API call
-    if (email && password) {
-      setUser({
-        id: '1',
-        email,
-        name: 'Admin User'
-      });
-      return true;
+  useEffect(() => {
+   // Check if user is already authenticated on app startup
+    const checkAuth = () => {
+      const authenticated = adminService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<void> => {
+    try {
+      await adminService.login(email, password);
+      setIsAuthenticated(true);
+    } catch (error) {
+      setIsAuthenticated(false);
+      throw error;
     }
-    return false;
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = (): void => {
+    adminService.logout();
+    setIsAuthenticated(false);
   };
 
-  const value = {
-    user,
+  const value: AuthContextType = {
+    isAuthenticated,
+    isLoading,
     login,
-    logout
+    logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
