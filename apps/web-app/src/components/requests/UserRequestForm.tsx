@@ -1,17 +1,38 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { adminService } from "../../services/adminService";
+import { AlertTriangle, CheckCircle, XCircle, Clock, User, FileText } from 'lucide-react';
 
-interface UserRequestData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  username: string;
-  phoneNumber: string;
-  gender: "Male" | "Female" | "Other";
-  requestType: "User" | "Stokvel";
-  status: "Pending" | "Approved" | "Declined";
-  dateSubmitted: string;
+interface RequestDetails {
+  request: {
+    requestId: string;
+    userId: string;
+    requestType: string;
+    status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+    reason: string;
+    groupId?: string;
+    cardId?: string;
+    createdAt: string;
+    processedAt?: string;
+    adminUserId?: string;
+    adminNotes?: string;
+  };
+  user?: {
+    userId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    // Add other user fields as needed
+  };
+  group?: {
+    groupId: string;
+    name: string;
+    // Add other group fields as needed
+  };
+  userError?: string;
+  groupError?: string;
 }
 
 interface UserRequestFormProps {
@@ -20,264 +41,528 @@ interface UserRequestFormProps {
 
 const UserRequestForm = ({ requestId }: UserRequestFormProps) => {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Mock data - replace with API call based on requestId
-  const [requestData, setRequestData] = useState<UserRequestData>({
-    id: requestId || "1",
-    firstName: "Kevin",
-    lastName: "Fleming",
-    email: "jaskolski.brent@yahoo.com",
-    username: "jaskolski",
-    phoneNumber: "073 345 3388",
-    gender: "Female",
-    requestType: "User",
-    status: "Pending",
-    dateSubmitted: "17 August 2025"
-  });
+  const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [requestDetails, setRequestDetails] = useState<RequestDetails | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
 
   useEffect(() => {
-    // Simulate API call to fetch request details
-    if (requestId) {
-      setIsLoading(true);
-      // Replace with actual API call
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
+    if (!authLoading && isAuthenticated && requestId) {
+      fetchRequestDetails();
     }
-  }, [requestId]);
+  }, [requestId, isAuthenticated, authLoading]);
+
+  const fetchRequestDetails = async () => {
+    if (!requestId) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('Fetching request details for:', requestId);
+      const details = await adminService.getRequestDetails(requestId);
+      console.log('Request details response:', details);
+      
+      setRequestDetails(details);
+    } catch (err: any) {
+      console.error('Error fetching request details:', err);
+      
+      if (err.response?.status === 404) {
+        setError("Request not found. It may have been deleted or the ID is invalid.");
+      } else if (err.response?.status === 401) {
+        setError("Access denied. Your session may have expired. Please log in again.");
+      } else if (err.response?.status === 403) {
+        setError("You don't have permission to view this request.");
+      } else if (err.message === 'Authentication required') {
+        setError("Authentication required. Please log in again.");
+      } else {
+        setError(err.message || "Failed to fetch request details");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleApprove = async () => {
-    setIsLoading(true);
+    if (!requestId || !requestDetails) return;
+
     try {
-      // API call to approve request
-      console.log("Approving request:", requestId);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setActionLoading('approve');
+      setError(null);
+
+      console.log('Approving request:', requestId, 'with notes:', adminNotes);
       
-      // Update local state
-      setRequestData(prev => ({ ...prev, status: "Approved" }));
+      const response = await adminService.approveRequest(requestId, adminNotes || "Request approved by admin");
+      console.log('Approval response:', response);
+
+      // Refresh the request details to show updated status
+      await fetchRequestDetails();
       
-      // Navigate back to requests page
-      navigate("/requests");
-    } catch (error) {
-      console.error("Error approving request:", error);
+      // Show success message (you might want to use a toast here)
+      console.log('Request approved successfully');
+      
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate("/requests");
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error approving request:', err);
+      setError(err.message || "Failed to approve request");
     } finally {
-      setIsLoading(false);
+      setActionLoading(null);
     }
   };
 
-  const handleDecline = async () => {
-    setIsLoading(true);
+  const handleReject = async () => {
+    if (!requestId || !requestDetails) return;
+
+    // Require notes for rejection
+    if (!adminNotes.trim()) {
+      setError("Please provide a reason for rejecting this request");
+      return;
+    }
+
     try {
-      // API call to decline request
-      console.log("Declining request:", requestId);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setActionLoading('reject');
+      setError(null);
+
+      console.log('Rejecting request:', requestId, 'with notes:', adminNotes);
       
-      // Update local state
-      setRequestData(prev => ({ ...prev, status: "Declined" }));
+      const response = await adminService.rejectRequest(requestId, adminNotes);
+      console.log('Rejection response:', response);
+
+      // Refresh the request details to show updated status
+      await fetchRequestDetails();
       
-      // Navigate back to requests page
-      navigate("/requests");
-    } catch (error) {
-      console.error("Error declining request:", error);
+      // Show success message
+      console.log('Request rejected successfully');
+      
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate("/requests");
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error rejecting request:', err);
+      setError(err.message || "Failed to reject request");
     } finally {
-      setIsLoading(false);
+      setActionLoading(null);
     }
   };
 
-  if (isLoading && !requestData.firstName) {
+  const getRequestTypeDisplay = (type: string): string => {
+    switch (type) {
+      case "LEAVE_GROUP":
+        return "Leave Group Request";
+      case "JOIN_GROUP":
+        return "Join Group Request";
+      case "TRANSACTION_DISPUTE":
+        return "Transaction Dispute";
+      case "DELETE_CARD":
+        return "Delete Card Request";
+      case "CLOSE_ACCOUNT":
+        return "Close Account Request";
+      default:
+        return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return { text: "Pending Review", color: "text-yellow-600 bg-yellow-100", icon: Clock };
+      case "APPROVED":
+        return { text: "Approved", color: "text-green-600 bg-green-100", icon: CheckCircle };
+      case "COMPLETED":
+        return { text: "Completed", color: "text-green-600 bg-green-100", icon: CheckCircle };
+      case "REJECTED":
+        return { text: "Rejected", color: "text-red-600 bg-red-100", icon: XCircle };
+      default:
+        return { text: status, color: "text-gray-600 bg-gray-100", icon: Clock };
+    }
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Show loading while checking authentication
+  if (authLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-64 mb-8"></div>
-          <div className="space-y-6">
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+        </div>
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication required message
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+        </div>
+        <div className="p-8 text-center">
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <p className="text-sm text-yellow-700">
+              Authentication required to view request details. Please log in with admin credentials.
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
+  if (isLoading && !requestDetails) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+        </div>
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading request details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !requestDetails) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+        </div>
+        <div className="p-8 text-center">
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 max-w-md mx-auto">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+                <div className="mt-4">
+                  <button
+                    onClick={() => navigate("/requests")}
+                    className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 mr-2"
+                  >
+                    Back to Requests
+                  </button>
+                  <button
+                    onClick={fetchRequestDetails}
+                    className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!requestDetails) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+        </div>
+        <div className="p-8 text-center">
+          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Request Not Found</h3>
+          <p className="text-gray-600">The requested details could not be loaded.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const request = requestDetails.request;
+  const user = requestDetails.user;
+  const group = requestDetails.group;
+  const statusInfo = getStatusDisplay(request.status);
+  const StatusIcon = statusInfo.icon;
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-semibold text-gray-900">Stokvels Details</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Request Details</h1>
+            <p className="text-gray-600 mt-1">Request ID: {request.requestId}</p>
+          </div>
+          <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>
+            <StatusIcon className="h-4 w-4 mr-1" />
+            {statusInfo.text}
+          </div>
+        </div>
       </div>
 
       <div className="p-6">
-        {/* Profile Avatar Section */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* First Name and Last Name */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                value={requestData.firstName}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                value={requestData.lastName}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-              />
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Email and Username */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Your email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={requestData.email}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                id="username"
-                value={requestData.username}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Phone Number and Gender */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="phoneNumber"
-                value={requestData.phoneNumber}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
-                Gender
-              </label>
-              <div className="relative">
-                <select
-                  id="gender"
-                  value={requestData.gender}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 focus:outline-none appearance-none cursor-not-allowed"
-                >
-                  <option value="Female">Female</option>
-                  <option value="Male">Male</option>
-                  <option value="Other">Other</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                  </svg>
+        {/* Request Information */}
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Basic Request Info */}
+          <div className="bg-gray-50 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Request Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Request Type</label>
+                <div className="text-gray-900">{getRequestTypeDisplay(request.requestType)}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Submitted On</label>
+                <div className="text-gray-900">{formatDate(request.createdAt)}</div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+                <div className="bg-white p-3 rounded border text-gray-900">
+                  {request.reason || "No reason provided"}
                 </div>
               </div>
             </div>
           </div>
 
+          {/* User Information */}
+          <div className="bg-gray-50 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">User Information</h2>
+            {requestDetails.userError ? (
+              <div className="text-red-600 text-sm">
+                Failed to load user details: {requestDetails.userError}
+              </div>
+            ) : (
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                    <div className="text-gray-900 font-mono">{request.userId}</div>
+                  </div>
+                  {user?.email && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <div className="text-gray-900">{user.email}</div>
+                    </div>
+                  )}
+                  {user?.firstName && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <div className="text-gray-900">
+                        {user.firstName} {user.lastName || ''}
+                      </div>
+                    </div>
+                  )}
+                  {user?.phoneNumber && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <div className="text-gray-900">{user.phoneNumber}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Group Information (if applicable) */}
+          {request.groupId && (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Group Information</h2>
+              {requestDetails.groupError ? (
+                <div className="text-red-600 text-sm">
+                  Failed to load group details: {requestDetails.groupError}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Group ID</label>
+                    <div className="text-gray-900 font-mono">{request.groupId}</div>
+                  </div>
+                  {group?.name && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+                      <div className="text-gray-900">{group.name}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Card Information (if applicable) */}
+          {request.cardId && (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Card Information</h2>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Card ID</label>
+                <div className="text-gray-900 font-mono">{request.cardId}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Notes Section */}
+          {request.status === "PENDING" && (
+            <div className="bg-blue-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Review</h2>
+              <div>
+                <label htmlFor="adminNotes" className="block text-sm font-medium text-gray-700 mb-2">
+                  Admin Notes {request.status === "PENDING" && actionLoading === 'reject' && (
+                    <span className="text-red-600">*</span>
+                  )}
+                </label>
+                <textarea
+                  id="adminNotes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Add notes about this request (required for rejection)..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {actionLoading === 'reject' && !adminNotes.trim() && (
+                  <p className="text-red-600 text-sm mt-1">Admin notes are required when rejecting a request</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Processing Information (for processed requests) */}
+          {request.status !== "PENDING" && (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Processing Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {request.processedAt && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Processed On</label>
+                    <div className="text-gray-900">{formatDate(request.processedAt)}</div>
+                  </div>
+                )}
+                {request.adminUserId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Processed By</label>
+                    <div className="text-gray-900 font-mono">{request.adminUserId}</div>
+                  </div>
+                )}
+                {request.adminNotes && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+                    <div className="bg-white p-3 rounded border text-gray-900">
+                      {request.adminNotes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4 pt-6">
             <button
-              onClick={handleApprove}
-              disabled={isLoading || requestData.status !== "Pending"}
-              className={`px-8 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                requestData.status !== "Pending"
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              }`}
+              onClick={() => navigate("/requests")}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </div>
-              ) : (
-                "Approve"
-              )}
+              Back to Requests
             </button>
             
-            <button
-              onClick={handleDecline}
-              disabled={isLoading || requestData.status !== "Pending"}
-              className={`px-8 py-3 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                requestData.status !== "Pending"
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-900 text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </div>
-              ) : (
-                "Decline"
-              )}
-            </button>
+            {request.status === "PENDING" && (
+              <>
+                <button
+                  onClick={handleApprove}
+                  disabled={actionLoading !== null}
+                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'approve' ? (
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Approving...
+                    </div>
+                  ) : (
+                    "Approve Request"
+                  )}
+                </button>
+                
+                <button
+                  onClick={handleReject}
+                  disabled={actionLoading !== null}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'reject' ? (
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Rejecting...
+                    </div>
+                  ) : (
+                    "Reject Request"
+                  )}
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Status Display */}
-          {requestData.status !== "Pending" && (
-            <div className="mt-6 p-4 rounded-lg bg-gray-50 text-center">
-              <p className="text-sm text-gray-600">
-                Request Status: 
-                <span className={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  requestData.status === "Approved" 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-red-100 text-red-800"
-                }`}>
-                  {requestData.status}
-                </span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Submitted on {requestData.dateSubmitted}
-              </p>
+          {/* Success Messages */}
+          {request.status === "APPROVED" && request.processedAt && (
+            <div className="bg-green-50 border-l-4 border-green-400 p-4 mt-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">
+                    This request has been approved and processed successfully.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {request.status === "REJECTED" && request.processedAt && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mt-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <XCircle className="h-5 w-5 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">
+                    This request has been rejected.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
