@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c6734dff-1219-4b3d-ac2a-798040f13f87"
+      }
+    },
+    "android": {
+      "package": "com.u22644106.stockfellow"
+    }
+  }
+}
