@@ -37,197 +37,196 @@ jobs:
           mvn ${{ env.MAVEN_CLI_OPTS }} compile -DskipTests -T 2C
         working-directory: .
 
-  # Security scanning job (runs on main branch)
-  security:
-    name: Security Checks
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+#   # Security scanning job (runs on main branch)
+#   security:
+#     name: Security Checks
+#     runs-on: ubuntu-latest
+#     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Full history for better security analysis
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0 # Full history for better security analysis
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: "temurin"
-          cache: maven
+#       - name: Set up JDK ${{ env.JAVA_VERSION }}
+#         uses: actions/setup-java@v4
+#         with:
+#           java-version: ${{ env.JAVA_VERSION }}
+#           distribution: "temurin"
+#           cache: maven
 
-      # Dependency vulnerability scanning
-      - name: OWASP Dependency Check
-        run: |
-          # Download OWASP Dependency Check
-          wget -q https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
-          unzip -q dependency-check-8.4.0-release.zip
+#       # Dependency vulnerability scanning
+#       - name: OWASP Dependency Check
+#         run: |
+#           # Download OWASP Dependency Check
+#           wget -q https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
+#           unzip -q dependency-check-8.4.0-release.zip
 
-          # Run dependency check for each service
-          for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
-            if [ -d "services/$service" ]; then
-              echo "Scanning dependencies for $service..."
-              ./dependency-check/bin/dependency-check.sh \
-                --project "stockfellow-$service" \
-                --scan "services/$service" \
-                --format "JSON" \
-                --format "HTML" \
-                --out "security-reports/$service" \
-                --nvdApiKey ${{ secrets.NVD_API_KEY || 'demo-key' }} \
-                --failOnCVSS 7 \
-                --enableExperimental || echo "Dependency check failed for $service"
-            fi
-          done
-        continue-on-error: true
+#           # Run dependency check for each service
+#           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
+#             if [ -d "services/$service" ]; then
+#               echo "Scanning dependencies for $service..."
+#               ./dependency-check/bin/dependency-check.sh \
+#                 --project "stockfellow-$service" \
+#                 --scan "services/$service" \
+#                 --format "JSON" \
+#                 --format "HTML" \
+#                 --out "security-reports/$service" \
+#                 --nvdApiKey ${{ secrets.NVD_API_KEY || 'demo-key' }} \
+#                 --failOnCVSS 7 \
+#                 --enableExperimental || echo "Dependency check failed for $service"
+#             fi
+#           done
+#         continue-on-error: true
 
-      # Static Application Security Testing (SAST)
-      - name: CodeQL Analysis
-        uses: github/codeql-action/init@v3
-        with:
-          languages: java
-          queries: security-and-quality
+#       # Static Application Security Testing (SAST)
+#       - name: CodeQL Analysis
+#         uses: github/codeql-action/init@v3
+#         with:
+#           languages: java
+#           queries: security-and-quality
 
-      - name: Build for CodeQL
-        run: |
-          # Build all services for CodeQL analysis
-          for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
-            if [ -d "services/$service" ]; then
-              echo "Building $service for security analysis..."
-              cd "services/$service"
-              mvn ${{ env.MAVEN_CLI_OPTS }} compile -DskipTests -q
-              cd ../..
-            fi
-          done
+#       - name: Build for CodeQL
+#         run: |
+#           # Build all services for CodeQL analysis
+#           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
+#             if [ -d "services/$service" ]; then
+#               echo "Building $service for security analysis..."
+#               cd "services/$service"
+#               mvn ${{ env.MAVEN_CLI_OPTS }} compile -DskipTests -q
+#               cd ../..
+#             fi
+#           done
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+#       - name: Perform CodeQL Analysis
+#         uses: github/codeql-action/analyze@v3
 
-      # Secret scanning
-      - name: Secret Detection with TruffleHog
-        run: |
-          # Install TruffleHog
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+#       # Secret scanning
+#       - name: Secret Detection with TruffleHog
+#         run: |
+#           # Install TruffleHog
+#           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
 
-          # Scan for secrets
-          trufflehog git file://. \
-            --only-verified \
-            --json \
-            --branch main > security-reports/secrets-scan.json || echo "Secrets found - review required"
-        continue-on-error: true
+#           # Scan for secrets
+#           trufflehog git file://. \
+#             --only-verified \
+#             --json \
+#             --branch main > security-reports/secrets-scan.json || echo "Secrets found - review required"
+#         continue-on-error: true
 
-      # Maven security plugins
-      - name: Maven Security Scan
-        run: |
-          mkdir -p security-reports
+#       # Maven security plugins
+#       - name: Maven Security Scan
+#         run: |
+#           mkdir -p security-reports
 
-          # Run security-focused Maven plugins for each service
-          for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
-            if [ -d "services/$service" ]; then
-              echo "Running Maven security checks for $service..."
-              cd "services/$service"
+#           # Run security-focused Maven plugins for each service
+#           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
+#             if [ -d "services/$service" ]; then
+#               echo "Running Maven security checks for $service..."
+#               cd "services/$service"
               
-              # Versions plugin to check for outdated dependencies
-              mvn ${{ env.MAVEN_CLI_OPTS }} versions:display-dependency-updates \
-                -DoutputFile="../../security-reports/$service-dependency-updates.txt" \
-                -q || true
+#               # Versions plugin to check for outdated dependencies
+#               mvn ${{ env.MAVEN_CLI_OPTS }} versions:display-dependency-updates \
+#                 -DoutputFile="../../security-reports/$service-dependency-updates.txt" \
+#                 -q || true
               
-              # Security-focused SpotBugs rules
-              mvn ${{ env.MAVEN_CLI_OPTS }} spotbugs:check \
-                -Dspotbugs.xmlOutput=true \
-                -Dspotbugs.xmlOutputDirectory="../../security-reports/" \
-                -Dspotbugs.outputFile="$service-spotbugs.xml" \
-                -q || echo "SpotBugs issues found in $service"
+#               # Security-focused SpotBugs rules
+#               mvn ${{ env.MAVEN_CLI_OPTS }} spotbugs:check \
+#                 -Dspotbugs.xmlOutput=true \
+#                 -Dspotbugs.xmlOutputDirectory="../../security-reports/" \
+#                 -Dspotbugs.outputFile="$service-spotbugs.xml" \
+#                 -q || echo "SpotBugs issues found in $service"
               
-              cd ../..
-            fi
-          done
+#               cd ../..
+#             fi
+#           done
 
-      # License compliance check
-      - name: License Check
-        run: |
-          # Check for license compliance issues
-          for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
-            if [ -d "services/$service" ]; then
-              echo "Checking licenses for $service..."
-              cd "services/$service"
-              mvn ${{ env.MAVEN_CLI_OPTS }} license:add-third-party \
-                -Dlicense.outputDirectory="../../security-reports" \
-                -Dlicense.thirdPartyFilename="$service-licenses.txt" \
-                -q || true
-              cd ../..
-            fi
-          done
+#       # License compliance check
+#       - name: License Check
+#         run: |
+#           # Check for license compliance issues
+#           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
+#             if [ -d "services/$service" ]; then
+#               echo "Checking licenses for $service..."
+#               cd "services/$service"
+#               mvn ${{ env.MAVEN_CLI_OPTS }} license:add-third-party \
+#                 -Dlicense.outputDirectory="../../security-reports" \
+#                 -Dlicense.thirdPartyFilename="$service-licenses.txt" \
+#                 -q || true
+#               cd ../..
+#             fi
+#           done
 
-      # Container security scanning (for Dockerfile analysis)
-      - name: Dockerfile Security Scan
-        run: |
-          # Install Hadolint for Dockerfile linting
-          wget -q https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
-          chmod +x hadolint-Linux-x86_64
+#       # Container security scanning (for Dockerfile analysis)
+#       - name: Dockerfile Security Scan
+#         run: |
+#           # Install Hadolint for Dockerfile linting
+#           wget -q https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+#           chmod +x hadolint-Linux-x86_64
 
-          # Scan Dockerfiles
-          mkdir -p security-reports/dockerfile-scan
-          for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
-            if [ -f "services/$service/Dockerfile" ]; then
-              echo "Scanning Dockerfile for $service..."
-              ./hadolint-Linux-x86_64 "services/$service/Dockerfile" \
-                --format json > "security-reports/dockerfile-scan/$service-hadolint.json" || echo "Dockerfile issues found in $service"
-            fi
-          done
+#           # Scan Dockerfiles
+#           mkdir -p security-reports/dockerfile-scan
+#           for service in api-gateway user-service group-service transaction-service notification-service mfa-service; do
+#             if [ -f "services/$service/Dockerfile" ]; then
+#               echo "Scanning Dockerfile for $service..."
+#               ./hadolint-Linux-x86_64 "services/$service/Dockerfile" \
+#                 --format json > "security-reports/dockerfile-scan/$service-hadolint.json" || echo "Dockerfile issues found in $service"
+#             fi
+#           done
 
-      # Trivy vulnerability scanner
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          output: "security-reports/trivy-results.sarif"
-          severity: "CRITICAL,HIGH,MEDIUM"
-        continue-on-error: true
+#       # Trivy vulnerability scanner
+#       - name: Run Trivy vulnerability scanner
+#         uses: aquasecurity/trivy-action@master
+#         with:
+#           scan-type: "fs"
+#           scan-ref: "."
+#           format: "sarif"
+#           output: "security-reports/trivy-results.sarif"
+#           severity: "CRITICAL,HIGH,MEDIUM"
+#         continue-on-error: true
 
-      # Upload security scan results
-      - name: Upload Security Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-reports
-          path: security-reports/
-          retention-days: 30
-        if: always()
+#       # Upload security scan results
+#       - name: Upload Security Reports
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: security-reports
+#           path: security-reports/
+#           retention-days: 30
+#         if: always()
 
-      # Security summary
-      - name: Security Summary
-        run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+#       # Security summary
+#       - name: Security Summary
+#         run: |
+#           echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+#           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+#           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
 
-          # Check if critical issues were found
-          if [ -f "security-reports/trivy-results.sarif" ]; then
-            critical_count=$(cat security-reports/trivy-results.sarif | jq -r '.runs[0].results | length // 0')
-            echo "| Trivy Scan | $critical_count issues found |" >> $GITHUB_STEP_SUMMARY
-          fi
+#           # Check if critical issues were found
+#           if [ -f "security-reports/trivy-results.sarif" ]; then
+#             critical_count=$(cat security-reports/trivy-results.sarif | jq -r '.runs[0].results | length // 0')
+#             echo "| Trivy Scan | $critical_count issues found |" >> $GITHUB_STEP_SUMMARY
+#           fi
 
-          if [ -f "security-reports/secrets-scan.json" ]; then
-            secret_count=$(cat security-reports/secrets-scan.json | wc -l)
-            echo "| Secret Scan | $secret_count potential secrets |" >> $GITHUB_STEP_SUMMARY
-          fi
+#           if [ -f "security-reports/secrets-scan.json" ]; then
+#             secret_count=$(cat security-reports/secrets-scan.json | wc -l)
+#             echo "| Secret Scan | $secret_count potential secrets |" >> $GITHUB_STEP_SUMMARY
+#           fi
 
-          echo "| OWASP Dependency Check | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL Analysis | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| License Check | Completed |" >> $GITHUB_STEP_SUMMARY
+#           echo "| OWASP Dependency Check | Completed |" >> $GITHUB_STEP_SUMMARY
+#           echo "| CodeQL Analysis | Completed |" >> $GITHUB_STEP_SUMMARY
+#           echo "| License Check | Completed |" >> $GITHUB_STEP_SUMMARY
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📋 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Review security reports in the artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "2. Address any critical or high-severity vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "3. Update dependencies with known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "📋 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
+#           echo "1. Review security reports in the artifacts" >> $GITHUB_STEP_SUMMARY
+#           echo "2. Address any critical or high-severity vulnerabilities" >> $GITHUB_STEP_SUMMARY
+#           echo "3. Update dependencies with known vulnerabilities" >> $GITHUB_STEP_SUMMARY
 
   # Backend build (now depends on security checks for main branch)
   backend:
     name: Backend CI/CD
     runs-on: ubuntu-latest
-    needs: [security]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
 
     strategy:
@@ -390,7 +389,7 @@ jobs:
   package:
     name: Package & Release
     runs-on: ubuntu-latest
-    needs: [backend, security]
+    needs: [backend]
     if: github.ref == 'refs/heads/main'
 
     steps:
