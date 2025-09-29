@@ -6,7 +6,8 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
     "./index.{js,ts,tsx}"
   ],
-  presets: [require("nativewind/preset")],
+  // Remove this line for NativeWind v2:
+  // presets: [require("nativewind/preset")],
   theme: {
     extend: {},
   },
