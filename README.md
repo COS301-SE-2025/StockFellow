@@ -110,6 +110,7 @@
 | Demo 1 | [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) |
 | Demo 2 |   [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link)   | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)                                                 |
 |Demo 3| [Video](https://drive.google.com/file/d/1BGR054N_6pEaafB9qam58Dgxa2EjJN_Q/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
+|Demo 4| [Video](https://drive.google.com/file/d/1BGR054N_6pEaafB9qam58Dgxa2EjJN_Q/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
 |App Link| [APK](https://drive.google.com/drive/folders/14ojQ398QfaWLVWc8atTlrnP2U1Ao0guA?usp=sharing) | |
 
 <!-- Documentation -->
@@ -118,12 +119,12 @@
 | Link                   | Description                   |
 |------------------------|-------------------------------|
 | [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Stockfellow_SRS_v4.pdf) | Project Requirements            |
-| [Architectural Specification](https://docs.google.com/document/d/1XvB7P_vGG0pFHn_IjOlX8Cg9RFqJQHc_K1H3oE6slBU/edit?usp=drive_link) | Architectural Patterns, Strategies and Functional Requirements   |
-| [Coding Standard](https://docs.google.com/document/d/1JtcF5wKQR_0zuQ-hYQdeu_yoRJDwTwQZCLHr7yqKuU8/edit?usp=drive_link) | Coding best practices to follow and programming guidelines   |
-| [Service Contract](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/servicess_contract.md) | Service contracts and API specifications for system integration |
-| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
-| [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/user_manual.pdf) | Step by step documentation on how to use the app |
-| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/dev/docs/technical_installation_manual.pdf) | Guide to install and run project |
+| [Architectural Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Architectural Requirements/Stockfellow_Architectural_Requirements_v4.pdf) | Architectural Patterns, Strategies and Functional Requirements   |
+| [Coding Standard](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Coding Standards/Stockfellow_Coding_Standards.pdf) | Coding best practices to follow and programming guidelines   |
+| [Testing Policy](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Testing Policy/Testing-Policy.pdf) | Testing strategy and mthods for testing the system |
+| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
+| [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/user_manual.pdf) | Step by step documentation on how to use the app |
+| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical Installation Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
 
 
 <!-- ROADMAP -->
@@ -133,16 +134,16 @@
   - [x] Register and Login
   - [x] Create Stokvel
   - [x] View Stokvel Groups
-- [ ] Demo 2
+- [X] Demo 2
   - [x] Transaction Service
   - [x] Group Service
   - [x] Notification Service
-  - [ ] Mock Payment Service
-- [ ] Demo 3
+  - [X] Mock Payment Service
+- [X] Demo 3
   - [x] Transaction Service
   - [x] System Tier And Group Management
   - [x] Notification Service
-  - [x] Mock Payment Service
+  - [x] PayStack Integration
   - [x] MFA Service
 - [ ] Demo 4
     
