@@ -21,6 +21,8 @@ const profile = () => {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [helpMenuVisible, setHelpMenuVisible] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<any>(null);
+  const [badgeModalVisible, setBadgeModalVisible] = useState(false);
   
   // Edit Profile states
   const [profileData, setProfileData] = useState({
@@ -95,6 +97,37 @@ const profile = () => {
       setProfileData({...profileData, profileImage: result.assets[0].uri});
     }
   };
+
+  const badgeData = [
+    {
+      id: 1,
+      name: "First Steps",
+      description: "Welcome to the community! You've successfully created your account and taken the first step towards building your financial future.",
+      icon: icons.badgeOne,
+      earned: true 
+    },
+    {
+      id: 2,
+      name: "Email Verified",
+      description: "Great job! You've verified your email address, making your account more secure and enabling important notifications.",
+      icon: icons.badgeTwo,
+      earned: userProfile?.emailVerified ?? false // Use nullish coalescing
+    },
+    {
+      id: 3,
+      name: "ID Verified",
+      description: "Your identity has been verified! This enables higher contribution limits and builds trust within the community.",
+      icon: icons.badgeThree,
+      earned: userProfile?.idVerified ?? false // Use nullish coalescing
+    },
+    {
+      id: 4,
+      name: "Stokvel Member",
+      description: "You're now part of a stokvel group! Start contributing and saving together with your fellow members.",
+      icon: icons.badgeFour,
+      earned: false
+    }
+  ];
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -217,84 +250,40 @@ const profile = () => {
               }}
             >
               <View className="flex-row items-center justify-center" style={{ gap: 16 }}>
-                {/* Badge 1 */}
-                <View className="w-16 h-16 items-center justify-center">
-                  <Image 
-                    source={icons.badgeOne}
-                    className="w-16 h-16"
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                {/* Badge 2 */}
-                <View className="w-16 h-16 items-center justify-center">
-                  <Image 
-                    source={icons.badgeTwo}
-                    className="w-16 h-16"
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                {/* Badge 3 */}
-                <View className="w-16 h-16 items-center justify-center">
-                  <Image 
-                    source={icons.badgeThree}
-                    className="w-16 h-16"
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                {/* Badge 4 */}
-                <View className="w-16 h-16 items-center justify-center">
-                  <Image 
-                    source={icons.badgeFour}
-                    className="w-16 h-16"
-                    resizeMode="contain"
-                  />
-                </View>
+                {badgeData.map((badge) => (
+                  <TouchableOpacity
+                    key={badge.id}
+                    className="w-16 h-16 items-center justify-center"
+                    onPress={() => {
+                      setSelectedBadge(badge);
+                      setBadgeModalVisible(true);
+                    }}
+                  >
+                    <Image 
+                      source={badge.icon}
+                      className="w-16 h-16"
+                      resizeMode="contain"
+                      style={{ 
+                        opacity: badge.earned ? 1 : 0.4 // Dim unearned badges
+                      }}
+                    />
+                  </TouchableOpacity>
+                ))}
               </View>
             </ScrollView>
           </View>
 
           <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Rank</Text>
           
-          {/* Rank Progress Section */}
-          <View className="flex-row items-center mb-6">
-            {/* Level Icon with Number */}
-            <View className="relative">
-              <Image 
-                source={icons.levelTwo}
-                className="w-12 h-12"
-                resizeMode="contain"
-              />
-              <View className="absolute inset-0 items-center justify-center">
-                <Text className="text-white font-['PlusJakartaSans-Bold'] text-lg">2</Text>
-              </View>
-            </View>
-            
-            {/* Progress Bar */}
-            <View className="flex-1 h-3 rounded-full mx-6" style={{ backgroundColor: '#F0F7FA' }}>
-              <View className="h-3 bg-[#1DA1FA] rounded-full" style={{ width: '60%' }} />
-            </View>
-            
-            {/* Level Icon with Number */}
-            <View className="relative">
-              <Image 
-                source={icons.levelThree}
-                className="w-12 h-12"
-                resizeMode="contain"
-              />
-              <View className="absolute inset-0 items-center justify-center">
-                <Text className="text-white font-['PlusJakartaSans-Bold'] text-lg">3</Text>
-              </View>
-            </View>
-          </View>
+          
           
           {/* Tier tasks */}
           <View className="rounded-lg overflow-hidden">
             {/* Current Tier */}
             <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
-              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">Tier 2</Text>
+                <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">
+                    {affordabilityInfo?.tier >= 0 ? `Tier ${affordabilityInfo.tier+1}` : 'No Tier Yet'}
+                </Text>
             </View>
             
             {/* Tasks */}
@@ -529,6 +518,49 @@ const profile = () => {
         isVisible={helpMenuVisible}
         onClose={() => setHelpMenuVisible(false)}
       />
+
+      {/* Badge Description Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={badgeModalVisible}
+        onRequestClose={() => setBadgeModalVisible(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white rounded-2xl p-6 w-11/12 max-w-sm">
+            {selectedBadge && (
+              <>
+                <View className="items-center mb-4">
+                  <Image 
+                    source={selectedBadge.icon}
+                    className="w-20 h-20 mb-3"
+                    resizeMode="contain"
+                  />
+                  <Text className="text-xl font-['PlusJakartaSans-Bold'] text-black text-center">
+                    {selectedBadge.name}
+                  </Text>
+                  {!selectedBadge.earned && (
+                    <Text className="text-sm text-gray-500 mt-1">Not yet earned</Text>
+                  )}
+                </View>
+                
+                <Text className="text-gray-700 font-['PlusJakartaSans-Regular'] text-center mb-6">
+                  {selectedBadge.description}
+                </Text>
+                
+                <TouchableOpacity 
+                  className="bg-[#1DA1FA] py-3 rounded-lg"
+                  onPress={() => setBadgeModalVisible(false)}
+                >
+                  <Text className="text-center text-white font-['PlusJakartaSans-Medium']">
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }

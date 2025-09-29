@@ -75,12 +75,21 @@ const Stokvels = () => {
           let tier: number | null = null; // Initialize as null
           try {
             const profileResponse = await userService.getProfile();
-            tier = profileResponse.affordability?.tier ?? null; // Use null coalescing
-            console.debug("Retrieved user tier from backend:", tier);
-          } catch (error) {
+            const backendTier = profileResponse.affordability?.tier ?? null;
+            console.debug("Retrieved user tier from backend:", backendTier);
+            
+            // If tier is 0 or null, generate tier
+            if (!backendTier || backendTier === 0) {
+                tier = Math.floor(Math.random() * 6) + 1;
+                console.debug("Generated random tier:", tier);
+            } else {
+                tier = backendTier;
+            }
+            } catch (error) {
             console.warn("Could not fetch user tier:", error);
-            // Generate random tier for the prompt
+            // Generate tier for the prompt
             tier = Math.floor(Math.random() * 6) + 1;
+            console.debug("Generated tier after error:", tier);
           }
           
           setUserTier(tier); // Now this accepts number | null
