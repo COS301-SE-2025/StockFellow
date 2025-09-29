@@ -60,5 +60,10 @@
     "**/react-native-worklets": "0.6.0",
     "**/react-native-reanimated": "3.19.1"
   },
+  "overrides": {
+    "react-native-worklets": {
+      "react-native-reanimated": "$react-native-reanimated"
+    }
+  },
   "private": true
 }
