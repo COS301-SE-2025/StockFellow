@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { adminService } from "../services/adminService";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
-import { ChevronDown, ChevronUp, User, AlertTriangle, Shield, Clock, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, AlertTriangle, Shield, RefreshCw } from 'lucide-react';
 
 interface SuspiciousActivity {
   logId: string;
@@ -19,11 +19,11 @@ interface SuspiciousActivity {
   userAgent?: string;
 }
 
-interface SuspiciousActivitiesResponse {
-  suspiciousActivities: SuspiciousActivity[];
-  count: number;
-  generatedAt: string;
-}
+// interface SuspiciousActivitiesResponse {
+//   suspiciousActivities: SuspiciousActivity[];
+//   count: number;
+//   generatedAt: string;
+// }
 
 interface FraudEntry {
   id: string;
@@ -43,7 +43,7 @@ interface FraudEntry {
 const FraudDetection: React.FC = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
+//   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fraudEntries, setFraudEntries] = useState<FraudEntry[]>([]);

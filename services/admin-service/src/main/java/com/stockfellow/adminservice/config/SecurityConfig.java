@@ -56,7 +56,7 @@ public class SecurityConfig {
     public JwtDecoder jwtDecoder() {
         logger.debug("Configuring JwtDecoder with custom JWK Set URI");
         
-        String jwkSetUri = "http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs";
+        String jwkSetUri = "https://134.122.73.157.nip.io/realms/stockfellow/protocol/openid-connect/certs";
         logger.info("JWK Set URI: {}", jwkSetUri);
         
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
@@ -73,7 +73,7 @@ public class SecurityConfig {
                 logger.debug("Validating token with issuer: {}", issuer);
                 
                 // Accept both keycloak (internal) and localhost (external) as valid issuers
-                if (issuer.equals("http://keycloak:8080/realms/stockfellow") || 
+                if (issuer.equals("https://134.122.73.157.nip.io/realms/stockfellow") || 
                     issuer.equals("http://localhost:8080/realms/stockfellow")) {
                     logger.debug("Issuer validation passed for: {}", issuer);
                     return OAuth2TokenValidatorResult.success();

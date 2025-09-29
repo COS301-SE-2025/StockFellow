@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { adminService } from "../../services/adminService";
-import LogEntry from "./LogEntry";
+// import LogEntry from "./LogEntry";
 import Pagination from "../common/Pagination";
 
 // Updated interface to match backend response
@@ -20,15 +20,15 @@ interface Log {
   riskFactors?: string;    // Backend sends risk_factors
 }
 
-interface PaginatedResponse {
-  content: Log[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  first: boolean;
-  last: boolean;
-}
+// interface PaginatedResponse {
+//   content: Log[];
+//   totalElements: number;
+//   totalPages: number;
+//   size: number;
+//   number: number;
+//   first: boolean;
+//   last: boolean;
+// }
 
 const UserLogsList = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();

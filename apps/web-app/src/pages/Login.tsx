@@ -169,7 +169,7 @@ const Login: React.FC = () => {
             <div className="mt-6 p-3 bg-gray-100 rounded-md">
               <p className="text-xs text-gray-600 mb-2">Development Info:</p>
               <p className="text-xs text-gray-500">
-                Backend: http://localhost:4060
+                Backend: http://admin-service:4060
               </p>
               <p className="text-xs text-gray-500">
                 Auth Provider: Keycloak

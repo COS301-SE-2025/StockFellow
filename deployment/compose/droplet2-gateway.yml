@@ -47,7 +47,7 @@ services:
     expose:
       - "8080"
     ports:
-      - "8080:8080" # This is for drop3 services to fetch JWKs token
+      - "8080:8080" 
     volumes:
       - ./realm-exports:/opt/keycloak/data/import
       - ./keycloak-extensions/:/opt/keycloak/providers/

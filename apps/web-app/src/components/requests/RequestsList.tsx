@@ -20,17 +20,17 @@ interface AdminRequest {
   adminNotes?: string;
 }
 
-interface PaginatedResponse {
-  content: AdminRequest[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  first: boolean;
-  last: boolean;
-  numberOfElements: number;
-  empty: boolean;
-}
+// interface PaginatedResponse {
+//   content: AdminRequest[];
+//   totalElements: number;
+//   totalPages: number;
+//   size: number;
+//   number: number;
+//   first: boolean;
+//   last: boolean;
+//   numberOfElements: number;
+//   empty: boolean;
+// }
 
 // Transform backend request to frontend format
 const transformRequestForCard = (request: AdminRequest) => ({
