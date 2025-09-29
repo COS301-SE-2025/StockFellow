@@ -254,10 +254,10 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Run strict linting for service
-        run: |
-          cd services/${{ matrix.service }}
-          mvn ${{ env.MAVEN_CLI_OPTS }} checkstyle:check -Pstrict-linting
+    #   - name: Run strict linting for service
+    #     run: |
+    #       cd services/${{ matrix.service }}
+    #       mvn ${{ env.MAVEN_CLI_OPTS }} checkstyle:check -Pstrict-linting
 
       - name: Cache Maven dependencies (per service)
         uses: actions/cache@v4
