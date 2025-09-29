@@ -5,10 +5,12 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel"
     ],
+    plugins: [
+      'react-native-worklets/plugin', 
+    ],
     env: {
       production: {
-        plugins: ['react-native-paper/babel'], // The plugin automatically rewrites the import 
-        // statements so that only the modules you use are imported instead of the whole library
+        plugins: ['react-native-paper/babel'],
       },
     },
   };
