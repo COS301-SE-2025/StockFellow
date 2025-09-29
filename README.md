@@ -119,12 +119,12 @@
 | Link                   | Description                   |
 |------------------------|-------------------------------|
 | [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Stockfellow_SRS_v4.pdf) | Project Requirements            |
-| [Architectural Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Architectural Requirements/Stockfellow_Architectural_Requirements_v4.pdf) | Architectural Patterns, Strategies and Functional Requirements   |
-| [Coding Standard](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Coding Standards/Stockfellow_Coding_Standards.pdf) | Coding best practices to follow and programming guidelines   |
-| [Testing Policy](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Testing Policy/Testing-Policy.pdf) | Testing strategy and mthods for testing the system |
-| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
+| [Architectural Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Architectural_Requirements/Stockfellow_Architectural_Requirements_v4.pdf) | Architectural Patterns, Strategies and Functional Requirements   |
+| [Coding Standard](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Coding_Standards/Stockfellow_Coding_Standards.pdf) | Coding best practices to follow and programming guidelines   |
+| [Testing Policy](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Testing_Policy/Testing-Policy.pdf) | Testing strategy and mthods for testing the system |
+| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment_Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
 | [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/user_manual.pdf) | Step by step documentation on how to use the app |
-| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical Installation Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
+| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical_Installation_Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
 
 
 <!-- ROADMAP -->
