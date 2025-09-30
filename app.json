@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./apps/mobile-app/assets/adaptive-icon.png",
+        "foregroundImage": "./apps/mobile-app/assets/icons/savings.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
