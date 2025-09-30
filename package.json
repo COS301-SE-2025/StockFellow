@@ -4,38 +4,17 @@
   "private": true,
   "workspaces": [
     "apps/mobile-app",
-    "apps/web-app",
     "packages/*",
     "services/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "clean": "turbo run clean",
-    "format": "prettier --write \"**/*.{js,ts,tsx,md}\"",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "mobile:start": "npm run start --workspace=apps/mobile-app",
     "mobile:install": "npm install --workspace=apps/mobile-app"
   },
-  "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "eslint": "^8.42.0",
-    "eslint-config-prettier": "^8.8.0",
-    "lint-staged": "^13.2.2",
-    "prettier": "^2.8.8",
-    "turbo": "^1.10.0"
-  },
   "engines": {
     "node": ">=16.0.0"
   },
-  "packageManager": "npm@9.6.7",
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": "eslint --fix",
-    "*.{js,jsx,ts,tsx,json,md}": "prettier --write"
-  },
-  "dependencies": {
-  }
+  "packageManager": "npm@9.6.7"
 }

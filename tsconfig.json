@@ -11,9 +11,6 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/web-app"
-    },
-    {
       "path": "./apps/mobile-app"
     }
   ]
