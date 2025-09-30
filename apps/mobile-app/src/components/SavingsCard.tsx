@@ -23,11 +23,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({
       {/* Header with Tier Badge and Money Icon */}
       <View className="flex-row justify-between items-start mb-4">
         {/* User Tier Badge */}
-        {/* <View className="bg-white/50 px-4 py-2 rounded-2xl"> */}
-          <Text className="text-black text-2xl font-['PlusJakartaSans-Bold']">
-            {userTier} Member
-          </Text>
-        {/* </View> */}
+        <Text className="text-black text-2xl font-['PlusJakartaSans-Bold']">
+          {userTier} Member
+        </Text>
 
         {/* Money Icon */}
         <Image 

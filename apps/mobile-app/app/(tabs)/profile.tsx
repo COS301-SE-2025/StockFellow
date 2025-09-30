@@ -207,7 +207,7 @@ const profile = () => {
               ) : (
                 <Image 
                   className='w-full h-full'
-                  source={images.songoku}
+                  source={images.user}
                   resizeMode="cover"
                 />
               )}
@@ -341,7 +341,7 @@ const profile = () => {
                       />
                     ) : (
                       <Image 
-                        source={images.songoku}
+                        source={images.user}
                         className="w-full h-full"
                         resizeMode="cover"
                       />
