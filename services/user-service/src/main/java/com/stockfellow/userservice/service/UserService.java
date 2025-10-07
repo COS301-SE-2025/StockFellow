@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.Optional;
 
 @Service
-@Transactional
 public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -125,23 +124,10 @@ public class UserService {
     /**
      * Get user by Keycloak user ID
      */
-    @Retryable(value = { JpaSystemException.class, DataAccessException.class }, 
-           maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    // @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    @Transactional(readOnly = true)
     public User getUserByUserId(String userId) {
-        try {
-            logger.info("Fetching user with ID: {}", userId);
-            Optional<User> user = userRepository.findByUserId(userId);
-            if (user.isPresent()) {
-                logger.info("Successfully retrieved user: {}", userId);
-                return user.get();
-            }
-            logger.warn("User not found with ID: {}", userId);
-            return null;
-        } catch (Exception e) {
-            logger.error("Error fetching user with ID: {}. Error: {}", userId, e.getMessage());
-            throw e;
-        }
+        logger.info("Fetching user with ID: {}", userId);
+        return userRepository.findByUserId(userId).orElse(null);
     }
 
     @Recover

@@ -61,7 +61,7 @@ management:
       show-details: always
 
 keycloak:
-  auth-server-url: http://keycloak:8080
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://keycloak:808}
   realm: stockfellow
   resource: admin-service-client
   credentials:

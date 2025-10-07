@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
-import { images } from '../constants';
+import { icons } from '../constants';
 
 interface GreetingCardProps {
   userName: string;
@@ -13,7 +13,7 @@ const GreetingCard: React.FC<GreetingCardProps> = ({ userName, profileImage }) =
       {/* Profile Picture */}
       <View className="mr-3">
         <Image 
-          source={images.songoku}
+          source={icons.user}
           className="w-12 h-12 rounded-full"
           resizeMode="cover"
         />

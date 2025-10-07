@@ -2,7 +2,7 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://${DROPLET1_IP}:${POSTGRES_PORT:5432}/notification_db
+    url: jdbc:postgresql://${DROPLET1_IP:postgres}:${POSTGRES_PORT:5432}/notification_db
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver

@@ -20,6 +20,7 @@ import profile_filled from "../../assets/icons/profile_filled.png";
 import email from "../../assets/icons/email.png";
 import pdf from "../../assets/icons/pdf.png";
 import uploaded from "../../assets/icons/uploaded.png";
+import user from "../../assets/icons/user.png";
 
 // stokvels pages
 import camera from "../../assets/icons/camera.png";
@@ -146,4 +147,5 @@ export default {
   badgeTwo,
   badgeThree,
   badgeFour,
+  user,
 };
