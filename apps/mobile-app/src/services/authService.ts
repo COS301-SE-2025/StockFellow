@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
-// const API_BASE_URL = 'https://134.122.73.157.nip.io/api';
-const API_BASE_URL = 'http://10.0.2.2:3000/api';
+const API_BASE_URL = 'https://134.122.73.157.nip.io/api';
+// const API_BASE_URL = 'http://10.0.2.2:3000/api';
 
 
 interface UserInfo {
