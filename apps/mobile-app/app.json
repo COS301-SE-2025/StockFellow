@@ -27,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.u22644106.stockfellow",
+      "package": "com.dramsay.mobileapp",
       "runtimeVersion": "1.0.0"
     },
     "web": {
@@ -50,10 +50,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c6734dff-1219-4b3d-ac2a-798040f13f87"
+        "projectId": "ef1f6131-372d-4ec0-be6b-f557c7d67f1a"
       }
     }
   }
 }
-
-
