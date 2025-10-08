@@ -11,9 +11,6 @@ import java.util.List;
 @Configuration
 public class RouteConfig {
 
-    // @Value("${services.user-service.url:http://user-service:4020}")
-    // private String userServiceUrl;
-
     @Value("${services.user-service.url}")
     private String userServiceUrl;
 
