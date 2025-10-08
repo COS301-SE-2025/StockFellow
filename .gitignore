@@ -66,3 +66,6 @@ stop.sh
 stockfellow-9e*.json
 save/
 .env.save
+
+# expo
+.expo/

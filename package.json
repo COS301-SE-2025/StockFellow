@@ -2,6 +2,7 @@
   "name": "stockfellow",
   "version": "1.0.0",
   "private": true,
+  "main": "apps/mobile-app/index.ts",
   "workspaces": [
     "apps/mobile-app",
     "packages/*",
@@ -16,11 +17,5 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "packageManager": "npm@9.6.7",
-  "dependencies": {
-    "@react-native-community/datetimepicker": "8.4.1",
-    "react-native-gesture-handler": "~2.24.0",
-    "react-native-safe-area-context": "5.4.0",
-    "react-native-screens": "~4.11.1"
-  }
+  "packageManager": "npm@9.6.7"
 }

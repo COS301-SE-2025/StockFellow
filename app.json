@@ -42,7 +42,7 @@
           "image": "./apps/mobile-app/assets/stockfellow_logo.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
-          "imageWidth": 200
+          "imageWidth": 250
         }
       ]
     ],
