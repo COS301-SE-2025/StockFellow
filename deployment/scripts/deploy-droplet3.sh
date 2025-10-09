@@ -31,14 +31,14 @@ echo "Deploying Business Services to Droplet 3 (${DROPLET3_IP})..."
 # ssh ${DROPLET3_USER}@${DROPLET3_IP} "mkdir -p /opt/stockfellow/apps"
 
 # scp -i ${SSH_KEY_PATH} ./deployment/compose/droplet3-services.yml ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/
-scp -i ${SSH_KEY_PATH} ./deployment/scripts/.env.droplet3 ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/.env
+# scp -i ${SSH_KEY_PATH} ./deployment/scripts/.env.droplet3 ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/.env
 
 # rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/user-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/user-service/
 # rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/group-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/group-service/
 # rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/transaction-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/transaction-service/
 # rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/notification-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/notification-service/
-rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/admin-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/admin-service/
-# rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" apps/web-app/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/apps/web-app/
+# rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" services/admin-service/ ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/admin-service/
+rsync -av --exclude='target/' --exclude='build/' --exclude='.git/' --exclude='*.log' --exclude='node_modules/' --exclude='test/' -e "ssh -i ${SSH_KEY_PATH}" apps/web-app/src/assets ${DROPLET3_USER}@${DROPLET3_IP}:/opt/stockfellow/apps/web-app/src/assets
 
 
 # ssh -i ${SSH_KEY_PATH} ${DROPLET3_USER}@${DROPLET3_IP} << 'ENDSSH'

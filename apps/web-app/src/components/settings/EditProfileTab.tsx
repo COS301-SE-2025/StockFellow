@@ -10,9 +10,9 @@ interface ProfileData {
 const EditProfileTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>({
-    fullName: "Naruto Uzumaki",
-    username: "naruto",
-    email: "naruto@gmail.com",
+    fullName: "Admin User",
+    username: "Admin",
+    email: "admin@test.com",
     password: "••••••••••"
   });
 
@@ -63,11 +63,16 @@ const EditProfileTab = () => {
       <div className="flex items-start space-x-6 mb-8">
         <div className="relative">
           <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200">
-            <img
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <svg
+                className="w-full h-full object-cover"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
+                />
+            </svg>
           </div>
           <button
             onClick={handleAvatarChange}
