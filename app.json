@@ -27,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ltshikila.mobileapp",
+      "package": "",
       "runtimeVersion": "1.0.0"
     },
     "web": {
@@ -50,7 +50,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e462114e-a621-4fc6-9dda-5bc774753635"
+        "projectId": ""
       }
     }
   }
