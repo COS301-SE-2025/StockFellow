@@ -53,11 +53,27 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontError) throw fontError;
-    if (fontsLoaded) SplashScreen.hideAsync();
+    // Safety net: Hide splash screen after 5 seconds max, even if fonts fail
+    const safetyTimer = setTimeout(() => {
+      SplashScreen.hideAsync();
+    }, 5000);
+
+    if (fontError) {
+      console.error('Font loading error:', fontError);
+      SplashScreen.hideAsync();
+      clearTimeout(safetyTimer);
+    }
+
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+      clearTimeout(safetyTimer);
+    }
+
+    return () => clearTimeout(safetyTimer); // Cleanup the timer
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) {
+  // Prevent rendering until fonts are loaded or have errored
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 

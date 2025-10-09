@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "StockFellow",
+    "slug": "mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./apps/mobile-app/assets/stockfellow_logo.png",
@@ -26,7 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.dramsay.stockfellow",
+      "package": "com.ltshikila.mobileapp",
       "runtimeVersion": "1.0.0"
     },
     "web": {
@@ -49,7 +50,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "f1046ae1-925d-4446-9818-1e9dbc1f319c"
+        "projectId": "e462114e-a621-4fc6-9dda-5bc774753635"
       }
     }
   }
