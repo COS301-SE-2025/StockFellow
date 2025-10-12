@@ -1,18 +1,23 @@
 package com.stockfellow.transactionservice.controller;
-import com.stockfellow.transactionservice.service.*;
+import com.stockfellow.transactionservice.service.PaymentDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
-@Tag(name="Webhook Controller", description="Handles event from paystack sent to ngrok endpoint on port 4080")
+@Tag(name = "Webhook Controller", description = "Handles event from paystack sent to ngrok endpoint on port 4080")
 @RequestMapping("/api/webhook")
-@CrossOrigin(origins="*")
+@CrossOrigin(origins = "*")
 public class WebhookController {
     
     @Autowired

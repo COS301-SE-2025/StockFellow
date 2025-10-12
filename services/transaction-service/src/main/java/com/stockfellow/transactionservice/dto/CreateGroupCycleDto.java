@@ -1,6 +1,12 @@
 package com.stockfellow.transactionservice.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Future;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -56,7 +62,9 @@ public class CreateGroupCycleDto {
     public void setExpectedTotal(BigDecimal expectedTotal) { this.expectedTotal = expectedTotal; }
     
     public LocalDate getCollectionStartDate() { return collectionStartDate; }
-    public void setCollectionStartDate(LocalDate collectionStartDate) { this.collectionStartDate = collectionStartDate; }
+    public void setCollectionStartDate(LocalDate collectionStartDate) {
+        this.collectionStartDate = collectionStartDate; 
+    }
     
     public LocalDate getCollectionEndDate() { return collectionEndDate; }
     public void setCollectionEndDate(LocalDate collectionEndDate) { this.collectionEndDate = collectionEndDate; }
