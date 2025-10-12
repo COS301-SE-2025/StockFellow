@@ -82,7 +82,7 @@ public class Group {
     public Double getMinContribution() { return minContribution; }
     public void setMinContribution(Double minContribution) { this.minContribution = minContribution; }
 
-    public Double getBalance() { return balance; }
+    public Double getBalance() { return minContribution; }
     public void setBalance(Double balance) { this.balance = balance; }
 
     public Integer getMaxMembers() { return maxMembers; }
