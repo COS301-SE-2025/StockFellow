@@ -120,7 +120,7 @@ public class UserService {
     }
 
 
-    public List<User> fetchUsers(UUID groupId) {
+    public List<User> fetchUsers(String groupId) {
         try {
             HttpHeaders headers = createHeaders();
             HttpEntity<?> entity = new HttpEntity<>(headers);

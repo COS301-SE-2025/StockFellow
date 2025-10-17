@@ -13,7 +13,10 @@ import java.util.UUID;
 
 public class CreateGroupCycleDto {
     @NotNull(message = "Group ID is required")
-    private UUID groupId;
+    private String groupId;
+
+    @NotNull(message = "Rotation ID is required")
+    private UUID rotationId;
     
     @NotBlank(message = "Cycle period is required")
     @Size(max = 50, message = "Cycle period must not exceed 50 characters")
@@ -46,8 +49,11 @@ public class CreateGroupCycleDto {
     public CreateGroupCycleDto() {}
 
     // Getters and Setters
-    public UUID getGroupId() { return groupId; }
-    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public String getGroupId() { return groupId; }
+    public void setGroupId(String groupId) { this.groupId = groupId; }
+
+    public UUID getRotationId() { return rotationId; }
+    public void setRotationId(UUID rotationId) { this.rotationId = rotationId; }
     
     public String getCyclePeriod() { return cyclePeriod; }
     public void setCyclePeriod(String cyclePeriod) { this.cyclePeriod = cyclePeriod; }

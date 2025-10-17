@@ -288,7 +288,7 @@ class UserServiceTest {
     @Test
     void fetchUsers_WhenSuccessful_ShouldReturnUserList() {
         // Given
-        UUID groupId = UUID.randomUUID();
+        String groupId = UUID.randomUUID().toString();
         List<User> expectedUsers = Arrays.asList(existingUser);
         ResponseEntity<List<User>> responseEntity = new ResponseEntity<>(expectedUsers, HttpStatus.OK);
 
@@ -316,7 +316,7 @@ class UserServiceTest {
     @Test
     void fetchUsers_WhenRestTemplateThrowsException_ShouldThrowResponseStatusException() {
         // Given
-        UUID groupId = UUID.randomUUID();
+        String groupId = UUID.randomUUID().toString();
         when(restTemplate.exchange(
             anyString(),
             eq(HttpMethod.GET),
@@ -335,7 +335,7 @@ class UserServiceTest {
     @Test
     void fetchUsers_WhenResponseBodyIsNull_ShouldReturnNull() {
         // Given
-        UUID groupId = UUID.randomUUID();
+        String groupId = UUID.randomUUID().toString();
         ResponseEntity<List<User>> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
 
         when(restTemplate.exchange(

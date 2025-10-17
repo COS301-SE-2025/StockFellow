@@ -8,6 +8,10 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
 
+transaction:
+  service:
+    url: ${TRANSACTION_SERVICE_URL}
+
 logging:
   level:
     org.springframework: ${LOG_LEVEL_SPRING:INFO}

@@ -35,7 +35,7 @@ class CreateGroupCycleDtoTest {
 
     private CreateGroupCycleDto createValidDto() {
         CreateGroupCycleDto dto = new CreateGroupCycleDto();
-        dto.setGroupId(UUID.randomUUID());
+        dto.setGroupId(UUID.randomUUID().toString());
         dto.setCyclePeriod("Monthly");
         dto.setRecipientUserId(UUID.randomUUID());
         dto.setContributionAmount(new BigDecimal("100.00"));
@@ -287,7 +287,7 @@ class CreateGroupCycleDtoTest {
         @Test
         @DisplayName("Should correctly set and get groupId")
         void shouldCorrectlySetAndGetGroupId() {
-            UUID testUuid = UUID.randomUUID();
+            String testUuid = UUID.randomUUID().toString();
             dto.setGroupId(testUuid);
             assertEquals(testUuid, dto.getGroupId());
         }

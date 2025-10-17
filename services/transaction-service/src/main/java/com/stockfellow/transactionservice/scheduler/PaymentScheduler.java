@@ -3,9 +3,11 @@ package com.stockfellow.transactionservice.scheduler;
 import com.stockfellow.transactionservice.dto.CreateTransactionDto;
 import com.stockfellow.transactionservice.model.GroupCycle;
 import com.stockfellow.transactionservice.model.PayerDetails;
+import com.stockfellow.transactionservice.model.Rotation;
 import com.stockfellow.transactionservice.model.Transaction;
 import com.stockfellow.transactionservice.model.User;
 import com.stockfellow.transactionservice.service.UserService;
+import com.stockfellow.transactionservice.service.RotationService;
 import com.stockfellow.transactionservice.service.TransactionService;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.repository.PayerDetailsRepository;
@@ -20,11 +22,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
 
 @Component
 public class PaymentScheduler {
+
+    private final RotationService rotationService;
 
     @Autowired
     private UserService userService;
@@ -43,7 +48,9 @@ public class PaymentScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
 
-    public PaymentScheduler() {}
+    public PaymentScheduler(RotationService rotationService) {
+        this.rotationService = rotationService;
+    }
 
     @Scheduled(cron = "0 * * * * ?") // Run every minute for testing (Run daily at 9 AM)
     @Transactional
@@ -246,10 +253,16 @@ public class PaymentScheduler {
         
         if (received == expectedTotal) {
             cycle.setStatus("COMPLETED");
+            updateRotation(cycle.getRotationId()); 
+            
         } else {
             cycle.setStatus("PROCESSING");
         }
         
         groupCycleRepository.save(cycle);
+    }
+
+    private void updateRotation(UUID id) {
+        rotationService.updateRotation(id);
     }
 }

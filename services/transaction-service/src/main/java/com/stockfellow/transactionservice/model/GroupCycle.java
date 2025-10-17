@@ -15,7 +15,10 @@ public class GroupCycle {
     private UUID cycleId;
     
     @Column(name = "group_id", nullable = false)
-    private UUID groupId;
+    private String groupId;
+
+    @Column(name = "rotation_id", nullable = false)
+    private UUID rotationId;
     
     @Column(name = "cycle_period", nullable = false)
     private String cyclePeriod;
@@ -62,23 +65,25 @@ public class GroupCycle {
     // Constructors
     public GroupCycle() {}
 
-    public GroupCycle(UUID groupId, String cyclePeriod, UUID recipientUserId, 
+    public GroupCycle(String groupId, UUID rotationId, String cyclePeriod, UUID recipientUserId, 
                      BigDecimal contributionAmount, BigDecimal expectedTotal,
                      LocalDate collectionStartDate, LocalDate collectionEndDate) {
         this.groupId = groupId;
+        this.rotationId = rotationId;
         this.cyclePeriod = cyclePeriod;
         this.recipientUserId = recipientUserId;
         this.contributionAmount = contributionAmount;
         this.expectedTotal = expectedTotal;
         this.collectionStartDate = collectionStartDate;
         this.collectionEndDate = collectionEndDate;
-        this.status = "pending";
+        this.status = "PENDING";
         this.currentTotal = BigDecimal.ZERO;
     }
 
     // Getters
     public UUID getCycleId() { return cycleId; }
-    public UUID getGroupId() { return groupId; }
+    public String getGroupId() { return groupId; }
+    public UUID getRotationId() { return rotationId; }    
     public String getCyclePeriod() { return cyclePeriod; }
     public UUID getRecipientUserId() { return recipientUserId; }
     public BigDecimal getContributionAmount() { return contributionAmount; }
@@ -96,7 +101,8 @@ public class GroupCycle {
 
     // Setters
     public void setCycleId(UUID cycleId) { this.cycleId = cycleId; }
-    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public void setGroupId(String groupId) { this.groupId = groupId; }
+    public void setRotationId(UUID rotationId) { this.rotationId = rotationId; }    
     public void setCyclePeriod(String cyclePeriod) { this.cyclePeriod = cyclePeriod; }
     public void setRecipientUserId(UUID recipientUserId) { this.recipientUserId = recipientUserId; }
     public void setContributionAmount(BigDecimal contributionAmount) { this.contributionAmount = contributionAmount; }
@@ -121,7 +127,7 @@ public class GroupCycle {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = "pending";
+            status = "PENDING";
         }
         if (currentTotal == null) {
             currentTotal = BigDecimal.ZERO;

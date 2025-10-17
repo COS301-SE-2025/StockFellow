@@ -10,7 +10,8 @@ import java.util.UUID;
 public class GroupCycleResponseDto {
     
     private UUID cycleId;
-    private UUID groupId;
+    private String groupId;
+    private UUID rotationId;
     private String cyclePeriod;
     private UUID recipientUserId;
     private BigDecimal contributionAmount;
@@ -42,6 +43,7 @@ public class GroupCycleResponseDto {
         GroupCycleResponseDto dto = new GroupCycleResponseDto();
         dto.cycleId = cycle.getCycleId();
         dto.groupId = cycle.getGroupId();
+        dto.rotationId = cycle.getRotationId();
         dto.cyclePeriod = cycle.getCyclePeriod();
         dto.recipientUserId = cycle.getRecipientUserId();
         dto.contributionAmount = cycle.getContributionAmount();
@@ -63,8 +65,11 @@ public class GroupCycleResponseDto {
     public UUID getCycleId() { return cycleId; }
     public void setCycleId(UUID cycleId) { this.cycleId = cycleId; }
     
-    public UUID getGroupId() { return groupId; }
-    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public String getGroupId() { return groupId; }
+    public void setGroupId(String groupId) { this.groupId = groupId; }
+
+    public UUID getRotationId() { return rotationId; }  
+    public void setRotationId(UUID rotationId) { this.rotationId = rotationId; }    
     
     public String getCyclePeriod() { return cyclePeriod; }
     public void setCyclePeriod(String cyclePeriod) { this.cyclePeriod = cyclePeriod; }

@@ -72,7 +72,7 @@ public class GroupCycleController {
     @GetMapping("/group/{groupId}")
         @Operation(summary = "Get cycles by group", 
                description = "Retrieves all cycles associated with a specific group")
-    public ResponseEntity<List<GroupCycleResponseDto>> getCyclesByGroup(@PathVariable UUID groupId) {
+    public ResponseEntity<List<GroupCycleResponseDto>> getCyclesByGroup(@PathVariable String groupId) {
         List<GroupCycle> cycles = groupCycleService.getCyclesByGroup(groupId);
         return ResponseEntity.ok(cycles.stream()
                                .map(GroupCycleResponseDto::fromEntity)

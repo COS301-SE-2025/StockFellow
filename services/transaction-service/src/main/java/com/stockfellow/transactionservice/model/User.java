@@ -21,7 +21,7 @@ public class User {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name="paystack_user_id")
+    @Column(name = "paystack_user_id")
     private String paystackUserId;
     
     @Column(name = "first_name")
@@ -61,7 +61,7 @@ public class User {
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.status = UserStatus.active;
+        this.status = UserStatus.ACTIVE;
     }
 
     // Getters
@@ -105,7 +105,7 @@ public class User {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = UserStatus.active;
+            status = UserStatus.ACTIVE;
         }
     }
 
@@ -116,9 +116,9 @@ public class User {
 
     // User Status Enum
     public enum UserStatus {
-        active,
-        inactive,
-        suspended,
-        pending
+        ACTIVE,
+        INACTIVE,
+        SUSPENDED,
+        PENDING
     }
 }
