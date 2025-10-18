@@ -18,7 +18,7 @@ import NotificationItem from '../../src/components/NotificationItem';
 import { router } from 'expo-router';
 
 const Home = () => {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const navigation = useNavigation<any>();
 
   const [loading, setLoading] = useState(true);
@@ -147,11 +147,12 @@ const Home = () => {
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1">
-      <StatusBar style="dark" />
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <TopBar title="Home" />
 
       <ScrollView 
         className="flex-1 px-6"
+        style={{ backgroundColor: colors.background }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

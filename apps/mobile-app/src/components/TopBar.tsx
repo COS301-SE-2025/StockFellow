@@ -220,6 +220,7 @@ const TopBar: React.FC<TopBarProps> = ({
             style={{ 
               width: 24,
               height: 24,
+              tintColor: isDarkMode ? colors.text : undefined
             }}
             resizeMode="contain"
           />
