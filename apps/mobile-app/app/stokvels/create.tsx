@@ -10,6 +10,8 @@ import DateTimeInput from "../../src/components/DateTimeInput";
 import { router } from "expo-router";
 import { icons } from "../../src/constants";
 import authService from '../../src/services/authService';
+import { useTheme } from "../_layout";
+import { StatusBar } from "expo-status-bar";
 //import { StatusBar } from 'expo-status-bar';
 interface FormData {
     name: string;
@@ -41,6 +43,8 @@ const StokvelForm: React.FC = () => {
         payoutFrequency: "Monthly",
         payoutDate: null,
     });
+
+    const { colors, isDarkMode } = useTheme();
 
     const frequencyMap: Record<FrequencyKey, BackendFrequencyValue> = {
         "Monthly": "Monthly",
@@ -133,26 +137,42 @@ const StokvelForm: React.FC = () => {
 
     return (
         <GestureHandlerRootView className="flex-1">
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+                <StatusBar style={isDarkMode ? 'light' : 'dark'} />
                 {/* Header with Back Button and Title */}
-                <View className="flex-row items-center px-5 py-3 border-b border-gray-200">
+                <View
+                    className="flex-row items-center px-5 py-3 border-b border-gray-200"
+                    style={isDarkMode ? { borderBottomColor: 'rgba(255,255,255,0.12)' } : undefined}
+                >
                     <TouchableOpacity onPress={() => router.back()}>
                         <Image
                             source={icons.back}
                             className="w-6 h-6"
                             resizeMode="contain"
+                            style={{ tintColor: isDarkMode ? '#FFFFFF' : colors.text }}
                         />
                     </TouchableOpacity>
-                    <Text className="text-lg font-medium ml-4">Stokvels</Text>
+                    <Text
+                        className="text-lg font-medium ml-4"
+                        style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}
+                    >
+                        Stokvels
+                    </Text>
                 </View>
 
                 <ScrollView
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
                     nestedScrollEnabled={true}
                     keyboardShouldPersistTaps="handled"
+                    style={{ backgroundColor: colors.background }}
                 >
                     <View className="w-full flex-1 justify-start px-7">
-                        <Text className="text-xl font-['PlusJakartaSans-SemiBold'] my-7">Create a New Stokvel</Text>
+                        <Text
+                            className="text-xl font-['PlusJakartaSans-SemiBold'] my-7"
+                            style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}
+                        >
+                            Create a New Stokvel
+                        </Text>
 
                         <StokvelAvatar
                             profileImage={form.profileImage}
@@ -165,8 +185,14 @@ const StokvelForm: React.FC = () => {
                             onSelect={(option) => handleRadioSelect('visibility', option)}
                         />
 
+                        {/* Stokvel Name */}
+                        {isDarkMode && (
+                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                            Stokvel Name
+                          </Text>
+                        )}
                         <FormInputFlat
-                            title="Stokvel Name"
+                            title={isDarkMode ? "" : "Stokvel Name"}
                             value={form.name}
                             placeholder="Enter stokvel name"
                             handleChangeText={(text) => {
@@ -175,41 +201,57 @@ const StokvelForm: React.FC = () => {
                             helperText={`${form.name.length}/60 characters`}
                         />
 
+                        {/* Row: Min Monthly Contribution & Max Members */}
                         <View className="flex-row justify-between">
+                            <View className="flex-1 mr-2">
+                                {isDarkMode && (
+                                  <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                                    Min Monthly Contribution
+                                  </Text>
+                                )}
+                                <FormInputFlat
+                                    title={isDarkMode ? "" : "Min Monthly Contribution"}
+                                    value={form.minContribution}
+                                    placeholder="200.00"
+                                    handleChangeText={(text) => {
+                                        const sanitized = text.replace(/[^0-9.]/g, '');
+                                        if ((sanitized.match(/\./g) || []).length <= 1) {
+                                            handleChangeText('minContribution', sanitized);
+                                        }
+                                    }}
+                                    keyboardType="numeric"
+                                />
+                            </View>
 
-                            <FormInputFlat
-                                title="Min Monthly Contribution"
-                                value={form.minContribution}
-                                placeholder="200.00"
-                                handleChangeText={(text) => {
-                                    // Allow only numbers and decimal point
-                                    const sanitized = text.replace(/[^0-9.]/g, '');
-                                    // Only allow one decimal point
-                                    if ((sanitized.match(/\./g) || []).length <= 1) {
-                                        handleChangeText('minContribution', sanitized);
-                                    }
-                                }}
-                                keyboardType="numeric"
-                            />
-
-
-                            <FormInputFlat
-                                title="Max Members"
-                                value={form.maxMembers}
-                                placeholder="10"
-                                handleChangeText={(text) => {
-                                    // Allow only numbers
-                                    const sanitized = text.replace(/[^0-9]/g, '');
-                                    handleChangeText('maxMembers', sanitized);
-                                }}
-                                keyboardType="numeric"
-                                helperText="Cannot exceed 30 members"
-                                helperTextColor={Number(form.maxMembers) > 30 ? "#EF4444" : undefined}
-                            />
+                            <View className="flex-1 ml-2">
+                                {isDarkMode && (
+                                  <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                                    Max Members
+                                  </Text>
+                                )}
+                                <FormInputFlat
+                                    title={isDarkMode ? "" : "Max Members"}
+                                    value={form.maxMembers}
+                                    placeholder="10"
+                                    handleChangeText={(text) => {
+                                        const sanitized = text.replace(/[^0-9]/g, '');
+                                        handleChangeText('maxMembers', sanitized);
+                                    }}
+                                    keyboardType="numeric"
+                                    helperText="Cannot exceed 30 members"
+                                    helperTextColor={Number(form.maxMembers) > 30 ? "#EF4444" : undefined}
+                                />
+                            </View>
                         </View>
 
+                        {/* Description */}
+                        {isDarkMode && (
+                          <Text className="mb-1 mt-2 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                            Description
+                          </Text>
+                        )}
                         <FormInputFlat
-                            title="Description"
+                            title={isDarkMode ? "" : "Description"}
                             value={form.description}
                             placeholder="Enter stokvel description"
                             handleChangeText={(text) => {
@@ -220,27 +262,49 @@ const StokvelForm: React.FC = () => {
                             helperText={`${form.description.length}/255 characters`}
                         />
 
-                        <Text className="text-lg mb-2 font-light">Contributions</Text>
+                        <Text
+                            className="text-lg mb-2 font-light"
+                            style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}
+                        >
+                            Contributions
+                        </Text>
                         <RadioBox
                             options={["Monthly", "Bi-Weekly", "Weekly"]}
                             selectedOption={form.contributionFrequency}
                             onSelect={(option) => handleRadioSelect('contributionFrequency', option)}
                         />
 
+                        {/* First Contribution Date */}
+                        {isDarkMode && (
+                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                            First Contribution Date
+                          </Text>
+                        )}
                         <DateTimeInput
-                            label="First Contribution Date"
+                            label={isDarkMode ? "" : "First Contribution Date"}
                             onDateTimeChange={handleContributionDateChange}
                         />
 
-                        <Text className="text-lg mb-2 font-light">Payouts</Text>
+                        <Text
+                            className="text-lg mb-2 font-light"
+                            style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}
+                        >
+                            Payouts
+                        </Text>
                         <RadioBox
                             options={["Monthly", "Bi-Weekly", "Weekly"]}
                             selectedOption={form.payoutFrequency}
                             onSelect={(option) => handleRadioSelect('payoutFrequency', option)}
                         />
 
+                        {/* First Payout Date */}
+                        {isDarkMode && (
+                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
+                            First Payout Date
+                          </Text>
+                        )}
                         <DateTimeInput
-                            label="First Payout Date"
+                            label={isDarkMode ? "" : "First Payout Date"}
                             onDateTimeChange={handlePayoutDateChange}
                         />
 
