@@ -11,9 +11,10 @@ import { Linking } from 'react-native';
 import HelpMenu from '../../src/components/help/HelpMenu';
 import { useEffect } from 'react';
 import userService from '../../src/services/userService'; 
+import { StatusBar } from 'expo-status-bar'; // added
 
 const profile = () => {
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode, toggleTheme, colors } = useTheme(); // include colors
   const { startTutorial } = useTutorial();
   const router = useRouter();
 
@@ -159,10 +160,11 @@ const profile = () => {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Your Profile" />
         <View className="flex-1 justify-center items-center">
-          <Text>Loading profile...</Text>
+          <Text style={{ color: colors.text }}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -170,7 +172,8 @@ const profile = () => {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Your Profile" />
         <View className="flex-1 justify-center items-center px-6">
           <Text className="text-red-500 text-center">Error loading profile: {error}</Text>
@@ -189,15 +192,19 @@ const profile = () => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <TopBar title="Your Profile" />
       
-      <ScrollView className="flex-1 px-6">
+      <ScrollView className="flex-1 px-6" style={{ backgroundColor: colors.background }}>
         {/* Profile Section */}
         <View className="items-center mt-4 mb-6">
           {/* Profile picture */}
           <TouchableOpacity className="relative mb-3">
-            <View className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-3 overflow-hidden">
+            <View
+              className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-3 overflow-hidden"
+              style={isDarkMode ? { backgroundColor: colors.card } : undefined}
+            >
               {profileData.profileImage ? (
                 <Image 
                   source={{ uri: profileData.profileImage }}
@@ -214,7 +221,12 @@ const profile = () => {
             </View>
           </TouchableOpacity>
 
-          <Text className="text-3xl font-['PlusJakartaSans-Bold'] text-black mb-3">{profileData.name}</Text>
+          <Text
+            className="text-3xl font-['PlusJakartaSans-Bold'] mb-3"
+            style={{ color: colors.text }}
+          >
+            {profileData.name}
+          </Text>
 
           {/* Buttons */}
           <View className="flex-row gap-3">
@@ -233,10 +245,14 @@ const profile = () => {
           </View>
         </View>
 
-        {/* ...existing code... */}
         {/* Badges and Rank*/}
         <View className="mb-6">
-          <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Badges</Text>
+          <Text
+            className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4"
+            style={{ color: colors.text }}
+          >
+            Badges
+          </Text>
           
           {/* Badges Container with Horizontal Scroll */}
           <View className="mb-6">
@@ -273,7 +289,12 @@ const profile = () => {
             </ScrollView>
           </View>
 
-          <Text className="text-lg font-['PlusJakartaSans-SemiBold'] text-black mb-4">Rank</Text>
+          <Text
+            className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4"
+            style={{ color: colors.text }}
+          >
+            Rank
+          </Text>
           
           
           
@@ -281,26 +302,32 @@ const profile = () => {
           <View className="rounded-lg overflow-hidden">
             {/* Current Tier */}
             <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
-                <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">
-                    {affordabilityInfo?.tier >= 0 ? `Tier ${affordabilityInfo.tier+1}` : 'No Tier Yet'}
-                </Text>
+              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">
+                {affordabilityInfo?.tier >= 0 ? `Tier ${affordabilityInfo.tier+1}` : 'No Tier Yet'}
+              </Text>
             </View>
             
             {/* Tasks */}
-            <View className="px-4 py-4 rounded-b-lg" style={{ backgroundColor: '#F0F7FA' }}>
+            <View className="px-4 py-4 rounded-b-lg" style={isDarkMode ? { backgroundColor: colors.card } : { backgroundColor: '#F0F7FA' }}>
               <View className="flex-row items-center mb-3">
                 <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Join a stokvel group</Text>
+                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
+                  Join a stokvel group
+                </Text>
               </View>
               
               <View className="flex-row items-center mb-3">
                 <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Verify your account information</Text>
+                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
+                  Verify your account information
+                </Text>
               </View>
               
               <View className="flex-row items-center">
                 <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-black text-m font-['PlusJakartaSans-Regular'] mb-1">Complete the tutorial guide</Text>
+                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
+                  Complete the tutorial guide
+                </Text>
               </View>
             </View>
           </View>
@@ -316,14 +343,19 @@ const profile = () => {
         onRequestClose={() => setEditProfileVisible(false)}
       >
         <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-white rounded-2xl p-6 w-11/12 max-h-4/5">
+          <View
+            className="rounded-2xl p-6 w-11/12 max-h-4/5"
+            style={{ backgroundColor: colors.card }}
+          >
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black">Edit Profile</Text>
+              <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-center" style={{ color: colors.text }}>
+                Edit Profile
+              </Text>
               <TouchableOpacity onPress={() => setEditProfileVisible(false)}>
                 <Image 
                   source={icons.close}
                   className="w-6 h-6"
-                  style={{ tintColor: '#666' }}
+                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
                 />
               </TouchableOpacity>
             </View>
@@ -351,29 +383,35 @@ const profile = () => {
                     <Image source={icons.camera} className="w-4 h-4" style={{ tintColor: 'white' }} />
                   </View>
                 </TouchableOpacity>
-                <Text className="text-gray-600 mt-2 text-sm">Tap to change photo</Text>
+                <Text className="mt-2 text-sm text-center" style={{ color: colors.text, opacity: 0.6 }}>
+                  Tap to change photo
+                </Text>
               </View>
 
               {/* Form Fields */}
-              <View className="space-y-4">
+              <View className="space-y-4 mt-6">
                 <View>
-                  <Text className="text-gray-700 font-['PlusJakartaSans-Medium'] mb-2">Full Name</Text>
+                  <Text className="mb-2" style={{ color: colors.text }}>Full Name</Text>
                   <TextInput
                     value={profileData.name}
                     onChangeText={(text) => setProfileData({...profileData, name: text})}
-                    className="border border-gray-300 rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
+                    className="border rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
                     placeholder="Enter your full name"
+                    placeholderTextColor={isDarkMode ? '#9CA3AF' : undefined}
+                    style={{ borderColor: isDarkMode ? colors.border : '#D1D5DB', color: colors.text }}
                   />
                 </View>
 
                 <View>
-                  <Text className="text-gray-700 font-['PlusJakartaSans-Medium'] mb-2">Email</Text>
+                  <Text className="mb-2" style={{ color: colors.text }}>Email</Text>
                   <TextInput
                     value={profileData.email}
                     onChangeText={(text) => setProfileData({...profileData, email: text})}
-                    className="border border-gray-300 rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
+                    className="border rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
                     placeholder="Enter your email"
                     keyboardType="email-address"
+                    placeholderTextColor={isDarkMode ? '#9CA3AF' : undefined}
+                    style={{ borderColor: isDarkMode ? colors.border : '#D1D5DB', color: colors.text }}
                   />
                 </View>
               </View>
@@ -381,10 +419,11 @@ const profile = () => {
               {/* Action Buttons */}
               <View className="flex-row gap-3 mt-8">
                 <TouchableOpacity 
-                  className="flex-1 bg-gray-200 py-3 rounded-lg"
+                  className="flex-1 py-3 rounded-lg"
                   onPress={() => setEditProfileVisible(false)}
+                  style={isDarkMode ? { backgroundColor: colors.background } : { backgroundColor: '#E5E7EB' }}
                 >
-                  <Text className="text-center text-gray-700 font-['PlusJakartaSans-Medium']">Cancel</Text>
+                  <Text className="text-center" style={{ color: colors.text }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   className="flex-1 bg-[#1DA1FA] py-3 rounded-lg"
@@ -406,14 +445,17 @@ const profile = () => {
         onRequestClose={() => setSettingsVisible(false)}
       >
         <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-white rounded-2xl p-6 w-11/12">
+          <View
+            className="rounded-2xl p-6 w-11/12"
+            style={{ backgroundColor: colors.card }}
+          >
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-black">Settings</Text>
+              <Text className="text-2xl font-['PlusJakartaSans-Bold']" style={{ color: colors.text }}>Settings</Text>
               <TouchableOpacity onPress={() => setSettingsVisible(false)}>
                 <Image 
                   source={icons.close}
                   className="w-6 h-6"
-                  style={{ tintColor: '#666' }}
+                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
                 />
               </TouchableOpacity>
             </View>
@@ -428,8 +470,8 @@ const profile = () => {
                     style={{ tintColor: '#1DA1FA' }}
                   />
                   <View className="flex-1">
-                    <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Dark Mode</Text>
-                    <Text className="text-gray-600 text-sm">Switch to dark theme</Text>
+                    <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>Dark Mode</Text>
+                    <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>Switch to dark theme</Text>
                   </View>
                 </View>
                 <Switch
@@ -449,8 +491,8 @@ const profile = () => {
                     style={{ tintColor: '#1DA1FA' }}
                   />
                   <View className="flex-1">
-                    <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Notifications</Text>
-                    <Text className="text-gray-600 text-sm">Receive app notifications</Text>
+                    <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>Notifications</Text>
+                    <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>Receive app notifications</Text>
                   </View>
                 </View>
                 <Switch
@@ -475,13 +517,13 @@ const profile = () => {
                   style={{ tintColor: '#1DA1FA' }}
                 />
                 <View className="flex-1">
-                  <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">Help & Support</Text>
-                  <Text className="text-gray-600 text-sm">Tutorial, FAQ, and contact support</Text>
+                  <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>Help & Support</Text>
+                  <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>Tutorial, FAQ, and contact support</Text>
                 </View>
                 <Image 
                   source={icons.right}
                   className="w-5 h-5"
-                  style={{ tintColor: '#666' }}
+                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
                 />
               </TouchableOpacity>
 
@@ -499,13 +541,13 @@ const profile = () => {
                   style={{ tintColor: '#1DA1FA' }}
                 />
                 <View className="flex-1">
-                  <Text className="font-['PlusJakartaSans-SemiBold'] text-black text-base">View Notifications</Text>
-                  <Text className="text-gray-600 text-sm">See your notification history</Text>
+                  <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>View Notifications</Text>
+                  <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>See your notification history</Text>
                 </View>
                 <Image 
                   source={icons.right}
                   className="w-5 h-5"
-                  style={{ tintColor: '#666' }}
+                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
                 />
               </TouchableOpacity>
             </View>
@@ -527,7 +569,7 @@ const profile = () => {
         onRequestClose={() => setBadgeModalVisible(false)}
       >
         <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-white rounded-2xl p-6 w-11/12 max-w-sm">
+          <View className="rounded-2xl p-6 w-11/12 max-w-sm" style={{ backgroundColor: colors.card }}>
             {selectedBadge && (
               <>
                 <View className="items-center mb-4">
@@ -536,21 +578,22 @@ const profile = () => {
                     className="w-20 h-20 mb-3"
                     resizeMode="contain"
                   />
-                  <Text className="text-xl font-['PlusJakartaSans-Bold'] text-black text-center">
+                  <Text className="text-xl font-['PlusJakartaSans-Bold'] text-center" style={{ color: colors.text }}>
                     {selectedBadge.name}
                   </Text>
                   {!selectedBadge.earned && (
-                    <Text className="text-sm text-gray-500 mt-1">Not yet earned</Text>
+                    <Text className="text-sm mt-1" style={{ color: colors.text, opacity: 0.6 }}>Not yet earned</Text>
                   )}
                 </View>
                 
-                <Text className="text-gray-700 font-['PlusJakartaSans-Regular'] text-center mb-6">
+                <Text className="font-['PlusJakartaSans-Regular'] text-center mb-6" style={{ color: colors.text }}>
                   {selectedBadge.description}
                 </Text>
                 
                 <TouchableOpacity 
-                  className="bg-[#1DA1FA] py-3 rounded-lg"
+                  className="py-3 rounded-lg"
                   onPress={() => setBadgeModalVisible(false)}
+                  style={{ backgroundColor: '#1DA1FA' }}
                 >
                   <Text className="text-center text-white font-['PlusJakartaSans-Medium']">
                     Close
