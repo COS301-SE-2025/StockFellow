@@ -16,5 +16,5 @@ public interface RotationRepository extends JpaRepository<Rotation, UUID> {
     /**
      * Find rotation by group ID
      */
-    List<GroupCycle> findByGroupId(String groupId);
+    Optional<Rotation> findByGroupId(String groupId);
 }

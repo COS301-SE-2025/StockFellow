@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -37,6 +38,29 @@ public class TransactionServiceClient {
         } catch (Exception e) {
             logger.error("Failed to create rotation for group {}: {}", 
                         request.getGroupId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Adds a member to a rotation in the transaction service
+     * @param groupId the group ID
+     * @param memberId the member's UUID
+     * @return true if successful, false otherwise
+     */
+    public boolean addMemberToRotation(String groupId, UUID memberId) {
+        try {
+            webClient.post()
+                    .uri("/api/rotations/add/{groupId}/{memberId}", groupId, memberId)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            
+            logger.info("Successfully added member {} to rotation for group {}", memberId, groupId);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to add member {} to rotation for group {}: {}", 
+                    memberId, groupId, e.getMessage());
+            return false;
         }
     }
 

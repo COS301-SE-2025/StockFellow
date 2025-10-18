@@ -4,6 +4,7 @@ import com.stockfellow.transactionservice.repository.RotationRepository;
 import com.stockfellow.transactionservice.dto.CreateGroupCycleDto;
 import com.stockfellow.transactionservice.dto.CreateRotationDto;
 import com.stockfellow.transactionservice.model.Rotation;
+import com.stockfellow.transactionservice.model.User;
 import com.stockfellow.transactionservice.model.GroupCycle;
 import com.stockfellow.transactionservice.service.GroupCycleService;
 
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.nio.file.attribute.GroupPrincipal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,11 +28,13 @@ public class RotationService {
 
 
     private final RotationRepository rotationRepository;
+    private final UserService userService;
     private final GroupCycleService groupCycleService;
     private static final Logger logger = LoggerFactory.getLogger(RotationService.class);
 
-    public RotationService(RotationRepository rotationRepository, GroupCycleService groupCycleService) {
+    public RotationService(RotationRepository rotationRepository, UserService userService, GroupCycleService groupCycleService) {
         this.rotationRepository = rotationRepository;
+        this.userService = userService;
         this.groupCycleService = groupCycleService;
     }
 
@@ -98,6 +102,10 @@ public class RotationService {
         return groupCycleService.createGroupCycle(cycleDto);
     }
 
+    /**
+     * Updates the roation at the end of a groupcycle
+     * @param id
+     */
     public void updateRotation(UUID id) {
         Rotation rotation = rotationRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Rotation not found with ID: " + id));
@@ -139,6 +147,28 @@ public class RotationService {
         
         logger.info("New cycle with ID: " + cycle.getCycleId() + " created for rotation with ID: " + id);
         return;
+    }
+
+    /**
+     * Attempts to add a member to the memberIds array, if the group is currently inactive(no current cycles running)
+     */
+    public void updateMembers(String groupId, UUID memberId) {
+        User user = userService.findById(memberId);
+        
+        // Get the rotation
+        Rotation rotation = rotationRepository.findByGroupId(groupId)
+            .orElseThrow(() -> new IllegalArgumentException("Rotation not found with for Group with ID: " + groupId));
+        
+        // Check if the rotation is active
+        if (!"ACTIVE".equals(rotation.getStatus())) {
+            throw new IllegalStateException("Cannot add members to inactive rotation");
+        }
+        
+        // Add user to memberIds array
+        rotation.addMember(memberId);
+        rotationRepository.save(rotation);
+        
+        logger.info("Successfully added member {} to rotation {}", memberId, rotation.getId());
     }
 
     public void validateCreateRotationRequest(CreateRotationDto request) {

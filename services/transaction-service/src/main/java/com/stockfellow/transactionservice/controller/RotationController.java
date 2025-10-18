@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,5 +34,27 @@ public class RotationController {
         Rotation created = rotationService.createRotation(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    @PostMapping("/add/{groupId}/{memberId}")
+    public ResponseEntity<?> addMember(
+        @PathVariable String groupId,
+        @PathVariable UUID memberId) {
+        try {
+            rotationService.updateMembers(groupId, memberId);
+            return ResponseEntity.ok()
+                .body(Map.of("message", "Member added successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            // logger.error("Error adding member to rotation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to add member"));
+        }
+    }
+    
     
 }

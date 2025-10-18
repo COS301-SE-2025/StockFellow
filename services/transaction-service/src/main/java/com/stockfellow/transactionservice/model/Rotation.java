@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -122,5 +125,27 @@ public class Rotation {
     public void advanceDates() {
         this.collectionDate = this.collectionDate.plusMonths(1);
         this.payoutDate = this.payoutDate.plusMonths(1);
+    }
+    
+    /**
+     * Adds a new member to the rotation
+     * @param memberId UUID of the member to add
+     * @throws IllegalArgumentException if memberId is null
+     * @throws IllegalStateException if member already exists
+     */
+    public void addMember(UUID memberId) {
+        if (memberId == null) {
+            throw new IllegalArgumentException("Member ID cannot be null");
+        }
+        
+        List<UUID> memberList = new ArrayList<>(Arrays.asList(this.memberIds));
+        
+        if (memberList.contains(memberId)) {
+            throw new IllegalStateException("Member already exists in rotation");
+        }
+        
+        memberList.add(memberId);
+        
+        this.memberIds = memberList.toArray(new UUID[0]);
     }
 }
