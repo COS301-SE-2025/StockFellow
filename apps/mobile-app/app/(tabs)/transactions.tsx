@@ -61,7 +61,7 @@ const Transactions = () => {
     try {
       setCardsLoading(true);
       const userCards = await cardService.getUserBankDetails();
-      const formattedCards = userCards.map(card => ({
+      const formattedCards = userCards.map((card: any) => ({
         id: card.id,
         bank: card.bank,
         last4Digits: card.last4Digits,
@@ -78,7 +78,7 @@ const Transactions = () => {
       setCardsLoading(false);
     }
   };
-
+  
   // Load more transactions (for pagination)
   const loadMoreTransactions = () => {
     if (!transactionsLoading && hasMoreTransactions) {

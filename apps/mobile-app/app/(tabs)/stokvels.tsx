@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import SearchBar from '../../src/components/SearchBar';
@@ -11,6 +11,7 @@ import { useTheme } from '../_layout';
 import authService from '../../src/services/authService';
 import userService from '../../src/services/userService';
 import groupService from '../../src/services/groupService';
+import cardService from '../../src/services/cardService';
 
 interface Stokvel {
   id: string;
@@ -26,6 +27,7 @@ const Stokvels = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stokvels, setStokvels] = useState<Stokvel[]>([]);
   const [publicStokvels, setPublicStokvels] = useState<Stokvel[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -43,76 +45,114 @@ const Stokvels = () => {
     "Elite Circle"
   ];
 
-  useEffect(() => {
-    const fetchStokvels = async () => {
-      try {
-        const response = await authService.apiRequest('/groups/user', {
-          method: 'GET'
-        });
+  const fetchStokvels = async () => {
+    try {
+      const response = await authService.apiRequest('/groups/user', {
+        method: 'GET'
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch stokvels');
-        }
-
-        const data = await response.json();
-        console.debug("User groups:", data);
-
-        const transformedStokvels = data.map((group: any) => ({
-          id: group._id || group.id,
-          groupId: group.groupId,
-          name: group.name,
-          memberCount: group.members?.length || 0,
-          balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
-          profileImage: group.profileImage || null,
-          visibility: group.visibility
-        }));
-
-        setStokvels(transformedStokvels);
-
-        // Check if user has no groups and we should show the prompt
-        if (data.length === 0) {
-          // Get user tier for the prompt
-          let tier: number | null = null; // Initialize as null
-          try {
-            const profileResponse = await userService.getProfile();
-            const backendTier = profileResponse.affordability?.tier ?? null;
-            console.debug("Retrieved user tier from backend:", backendTier);
-            
-            // If tier is 0 or null, generate tier
-            if (!backendTier || backendTier === 0) {
-                tier = Math.floor(Math.random() * 6) + 1;
-                console.debug("Generated random tier:", tier);
-            } else {
-                tier = backendTier;
-            }
-            } catch (error) {
-            console.warn("Could not fetch user tier:", error);
-            // Generate tier for the prompt
-            tier = Math.floor(Math.random() * 6) + 1;
-            console.debug("Generated tier after error:", tier);
-          }
-          
-          setUserTier(tier); // Now this accepts number | null
-          if (tier !== null) {
-            setShowAutoJoinPrompt(true);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching stokvels:', error);
-        if (error instanceof Error && error.message.includes('Authentication failed')) {
-          Alert.alert('Session Expired', 'Please login again', [
-            { text: 'OK', onPress: () => router.push('/login') }
-          ]);
-        } else {
-          Alert.alert('Error', 'Failed to load stokvels');
-        }
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch stokvels');
       }
+
+      const data = await response.json();
+      console.debug("User groups:", data);
+
+      const transformedStokvels = data.map((group: any) => ({
+        id: group._id || group.id,
+        groupId: group.groupId,
+        name: group.name,
+        memberCount: group.members?.length || 0,
+        balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
+        profileImage: group.profileImage || null,
+        visibility: group.visibility
+      }));
+
+      setStokvels(transformedStokvels);
+    } catch (error) {
+      console.error('Error fetching stokvels:', error);
+      if (error instanceof Error && error.message.includes('Authentication failed')) {
+        Alert.alert('Session Expired', 'Please login again', [
+          { text: 'OK', onPress: () => router.push('/login') }
+        ]);
+      } else {
+        Alert.alert('Error', 'Failed to load stokvels');
+      }
+    }
+  };
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      await fetchStokvels();
+      setLoading(false);
     };
 
-    fetchStokvels();
+    loadInitialData();
   }, []);
+
+  // Pull to refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchStokvels();
+    setRefreshing(false);
+  }, []);
+
+  const handleCreateButtonPress = async () => {
+    try {
+      // Check if user has an active card
+      const userCards = await cardService.getUserBankDetails();
+      
+      if (!userCards || userCards.length === 0) {
+        Alert.alert(
+          'Card Required',
+          'Please add a debit card before creating or joining a stokvel.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Add Card', 
+              onPress: () => router.push('/transactions/cards')
+            }
+          ]
+        );
+        return;
+      }
+
+      // Check if user is already part of any groups
+      if (stokvels.length === 0) {
+        // User has no groups, show auto-join prompt
+        // First, get user tier
+        let tier: number | null = null;
+        try {
+          const profileResponse = await userService.getProfile();
+          const backendTier = profileResponse.affordability?.tier ?? null;
+          console.debug("Retrieved user tier from backend:", backendTier);
+          
+          if (!backendTier || backendTier === 0) {
+            tier = Math.floor(Math.random() * 6) + 1;
+            console.debug("Generated random tier:", tier);
+          } else {
+            tier = backendTier;
+          }
+        } catch (error) {
+          console.warn("Could not fetch user tier:", error);
+          tier = Math.floor(Math.random() * 6) + 1;
+          console.debug("Generated tier after error:", tier);
+        }
+        
+        setUserTier(tier);
+        if (tier !== null) {
+          setShowAutoJoinPrompt(true);
+        }
+      } else {
+        // User already has groups, go straight to create page
+        router.push('/stokvels/create');
+      }
+    } catch (error) {
+      console.error('Error checking card status:', error);
+      Alert.alert('Error', 'Failed to check card status. Please try again.');
+    }
+  };
 
   const handleAutoJoinAccept = async () => {
     try {
@@ -128,26 +168,9 @@ const Stokvels = () => {
       const joinResult = await groupService.joinOrCreateStokvel(userTier);
 
       // Refetch user's groups after joining
-      const response = await authService.apiRequest('/groups/user', {
-        method: 'GET'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const transformedStokvels = data.map((group: any) => ({
-          id: group._id || group.id,
-          groupId: group.groupId,
-          name: group.name,
-          memberCount: group.members?.length || 0,
-          balance: group.balance ? `R ${group.balance.toFixed(2)}` : "R 0.00",
-          profileImage: group.profileImage || null,
-          visibility: group.visibility
-        }));
-
-        setStokvels(transformedStokvels);
-        
-        Alert.alert('Success', `You've been added to a ${tierNames[userTier - 1]} stokvel`);
-      }
+      await fetchStokvels();
+      
+      Alert.alert('Success', `You've been added to a ${tierNames[userTier - 1]} stokvel`);
     } catch (error) {
       console.error('Error joining stokvel:', error);
       Alert.alert('Error', 'Failed to join stokvel automatically');
@@ -158,11 +181,8 @@ const Stokvels = () => {
 
   const handleAutoJoinDecline = () => {
     setShowAutoJoinPrompt(false);
-    Alert.alert(
-      'No Problem!',
-      'You can create your own stokvel or join public ones anytime.',
-      [{ text: 'OK' }]
-    );
+    // Take user to create page after declining
+    router.push('/stokvels/create');
   };
 
   const handleClosePrompt = () => {
@@ -194,7 +214,7 @@ const Stokvels = () => {
         const groups = data.groups || [];
 
         const transformedResults = groups.map((group: any) => ({
-          id: group.id, // Include id field
+          id: group.id,
           groupId: group.groupId || group.id || group._id,
           name: group.name,
           memberCount: group.currentMembers || group.members?.length || 0,
@@ -250,7 +270,6 @@ const Stokvels = () => {
         tierName={userTier ? tierNames[userTier - 1] : 'Recommended'}
       />
 
-
       <View className="px-6 pt-4">
         <SearchBar
           nativeID="search-bar"
@@ -262,7 +281,17 @@ const Stokvels = () => {
 
       {/* Main content with padding bottom for fixed button */}
       <View style={{ flex: 1, paddingBottom: 80 }}>
-        <ScrollView className="flex-1 px-6">
+        <ScrollView 
+          className="flex-1 px-6"
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
           {searchQuery ? (
             <>
               {/* Search results section */}
@@ -282,7 +311,6 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
                           params: { id: stokvel.groupId }
@@ -311,7 +339,6 @@ const Stokvels = () => {
                       balance={stokvel.balance || "R 0.00"}
                       profileImage={stokvel.profileImage}
                       onPress={() => {
-                        // Use groupId consistently for navigation
                         router.push({
                           pathname: '/stokvels/[id]',
                           params: { id: stokvel.groupId }
@@ -338,7 +365,6 @@ const Stokvels = () => {
                     balance={stokvel.balance || "R 0.00"}
                     profileImage={stokvel.profileImage}
                     onPress={() => {
-                      // Use groupId consistently for navigation
                       router.push({
                         pathname: '/stokvels/[id]',
                         params: { id: stokvel.groupId }
@@ -374,7 +400,7 @@ const Stokvels = () => {
             maxWidth: 400
           }}
           className="rounded-full py-3 flex-row items-center justify-center gap-2"
-          onPress={() => router.push('/stokvels/create')}
+          onPress={handleCreateButtonPress}
         >
           <Image
             source={icons.plus}
