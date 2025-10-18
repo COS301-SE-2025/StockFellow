@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../_layout';
 import TopBar from '../../src/components/TopBar';
 import NotificationItem from '../../src/components/NotificationItem';
 import NotificationService, { Notification } from '../../src/services/notificationService';
@@ -62,6 +64,7 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { colors, isDarkMode } = useTheme();
 
   // Load notifications from API
   const loadNotifications = async (showLoading = true) => {
@@ -136,11 +139,12 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Notifications" showBackButton />
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#0066CC" />
-          <Text className="mt-4 text-gray-600 font-['PlusJakartaSans-Regular']">
+          <Text className="mt-4 font-['PlusJakartaSans-Regular']" style={{ color: colors.text, opacity: 0.7 }}>
             Loading notifications...
           </Text>
         </View>
@@ -150,14 +154,16 @@ const Notifications = () => {
 
   if (error && notifications.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Notifications" showBackButton />
         <View className="flex-1 justify-center items-center px-8">
-          <Text className="text-red-500 text-center font-['PlusJakartaSans-Medium'] mb-4">
+          <Text className="text-center font-['PlusJakartaSans-Medium'] mb-4" style={{ color: '#EF4444' }}>
             {error}
           </Text>
           <Text 
-            className="text-blue-500 font-['PlusJakartaSans-Medium']"
+            className="font-['PlusJakartaSans-Medium']"
+            style={{ color: colors.primary }}
             onPress={() => loadNotifications()}
           >
             Tap to retry
@@ -172,14 +178,16 @@ const Notifications = () => {
   const hasUnreadNotifications = notifications.some(n => !n.readStatus);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <TopBar 
         title="Notifications" 
         showBackButton 
         rightComponent={
           hasUnreadNotifications ? (
             <Text 
-              className="text-blue-500 font-['PlusJakartaSans-Medium'] mr-4"
+              className="mr-4 font-['PlusJakartaSans-Medium']"
+              style={{ color: '#1DA1FA' }}
               onPress={markAllAsRead}
             >
               Mark All Read
@@ -190,27 +198,29 @@ const Notifications = () => {
       
       {!hasNotifications ? (
         <View className="flex-1 justify-center items-center px-8">
-          <Text className="text-gray-500 text-center font-['PlusJakartaSans-Medium'] text-lg mb-2">
+          <Text className="text-center font-['PlusJakartaSans-Medium'] text-lg mb-2" style={{ color: colors.text, opacity: 0.8 }}>
             No notifications yet
           </Text>
-          <Text className="text-gray-400 text-center font-['PlusJakartaSans-Regular']">
+          <Text className="text-center font-['PlusJakartaSans-Regular']" style={{ color: colors.text, opacity: 0.6 }}>
             You'll see your notifications here when you receive them
           </Text>
         </View>
       ) : (
         <ScrollView 
           className="flex-1 mx-4"
+          style={{ backgroundColor: colors.background }}
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh}
               colors={['#0066CC']}
+              tintColor={colors.primary}
             />
           }
         >
           {groupedNotifications.today.length > 0 && (
             <View>
-              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text, opacity: 0.8 }}>
                 Today
               </Text>
               {groupedNotifications.today.map(notification => (
@@ -229,7 +239,7 @@ const Notifications = () => {
 
           {groupedNotifications.yesterday.length > 0 && (
             <View>
-              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text, opacity: 0.8 }}>
                 Yesterday
               </Text>
               {groupedNotifications.yesterday.map(notification => (
@@ -248,7 +258,7 @@ const Notifications = () => {
 
           {groupedNotifications.last7Days.length > 0 && (
             <View>
-              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text, opacity: 0.8 }}>
                 Last 7 Days
               </Text>
               {groupedNotifications.last7Days.map(notification => (
@@ -267,7 +277,7 @@ const Notifications = () => {
 
           {groupedNotifications.last30Days.length > 0 && (
             <View>
-              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text, opacity: 0.8 }}>
                 Last 30 Days
               </Text>
               {groupedNotifications.last30Days.map(notification => (
@@ -286,7 +296,7 @@ const Notifications = () => {
 
           {groupedNotifications.older.length > 0 && (
             <View>
-              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold'] text-gray-700">
+              <Text className="px-4 py-2 font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text, opacity: 0.8 }}>
                 Older Notifications
               </Text>
               {groupedNotifications.older.map(notification => (
