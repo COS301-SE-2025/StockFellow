@@ -12,6 +12,8 @@ import com.stockfellow.transactionservice.service.TransactionService;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.repository.PayerDetailsRepository;
 import com.stockfellow.transactionservice.repository.TransactionRepository;
+import com.stockfellow.transactionservice.repository.UserRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -46,6 +50,9 @@ public class PaymentScheduler {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
 
     public PaymentScheduler(RotationService rotationService) {
@@ -57,11 +64,12 @@ public class PaymentScheduler {
     public void processScheduledPayments() {
         logger.info("Starting scheduled payment processing");
         
-        List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("PENDING", LocalDate.now());
-        
+    LocalDate today = LocalDate.now(ZoneOffset.ofHours(2));
+    List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("PENDING", today);
+
         logger.info("{} Pending cycles found", dueCycles.size());
         for (GroupCycle cycle : dueCycles) {
-            if ("PENDING".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(LocalDate.now().plusDays(1))) {
+            if ("PENDING".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(today.plusDays(1))) {
                 
                 logger.info("Processing payments for cycle {} with recipient {}", 
                     cycle.getCycleId(), cycle.getRecipientUserId());
@@ -70,6 +78,9 @@ public class PaymentScheduler {
                 groupCycleRepository.save(cycle);
                 
                 processPaymentsForCycle(cycle);
+            } else {
+                logger.info("Cycle doesnt meet criteria. Status: {} Check date: {} Actual_Date: {}",
+                    cycle.getStatus(), today.plusDays(1), cycle.getCollectionStartDate());                
             }
         }
     }
@@ -78,15 +89,30 @@ public class PaymentScheduler {
         logger.info("Processing payments for cycle: {}", cycle.getCycleId());
 
         try {
-            // Fetch all users in the group
-            List<User> users = userService.fetchUsers(cycle.getGroupId());
-            
             // Remove the recipient from the list (they don't pay, they receive)
-            List<User> payingUsers = users.stream()
-                .filter(user -> !user.getUserId().equals(cycle.getRecipientUserId()))
-                .collect(Collectors.toList());
+            UUID[] memberIdsArray = cycle.getMemberIds();
             
-            logger.info("Found {} users to charge for cycle {}", payingUsers.size(), cycle.getCycleId());
+            if (memberIdsArray == null || memberIdsArray.length == 0) {
+                logger.warn("No member IDs found for cycle {}", cycle.getCycleId());
+                return;
+            }
+
+            List<UUID> payingUserIds = Arrays.stream(memberIdsArray)
+            .filter(memberId -> !memberId.equals(cycle.getRecipientUserId()))
+            .collect(Collectors.toList());
+            
+            logger.info("Found {} users to charge for cycle {} (excluding recipient)", 
+                payingUserIds.size(), cycle.getCycleId());
+            
+
+            List<User> payingUsers = userRepository.findAllById(payingUserIds);
+
+            if (payingUsers.isEmpty()) {
+                logger.warn("No paying users found in database for cycle {}", cycle.getCycleId());
+                return;
+            }
+            
+            logger.info("Successfully fetched {} user records", payingUsers.size());
             
             // Process each paying user
             for (User user : payingUsers) {
@@ -95,7 +121,6 @@ public class PaymentScheduler {
                 } catch (Exception e) {
                     logger.error("Failed to process payment for user {} in cycle {}: {}", 
                         user.getUserId(), cycle.getCycleId(), e.getMessage());
-                    // Continue with other users even if one fails
                 }
             }
             

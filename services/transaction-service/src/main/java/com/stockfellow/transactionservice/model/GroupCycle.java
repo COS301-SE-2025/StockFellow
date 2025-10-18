@@ -55,6 +55,9 @@ public class GroupCycle {
     
     @Column(name = "status", nullable = false)
     private String status;
+
+    @Column(name = "member_ids")
+    private UUID[] memberIds;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -62,12 +65,14 @@ public class GroupCycle {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    
+
     // Constructors
     public GroupCycle() {}
 
     public GroupCycle(String groupId, UUID rotationId, String cyclePeriod, UUID recipientUserId, 
                      BigDecimal contributionAmount, BigDecimal expectedTotal,
-                     LocalDate collectionStartDate, LocalDate collectionEndDate) {
+                     LocalDate collectionStartDate, LocalDate collectionEndDate, LocalDate payoutDate, UUID[] memberIds) {
         this.groupId = groupId;
         this.rotationId = rotationId;
         this.cyclePeriod = cyclePeriod;
@@ -77,7 +82,10 @@ public class GroupCycle {
         this.collectionStartDate = collectionStartDate;
         this.collectionEndDate = collectionEndDate;
         this.status = "PENDING";
+        this.memberIds = memberIds;
         this.currentTotal = BigDecimal.ZERO;
+        this.payoutDate = payoutDate;
+        
     }
 
     // Getters
@@ -96,6 +104,7 @@ public class GroupCycle {
     public Integer getFailedCount() { return failedCount; }
     public Integer getPendingCount() { return pendingCount; }
     public String getStatus() { return status; }
+    public UUID[] getMemberIds() { return memberIds; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -115,6 +124,7 @@ public class GroupCycle {
     public void setFailedCount(Integer failedCount) { this.failedCount = failedCount; }
     public void setPendingCount(Integer pendingCount) { this.pendingCount = pendingCount; }
     public void setStatus(String status) { this.status = status; }
+    public void setMemberIds(UUID[] memberIds) { this.memberIds = memberIds; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 

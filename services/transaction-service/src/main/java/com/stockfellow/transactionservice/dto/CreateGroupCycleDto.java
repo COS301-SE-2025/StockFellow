@@ -45,6 +45,8 @@ public class CreateGroupCycleDto {
     
     private LocalDate payoutDate;
 
+    private UUID[] memberIds;
+
     // Constructors
     public CreateGroupCycleDto() {}
 
@@ -71,6 +73,9 @@ public class CreateGroupCycleDto {
     public void setCollectionStartDate(LocalDate collectionStartDate) {
         this.collectionStartDate = collectionStartDate; 
     }
+
+    public UUID[] getMemberIds() { return memberIds; }
+    public void setMemberIds(UUID[] memberIds) { this.memberIds = memberIds; }
     
     public LocalDate getCollectionEndDate() { return collectionEndDate; }
     public void setCollectionEndDate(LocalDate collectionEndDate) { this.collectionEndDate = collectionEndDate; }

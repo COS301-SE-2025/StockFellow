@@ -66,7 +66,7 @@ public class UserService {
             user.setFirstName(syncDto.getFirstName());
             user.setLastName(syncDto.getLastName());
             user.setPhone(syncDto.getPhone());
-            user.setStatus(syncDto.getStatus() != null ? syncDto.getStatus() : User.UserStatus.active);
+            user.setStatus(syncDto.getStatus() != null ? syncDto.getStatus() : User.UserStatus.ACTIVE);
         }
 
         user = userRepository.save(user);
@@ -120,22 +120,14 @@ public class UserService {
     }
 
 
-    public List<User> fetchUsers(String groupId) {
-        try {
-            HttpHeaders headers = createHeaders();
-            HttpEntity<?> entity = new HttpEntity<>(headers);
+    // public List<User> fetchUsers(String groupId) {
+    //     try {
+    //         List<User> = userRepository.findByGr
             
-            ResponseEntity<List<User>> response = restTemplate.exchange(
-                GROUP_SERVICE_BASE_URL + "/transfer/" + groupId,
-                HttpMethod.GET,
-                entity,
-                new ParameterizedTypeReference<List<User>>() {}
-            );
-            
-            return response.getBody();
-        } catch (Exception e) {
-            logger.error("Error fetching users: ", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch users");
-        }
-    }
+    //         return response.getBody();
+    //     } catch (Exception e) {
+    //         logger.error("Error fetching users: ", e);
+    //         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch users");
+    //     }
+    // }
 }

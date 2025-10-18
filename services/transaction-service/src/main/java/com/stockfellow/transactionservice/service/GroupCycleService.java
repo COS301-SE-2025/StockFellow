@@ -46,7 +46,9 @@ public class GroupCycleService {
             request.getContributionAmount(),
             request.getExpectedTotal(),
             request.getCollectionStartDate(),
-            request.getCollectionEndDate()
+            request.getCollectionEndDate(),
+            request.getPayoutDate(),
+            request.getMemberIds()
         );
         
 //        cycle.setStatus("pending"); // Set default status

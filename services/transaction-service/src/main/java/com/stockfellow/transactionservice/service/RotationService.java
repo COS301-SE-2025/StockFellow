@@ -93,6 +93,7 @@ public class RotationService {
         cycleDto.setCollectionStartDate(rotation.getCollectionDate());
         cycleDto.setCollectionEndDate(rotation.getCollectionDate());
         cycleDto.setPayoutDate(rotation.getPayoutDate());
+        cycleDto.setMemberIds(rotation.getMemberIds());
         
         return groupCycleService.createGroupCycle(cycleDto);
     }
