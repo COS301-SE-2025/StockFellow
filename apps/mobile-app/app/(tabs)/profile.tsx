@@ -1,4 +1,4 @@
-import { Text, View, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Switch } from 'react-native'
+import { Text, View, Image, TouchableOpacity, ScrollView, Modal, Alert, Switch } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBar from '../../src/components/TopBar';
@@ -6,26 +6,24 @@ import { icons, images } from '../../src/constants';
 import { useTheme } from '../../app/_layout';
 import { useTutorial } from '../../src/components/help/TutorialContext';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { Linking } from 'react-native';
 import HelpMenu from '../../src/components/help/HelpMenu';
 import { useEffect } from 'react';
 import userService from '../../src/services/userService'; 
 import { StatusBar } from 'expo-status-bar'; // added
+import authService from '../../src/services/authService';
 
 const profile = () => {
-  const { isDarkMode, toggleTheme, colors } = useTheme(); // include colors
+  const { isDarkMode, toggleTheme, colors } = useTheme();
   const { startTutorial } = useTutorial();
   const router = useRouter();
 
   // Modal states
-  const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [helpMenuVisible, setHelpMenuVisible] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<any>(null);
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
   
-  // Edit Profile states
+  // Profile data state
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -40,63 +38,8 @@ const profile = () => {
   // Settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  const handleSaveProfile = () => {
-    Alert.alert('Success', 'Profile updated successfully!');
-    setEditProfileVisible(false);
-  };
-
   const handleSettings = () => {
     setSettingsVisible(true);
-  };
-
-  const handleImagePicker = async () => {
-    Alert.alert(
-      'Select Image',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: openCamera },
-        { text: 'Gallery', onPress: openGallery },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
-  };
-
-  const openCamera = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Camera access is required to take a photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setProfileData({...profileData, profileImage: result.assets[0].uri});
-    }
-  };
-
-  const openGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Gallery access is required to select a photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setProfileData({...profileData, profileImage: result.assets[0].uri});
-    }
   };
 
   const badgeData = [
@@ -158,6 +101,16 @@ const profile = () => {
     fetchUserProfile();
   }, []);
 
+  const handleLogout = async () => {
+    setSettingsVisible(false);
+    try {
+      await authService.logout?.(); // call if available
+    } catch (e) {
+      // ignore logout errors
+    }
+    router.replace('/login');
+  };
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
@@ -200,7 +153,7 @@ const profile = () => {
         {/* Profile Section */}
         <View className="items-center mt-4 mb-6">
           {/* Profile picture */}
-          <TouchableOpacity className="relative mb-3">
+          <View className="relative mb-3">
             <View
               className="w-32 h-32 bg-slate-200 rounded-full items-center justify-center mb-3 overflow-hidden"
               style={isDarkMode ? { backgroundColor: colors.card } : undefined}
@@ -219,7 +172,7 @@ const profile = () => {
                 />
               )}
             </View>
-          </TouchableOpacity>
+          </View>
 
           <Text
             className="text-3xl font-['PlusJakartaSans-Bold'] mb-3"
@@ -230,12 +183,6 @@ const profile = () => {
 
           {/* Buttons */}
           <View className="flex-row gap-3">
-            <TouchableOpacity 
-              className="bg-[#1DA1FA] px-6 py-3 rounded-full"
-              onPress={() => setEditProfileVisible(true)}
-            >
-              <Text className="text-white font-['PlusJakartaSans-Medium'] text-m">Edit Profile</Text>
-            </TouchableOpacity>
             <TouchableOpacity 
               className="bg-[#1DA1FA] px-6 py-3 rounded-full"
               onPress={handleSettings}
@@ -334,108 +281,6 @@ const profile = () => {
 
         </View>
       </ScrollView>
-
-      {/* Edit Profile Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={editProfileVisible}
-        onRequestClose={() => setEditProfileVisible(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-black/50">
-          <View
-            className="rounded-2xl p-6 w-11/12 max-h-4/5"
-            style={{ backgroundColor: colors.card }}
-          >
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-center" style={{ color: colors.text }}>
-                Edit Profile
-              </Text>
-              <TouchableOpacity onPress={() => setEditProfileVisible(false)}>
-                <Image 
-                  source={icons.close}
-                  className="w-6 h-6"
-                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Profile Picture */}
-              <View className="items-center mb-6">
-                <TouchableOpacity onPress={handleImagePicker} className="relative">
-                  <View className="w-24 h-24 bg-slate-200 rounded-full items-center justify-center overflow-hidden">
-                    {profileData.profileImage ? (
-                      <Image 
-                        source={{ uri: profileData.profileImage }}
-                        className="w-full h-full"
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Image 
-                        source={images.user}
-                        className="w-full h-full"
-                        resizeMode="cover"
-                      />
-                    )}
-                  </View>
-                  <View className="absolute -bottom-2 -right-2 bg-[#1DA1FA] rounded-full p-2">
-                    <Image source={icons.camera} className="w-4 h-4" style={{ tintColor: 'white' }} />
-                  </View>
-                </TouchableOpacity>
-                <Text className="mt-2 text-sm text-center" style={{ color: colors.text, opacity: 0.6 }}>
-                  Tap to change photo
-                </Text>
-              </View>
-
-              {/* Form Fields */}
-              <View className="space-y-4 mt-6">
-                <View>
-                  <Text className="mb-2" style={{ color: colors.text }}>Full Name</Text>
-                  <TextInput
-                    value={profileData.name}
-                    onChangeText={(text) => setProfileData({...profileData, name: text})}
-                    className="border rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
-                    placeholder="Enter your full name"
-                    placeholderTextColor={isDarkMode ? '#9CA3AF' : undefined}
-                    style={{ borderColor: isDarkMode ? colors.border : '#D1D5DB', color: colors.text }}
-                  />
-                </View>
-
-                <View>
-                  <Text className="mb-2" style={{ color: colors.text }}>Email</Text>
-                  <TextInput
-                    value={profileData.email}
-                    onChangeText={(text) => setProfileData({...profileData, email: text})}
-                    className="border rounded-lg px-4 py-3 font-['PlusJakartaSans-Regular']"
-                    placeholder="Enter your email"
-                    keyboardType="email-address"
-                    placeholderTextColor={isDarkMode ? '#9CA3AF' : undefined}
-                    style={{ borderColor: isDarkMode ? colors.border : '#D1D5DB', color: colors.text }}
-                  />
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View className="flex-row gap-3 mt-8">
-                <TouchableOpacity 
-                  className="flex-1 py-3 rounded-lg"
-                  onPress={() => setEditProfileVisible(false)}
-                  style={isDarkMode ? { backgroundColor: colors.background } : { backgroundColor: '#E5E7EB' }}
-                >
-                  <Text className="text-center" style={{ color: colors.text }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  className="flex-1 bg-[#1DA1FA] py-3 rounded-lg"
-                  onPress={handleSaveProfile}
-                >
-                  <Text className="text-center text-white font-['PlusJakartaSans-Medium']">Save Changes</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Settings Modal */}
       <Modal
@@ -543,6 +388,36 @@ const profile = () => {
                 <View className="flex-1">
                   <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>View Notifications</Text>
                   <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>See your notification history</Text>
+                </View>
+                <Image 
+                  source={icons.right}
+                  className="w-5 h-5"
+                  style={{ tintColor: isDarkMode ? '#AAA' : '#666' }}
+                />
+              </TouchableOpacity>
+
+              {/* Logout */}
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                onPress={() =>
+                  Alert.alert('Log out', 'Are you sure you want to log out?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Log out', style: 'destructive', onPress: handleLogout },
+                  ])
+                }
+              >
+                <Image 
+                  source={icons.close}
+                  className="w-4 h-4 mr-4"
+                  style={{ tintColor: '#EF4444' }}
+                />
+                <View className="flex-1">
+                  <Text className="font-['PlusJakartaSans-SemiBold'] text-base text-red-500">
+                    Log Out
+                  </Text>
+                  <Text className="text-sm" style={{ color: colors.text, opacity: 0.7 }}>
+                    End your session and return to login
+                  </Text>
                 </View>
                 <Image 
                   source={icons.right}
