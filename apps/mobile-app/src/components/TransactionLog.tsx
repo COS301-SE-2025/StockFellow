@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { icons } from '../../src/constants';
+import { useTheme } from '../../app/_layout';
 
 export interface Transaction {
   id: string;
@@ -17,6 +18,8 @@ interface TransactionLogProps {
 }
 
 const TransactionLog: React.FC<TransactionLogProps> = ({ transactions }) => {
+  const { isDarkMode, colors } = useTheme();
+
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-GB', options);
@@ -36,6 +39,7 @@ const TransactionLog: React.FC<TransactionLogProps> = ({ transactions }) => {
         <View 
           key={transaction.id}
           className="flex-row items-center justify-between py-4 border-b border-gray-100"
+          style={isDarkMode ? { borderBottomColor: 'rgba(255,255,255,0.12)' } : undefined}
         >
           <Image
             source={transaction.profileImage ? { uri: transaction.profileImage } : icons.stokvelpfp}
@@ -45,10 +49,16 @@ const TransactionLog: React.FC<TransactionLogProps> = ({ transactions }) => {
           />
 
           <View className="flex-1 ml-3">
-            <Text className="text-gray-500 text-xs">
+            <Text
+              className="text-gray-500 text-xs"
+              style={isDarkMode ? { color: '#9CA3AF' } : undefined}
+            >
               {formatDate(transaction.date)}
             </Text>
-            <Text className="text-black font-medium mt-1">
+            <Text
+              className="text-black font-medium mt-1"
+              style={isDarkMode ? { color: colors.text } : undefined}
+            >
               {transaction.groupName}
             </Text>
           </View>

@@ -9,9 +9,12 @@ import TransactionLog, { Transaction } from '../../src/components/TransactionLog
 import { icons } from '../../src/constants';
 import { useRouter } from 'expo-router';
 import cardService from '../../src/services/cardService';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../_layout';
 
 const Transactions = () => {
   const router = useRouter();
+  const { colors, isDarkMode } = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<any[]>([]);
@@ -117,7 +120,8 @@ const Transactions = () => {
   if (loading) {
     return (
       <GestureHandlerRootView className="flex-1">
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+          <StatusBar style={isDarkMode ? 'light' : 'dark'} />
           <TopBar title="Transactions" />
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#0000ff" />
@@ -129,11 +133,13 @@ const Transactions = () => {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Transactions" />
 
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingTop: 20, paddingBottom: 80 }}
+          style={{ backgroundColor: colors.background }}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
           refreshControl={
@@ -151,7 +157,10 @@ const Transactions = () => {
         >
           <View className="w-full flex-1 justify-start items-center h-full px-6">
             {/* Your existing card UI */}
-            <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start">
+            <Text
+              className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start"
+              style={{ color: colors.text }}
+            >
               My Debit Card
             </Text>
 
@@ -179,7 +188,10 @@ const Transactions = () => {
               )}
             </View>
 
-            <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start">
+            <Text
+              className="text-base font-['PlusJakartaSans-SemiBold'] mb-4 mt-2 self-start"
+              style={{ color: colors.text }}
+            >
               Transaction History
             </Text>
 
@@ -196,7 +208,10 @@ const Transactions = () => {
 
             {transactions.length === 0 && !transactionsLoading && (
               <View className="w-full items-center justify-center py-10">
-                <Text className="text-gray-500 text-center">
+                <Text
+                  className="text-gray-500 text-center"
+                  style={{ color: colors.text, opacity: 0.7 }}
+                >
                   No transactions found. Your transaction history will appear here.
                 </Text>
               </View>
