@@ -212,7 +212,7 @@ const StokvelRequests = () => {
                                             {request.profileName || request.userId}
                                         </Text>
                                         <Text className="text-gray-600 text-sm">
-                                            wants to join
+                                            wants to join your stokvel
                                         </Text>
                                         <Text className="text-gray-500 text-xs mt-1">
                                             {formatDistanceToNow(request.timestamp, { addSuffix: true })}
@@ -220,9 +220,9 @@ const StokvelRequests = () => {
                                     </View>
                                 </View>
 
-                                <View className="flex-row justify-end space-x-3">
+                                <View className="flex-row justify-end space-x-3 gap-2">
                                     <TouchableOpacity
-                                        className="px-4 py-2 bg-red-100 rounded-full"
+                                        className="px-6 py-3"
                                         onPress={() => handleReject(request.requestId)}
                                         disabled={loading}
                                     >
@@ -231,11 +231,11 @@ const StokvelRequests = () => {
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        className="px-4 py-2 bg-[#03DE58]/10 rounded-full"
+                                        className="px-6 py-3 bg-[#0C0C0F] rounded-full"
                                         onPress={() => handleAccept(request.requestId)}
                                         disabled={loading}
                                     >
-                                        <Text className="text-[#03DE58] font-['PlusJakartaSans-SemiBold']">
+                                        <Text className="text-[#FFFFFF] font-['PlusJakartaSans-SemiBold']">
                                             Accept
                                         </Text>
                                     </TouchableOpacity>
