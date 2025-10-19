@@ -78,6 +78,20 @@
             <artifactId>commons-logging</artifactId>
             <version>1.3.4</version>
         </dependency>
+        
+        <!-- Tabula for PDF table extraction -->
+        <dependency>
+            <groupId>technology.tabula</groupId>
+            <artifactId>tabula</artifactId>
+            <version>1.0.5</version>
+        </dependency>
+        
+        <!-- Apache Commons CSV for parsing CSV-like data -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.10.0</version>
+        </dependency>
 
         <!-- Servlet API -->
         <dependency>
