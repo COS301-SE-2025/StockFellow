@@ -87,7 +87,7 @@ const Transactions = () => {
       setCardsLoading(false);
     }
   };
-
+  
   // Load more transactions (for pagination)
   const loadMoreTransactions = () => {
     if (!transactionsLoading && hasMoreTransactions) {

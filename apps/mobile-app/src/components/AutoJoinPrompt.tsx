@@ -83,11 +83,11 @@ const AutoJoinPrompt: React.FC<AutoJoinPromptProps> = ({
           </View>
 
           {/* Buttons */}
-          <View className="flex-row justify-between space-x-4">
+          <View className="flex-row justify-between space-x-4 gap-2">
             <TouchableOpacity
               onPress={onDecline}
               style={{ borderColor: colors.primary, borderWidth: 1 }}
-              className="flex-1 py-3 rounded-xl items-center"
+              className="flex-1 py-3 rounded-3xl items-center"
             >
               <Text style={{ color: colors.primary }} className="font-['PlusJakartaSans-SemiBold']">
                 No Thanks
@@ -96,8 +96,8 @@ const AutoJoinPrompt: React.FC<AutoJoinPromptProps> = ({
             
             <TouchableOpacity
               onPress={onAccept}
-              style={{ backgroundColor: colors.primary }}
-              className="flex-1 py-3 rounded-xl items-center"
+              style={{ backgroundColor: "#0C0C0F" }}
+              className="flex-1 py-3 rounded-3xl items-center"
             >
               <Text className="text-white font-['PlusJakartaSans-SemiBold']">
                 Join Now
