@@ -282,7 +282,7 @@ const profile = () => {
             {/* Current Tier */}
             <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
                 <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">
-                    {affordabilityInfo?.tier >= 0 ? `Tier ${affordabilityInfo.tier+1}` : 'No Tier Yet'}
+                    {affordabilityInfo?.tier > 0 ? `Tier ${affordabilityInfo.tier}` : 'No Tier Yet'}
                 </Text>
             </View>
             

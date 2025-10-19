@@ -525,10 +525,15 @@ class AuthService {
   async apiRequest(url: string, options: any = {}) {
     const { accessToken } = await this.getTokens();
     
-    const headers = {
-      'Content-Type': 'application/json',
+    const headers: any = {
       ...options.headers,
     };
+
+    // Only set Content-Type if not FormData
+    // FormData will automatically set Content-Type with boundary
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
@@ -536,6 +541,8 @@ class AuthService {
 
     try {
       console.log('API Request to:', `${API_BASE_URL}${url}`);
+      console.log('Is FormData:', options.body instanceof FormData);
+      console.log('Headers:', Object.keys(headers));
       
       const response = await fetch(`${API_BASE_URL}${url}`, {
         ...options,
@@ -589,6 +596,7 @@ class AuthService {
     }
   }
 
+  
   // Validate current token
   async validateToken() {
     try {
