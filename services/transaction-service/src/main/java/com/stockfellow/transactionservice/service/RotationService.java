@@ -61,19 +61,20 @@ public class RotationService {
         Rotation savedRotation = rotationRepository.save(rotation);
         logger.info("Successfully created rotation with ID: {}", savedRotation.getId());
 
-        try {
-            GroupCycle cycle = createGroupCycle(savedRotation);
-            logger.info("Successfully created initial group cycle with ID: {}", cycle.getCycleId());
-        } catch (Exception e) {
-            logger.error("Failed to create group cycle for rotation {}: {}", 
-                        savedRotation.getId(), e.getMessage());
+        // Shouldnt automatically create a cycle
+        // try {
+        //     GroupCycle cycle = createGroupCycle(savedRotation);
+        //     logger.info("Successfully created initial group cycle with ID: {}", cycle.getCycleId());
+        // } catch (Exception e) {
+        //     logger.error("Failed to create group cycle for rotation {}: {}", 
+        //                 savedRotation.getId(), e.getMessage());
 
-            throw new RuntimeException("Failed to create group cycle", e);
-        }
+        //     throw new RuntimeException("Failed to create group cycle", e);
+        // }
         return savedRotation;
     }
 
-    private GroupCycle createGroupCycle(Rotation rotation) {
+    public GroupCycle createGroupCycle(Rotation rotation) {
         // Calculate cycle period (e.g., "2025-10" for October 2025)
         String cyclePeriod = rotation.getCollectionDate().format(
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")
@@ -160,7 +161,7 @@ public class RotationService {
             .orElseThrow(() -> new IllegalArgumentException("Rotation not found with for Group with ID: " + groupId));
         
         // Check if the rotation is active
-        if (!"ACTIVE".equals(rotation.getStatus())) {
+        if (!"active".equals(rotation.getStatus())) {
             throw new IllegalStateException("Cannot add members to inactive rotation");
         }
         

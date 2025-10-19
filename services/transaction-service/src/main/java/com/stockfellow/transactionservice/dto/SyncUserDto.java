@@ -1,6 +1,8 @@
 package com.stockfellow.transactionservice.dto;
 
 import com.stockfellow.transactionservice.model.User;
+import com.stockfellow.transactionservice.model.User.UserStatus;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

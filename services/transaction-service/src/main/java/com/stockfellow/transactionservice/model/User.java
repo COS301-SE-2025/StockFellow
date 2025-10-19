@@ -61,7 +61,7 @@ public class User {
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.status = UserStatus.ACTIVE;
+        this.status = UserStatus.active;
     }
 
     // Getters
@@ -105,7 +105,7 @@ public class User {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = UserStatus.ACTIVE;
+            status = UserStatus.active;
         }
     }
 
@@ -116,9 +116,9 @@ public class User {
 
     // User Status Enum
     public enum UserStatus {
-        ACTIVE,
-        INACTIVE,
-        SUSPENDED,
-        PENDING
+        active,
+        inactive,
+        suspended,
+        pending
     }
 }

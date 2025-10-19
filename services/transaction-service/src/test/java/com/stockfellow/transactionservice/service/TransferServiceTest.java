@@ -87,7 +87,7 @@ class TransferServiceTest {
         user = new User();
         user.setUserId(testUserId);
         user.setEmail("test@example.com");
-        user.setStatus(User.UserStatus.ACTIVE);
+        user.setStatus(User.UserStatus.active);
 
         groupCycle = new GroupCycle();
         groupCycle.setCycleId(testCycleId);

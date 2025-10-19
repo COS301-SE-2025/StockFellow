@@ -66,7 +66,7 @@ public class UserService {
             user.setFirstName(syncDto.getFirstName());
             user.setLastName(syncDto.getLastName());
             user.setPhone(syncDto.getPhone());
-            user.setStatus(syncDto.getStatus() != null ? syncDto.getStatus() : User.UserStatus.ACTIVE);
+            user.setStatus(syncDto.getStatus() != null ? syncDto.getStatus() : User.UserStatus.active);
         }
 
         user = userRepository.save(user);

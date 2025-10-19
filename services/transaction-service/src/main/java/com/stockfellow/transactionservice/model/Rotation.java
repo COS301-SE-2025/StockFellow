@@ -57,7 +57,7 @@ public class Rotation {
         this.collectionDate = collectionDate;
         this.payoutDate = payoutDate;
         this.position = 0;
-        this.status = "PENDING";
+        this.status = "inactive";
         this.frequency = frequency;
     }
 
@@ -96,7 +96,7 @@ public class Rotation {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = "PENDING";
+            status = "pending";
         }
         if (position == null) {
             position = 0;

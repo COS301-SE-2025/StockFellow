@@ -60,7 +60,7 @@ class UserServiceTest {
         syncUserDto.setFirstName("John");
         syncUserDto.setLastName("Doe");
         syncUserDto.setPhone("+1234567890");
-        syncUserDto.setStatus(User.UserStatus.ACTIVE);
+        syncUserDto.setStatus(User.UserStatus.active);
 
         existingUser = new User();
         existingUser.setUserId(testUserId);
@@ -68,10 +68,10 @@ class UserServiceTest {
         existingUser.setFirstName("Jane");
         existingUser.setLastName("Smith");
         existingUser.setPhone("+0987654321");
-        existingUser.setStatus(User.UserStatus.ACTIVE);
+        existingUser.setStatus(User.UserStatus.active);
 
         updateStatusDto = new UpdateUserStatusDto();
-        updateStatusDto.setStatus(User.UserStatus.INACTIVE);
+        updateStatusDto.setStatus(User.UserStatus.inactive);
     }
 
     @Test
@@ -136,7 +136,7 @@ class UserServiceTest {
         syncUserDto.setStatus(null);
         User newUser = new User();
         newUser.setUserId(testUserId);
-        newUser.setStatus(User.UserStatus.ACTIVE);
+        newUser.setStatus(User.UserStatus.active);
 
         when(userRepository.findById(testUserId)).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenReturn(newUser);
@@ -146,12 +146,12 @@ class UserServiceTest {
 
         // Then
         assertNotNull(result);
-        assertEquals(User.UserStatus.ACTIVE, result.getStatus());
+        assertEquals(User.UserStatus.active, result.getStatus());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         User capturedUser = userCaptor.getValue();
-        assertEquals(User.UserStatus.ACTIVE, capturedUser.getStatus());
+        assertEquals(User.UserStatus.active, capturedUser.getStatus());
     }
 
     @Test
