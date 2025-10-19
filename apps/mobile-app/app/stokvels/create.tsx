@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Text, View, Alert, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
-import StokvelAvatar from "../../src/components/StokvelAvatar";
+// import StokvelAvatar from "../../src/components/StokvelAvatar";
 import FormInputFlat from "../../src/components/FormInputFlat";
 import CustomButton from "../../src/components/CustomButton";
 import RadioBox from "../../src/components/RadioBox";
@@ -10,6 +10,7 @@ import DateTimeInput from "../../src/components/DateTimeInput";
 import { router } from "expo-router";
 import { icons } from "../../src/constants";
 import authService from '../../src/services/authService';
+import userService from '../../src/services/userService';
 import { useTheme } from "../_layout";
 import { StatusBar } from "expo-status-bar";
 //import { StatusBar } from 'expo-status-bar';
@@ -46,6 +47,43 @@ const StokvelForm: React.FC = () => {
 
     const { colors, isDarkMode } = useTheme();
 
+    // Tier and recommendation state
+    const [userTier, setUserTier] = useState<number>(1);
+    const [recommended, setRecommended] = useState<{ min: number; max: number }>({ min: 50, max: 200 });
+
+    const normalizeTier = (raw: any) => {
+        const n = Number(raw);
+        if (Number.isFinite(n)) {
+            if (n >= 1 && n <= 5) return n;
+            if (n >= 0 && n <= 4) return n + 1;
+        }
+        return 1;
+    };
+    const getRangeForTier = (tier: number) => {
+        switch (tier) {
+            case 1: return { min: 50, max: 200 };
+            case 2: return { min: 200, max: 500 };
+            case 3: return { min: 500, max: 1000 };
+            case 4: return { min: 1000, max: 2500 };
+            case 5: return { min: 2500, max: 5000 };
+            default: return { min: 50, max: 200 };
+        }
+    };
+
+    // Fetch tier once
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const profile = await userService.getProfile();
+                const t = normalizeTier(profile?.affordability?.tier);
+                setUserTier(t);
+                setRecommended(getRangeForTier(t));
+            } catch {
+                // fallback defaults already set
+            }
+        })();
+    }, []);
+
     // Helper: compare dates by start of day
     const toStartOfDay = (d: Date) => {
         const x = new Date(d);
@@ -65,10 +103,6 @@ const StokvelForm: React.FC = () => {
         "Monthly": "Monthly",
         "Bi-Weekly": "Bi-weekly",
         "Weekly": "Weekly"
-    };
-
-    const handleImageUpdate = (uri: string | null) => {
-        setForm(prev => ({ ...prev, profileImage: uri }));
     };
 
     const handleChangeText = (field: keyof Omit<FormData, 'profileImage' | 'visibility' | 'contributionFrequency' | 'payoutFrequency'>, value: string) => {
@@ -113,6 +147,11 @@ const StokvelForm: React.FC = () => {
 
             if (Number.isNaN(minContributionNum) || minContributionNum <= 0) {
                 Alert.alert("Error", "Invalid minimum contribution amount");
+                return;
+            }
+            // Enforce tier max on submit
+            if (minContributionNum > recommended.max) {
+                Alert.alert("Error", `Min contribution cannot exceed your tier's max: R${recommended.max.toFixed(2)}`);
                 return;
             }
 
@@ -222,10 +261,18 @@ const StokvelForm: React.FC = () => {
                             Create a New Stokvel
                         </Text>
 
-                        <StokvelAvatar
+                        {/* Default Stokvel picture (no upload) */}
+                        <Image
+                            source={icons.stokvelpfp}
+                            className="w-32 h-32 self-center my-2"
+                            resizeMode="contain"
+                        />
+
+                        {/* Removed upload UI */}
+                        {/* <StokvelAvatar
                             profileImage={form.profileImage}
                             onImageUpdate={handleImageUpdate}
-                        />
+                        /> */}
 
                         <RadioBox
                             options={["Private", "Public"]}
@@ -234,13 +281,11 @@ const StokvelForm: React.FC = () => {
                         />
 
                         {/* Stokvel Name */}
-                        {isDarkMode && (
-                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                            Stokvel Name
-                          </Text>
-                        )}
+                        <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                          Stokvel Name
+                        </Text>
                         <FormInputFlat
-                            title={isDarkMode ? "" : "Stokvel Name"}
+                            title=""
                             value={form.name}
                             placeholder="Enter stokvel name"
                             handleChangeText={(text) => {
@@ -252,33 +297,43 @@ const StokvelForm: React.FC = () => {
                         {/* Row: Min Monthly Contribution & Max Members */}
                         <View className="flex-row justify-between">
                             <View className="flex-1 mr-2">
-                                {isDarkMode && (
-                                  <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                                    Min Monthly Contribution
-                                  </Text>
-                                )}
+                                <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                                  Min Monthly Contribution
+                                </Text>
                                 <FormInputFlat
-                                    title={isDarkMode ? "" : "Min Monthly Contribution"}
+                                    title=""
                                     value={form.minContribution}
                                     placeholder="200.00"
                                     handleChangeText={(text) => {
                                         const sanitized = text.replace(/[^0-9.]/g, '');
-                                        if ((sanitized.match(/\./g) || []).length <= 1) {
-                                            handleChangeText('minContribution', sanitized);
+                                        if ((sanitized.match(/\./g) || []).length > 1) return;
+                                        // Enforce tier max
+                                        const num = parseFloat(sanitized || '0');
+                                        if (!Number.isNaN(num)) {
+                                            if (num > recommended.max) {
+                                                Alert.alert(
+                                                    'Limit reached',
+                                                    `Max allowed for your tier is R${recommended.max.toFixed(2)}`
+                                                );
+                                                return setForm(prev => ({ ...prev, minContribution: String(recommended.max) }));
+                                            }
                                         }
+                                        handleChangeText('minContribution', sanitized);
                                     }}
                                     keyboardType="numeric"
+                                    helperText={`Suggested for you: R${recommended.min.toFixed(2)} - R${recommended.max.toFixed(2)}`}
+                                    helperTextColor={
+                                        parseFloat(form.minContribution || '0') > recommended.max ? '#EF4444' : undefined
+                                    }
                                 />
                             </View>
 
                             <View className="flex-1 ml-2">
-                                {isDarkMode && (
-                                  <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                                    Max Members
-                                  </Text>
-                                )}
+                                <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                                  Max Members
+                                </Text>
                                 <FormInputFlat
-                                    title={isDarkMode ? "" : "Max Members"}
+                                    title=""
                                     value={form.maxMembers}
                                     placeholder="10"
                                     handleChangeText={(text) => {
@@ -293,13 +348,11 @@ const StokvelForm: React.FC = () => {
                         </View>
 
                         {/* Description */}
-                        {isDarkMode && (
-                          <Text className="mb-1 mt-2 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                            Description
-                          </Text>
-                        )}
+                        <Text className="mb-1 mt-2 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                          Description
+                        </Text>
                         <FormInputFlat
-                            title={isDarkMode ? "" : "Description"}
+                            title=""
                             value={form.description}
                             placeholder="Enter stokvel description"
                             handleChangeText={(text) => {
@@ -323,13 +376,11 @@ const StokvelForm: React.FC = () => {
                         />
                         
                         {/* First Contribution Date */}
-                        {isDarkMode && (
-                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                            First Contribution Date
-                          </Text>
-                        )}
+                        <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                          First Contribution Date
+                        </Text>
                         <DateTimeInput
-                            label={isDarkMode ? "" : "First Contribution Date"}
+                            label=""
                             onDateTimeChange={handleContributionDateChange}
                         />
 
@@ -346,13 +397,11 @@ const StokvelForm: React.FC = () => {
                         />
 
                         {/* First Payout Date */}
-                        {isDarkMode && (
-                          <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
-                            First Payout Date
-                          </Text>
-                        )}
+                        <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: isDarkMode ? '#FFFFFF' : colors.text }}>
+                          First Payout Date
+                        </Text>
                         <DateTimeInput
-                            label={isDarkMode ? "" : "First Payout Date"}
+                            label=""
                             onDateTimeChange={handlePayoutDateChange}
                         />
 

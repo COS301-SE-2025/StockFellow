@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Text, View, Alert, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
-import StokvelAvatar from "../../../src/components/StokvelAvatar";
+// import StokvelAvatar from "../../../src/components/StokvelAvatar";
 import FormInputFlat from "../../../src/components/FormInputFlat";
 import CustomButton from "../../../src/components/CustomButton";
 import RadioBox from "../../../src/components/RadioBox";
@@ -123,9 +123,10 @@ const EditStokvelForm: React.FC = () => {
         fetchGroupDetails();
     }, [groupId]);
 
-    const handleImageUpdate = (uri: string | null) => {
-        setForm(prev => ({ ...prev, profileImage: uri }));
-    };
+    // Remove image update handler (no upload now)
+    // const handleImageUpdate = (uri: string | null) => {
+    //     setForm(prev => ({ ...prev, profileImage: uri }));
+    // };
 
     const handleChangeText = (field: keyof Omit<FormData, 'profileImage' | 'visibility' | 'contributionFrequency' | 'payoutFrequency'>, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -228,10 +229,18 @@ const EditStokvelForm: React.FC = () => {
                     <View className="w-full flex-1 justify-start px-7">
                         <Text className="text-xl font-['PlusJakartaSans-SemiBold'] my-7">Edit Stokvel Details</Text>
 
-                        <StokvelAvatar
+                        {/* Default Stokvel picture (no upload) */}
+                        <Image
+                            source={icons.stokvelpfp}
+                            className="w-32 h-32 self-center my-2"
+                            resizeMode="contain"
+                        />
+
+                        {/* Removed upload UI */}
+                        {/* <StokvelAvatar
                             profileImage={form.profileImage}
                             onImageUpdate={handleImageUpdate}
-                        />
+                        /> */}
 
                         <RadioBox
                             options={["Private", "Public"]}

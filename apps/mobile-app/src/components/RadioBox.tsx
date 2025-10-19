@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
+import { useTheme } from '../../app/_layout';
 
 interface RadioBoxProps {
   options: string[];
@@ -8,21 +9,33 @@ interface RadioBoxProps {
 }
 
 const RadioBox: React.FC<RadioBoxProps> = ({ options, selectedOption, onSelect }) => {
+  const { isDarkMode, colors } = useTheme();
+
   return (
     <View className="flex-row  mb-6">
-      {options.map((option) => (
-        <TouchableOpacity
-          key={option}
-          onPress={() => onSelect(option)}
-          className={`pb-2 px-4 mt-3 ${selectedOption === option ? 'border-b-4 border-[#006FFD]' : 'border-b-4 border-transparent'}`}
-        >
-          <Text 
-            className={`text-lg ${selectedOption === option ? 'text-[#006FFD] font-semibold' : 'text-gray-900 font-light'}`}
+      {options.map((option) => {
+        const isSelected = selectedOption === option;
+        const textColor = isSelected
+          ? colors.primary // keep selected blue
+          : (isDarkMode ? '#FFFFFF' : '#111827'); // white on dark, gray-900 on light
+        const fontWeightClass = isSelected ? 'font-semibold' : 'font-light';
+
+        return (
+          <TouchableOpacity
+            key={option}
+            onPress={() => onSelect(option)}
+            className="pb-2 px-4 mt-3 border-b-4"
+            style={{ borderBottomColor: isSelected ? colors.primary : 'transparent' }}
           >
-            {option}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text
+              className={`text-lg ${fontWeightClass}`}
+              style={{ color: textColor }}
+            >
+              {option}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
