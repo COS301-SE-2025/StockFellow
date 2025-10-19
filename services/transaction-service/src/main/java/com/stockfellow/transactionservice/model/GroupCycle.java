@@ -81,7 +81,7 @@ public class GroupCycle {
         this.expectedTotal = expectedTotal;
         this.collectionStartDate = collectionStartDate;
         this.collectionEndDate = collectionEndDate;
-        this.status = "pending";
+        this.status = "active";
         this.memberIds = memberIds;
         this.currentTotal = BigDecimal.ZERO;
         this.payoutDate = payoutDate;
@@ -137,7 +137,7 @@ public class GroupCycle {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = "pending";
+            status = "active";
         }
         if (currentTotal == null) {
             currentTotal = BigDecimal.ZERO;

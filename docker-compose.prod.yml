@@ -243,7 +243,6 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
-      - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=http://user-service:4020
       - LOGGING_LEVEL_ROOT=WARN
@@ -416,6 +415,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
       - KEYCLOAK_JWKS_URI=http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs
+      - KEYCLOAK_URL=http://keycloak:8080
       - USER_SERVICE_URL=http://user-service:4020
       - GROUP_SERVICE_URL=http://group-service:4040
       - TRANSACTION_SERVICE_URL=http://transaction-service:4080

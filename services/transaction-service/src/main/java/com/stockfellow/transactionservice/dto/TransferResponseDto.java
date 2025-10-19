@@ -17,7 +17,6 @@ public class TransferResponseDto {
     private BigDecimal amount;
     private String currency;
     private Transfer.TransferStatus status;
-    private String gatewayStatus;
     private String failureReason;
     private Integer retryCount;
     
@@ -45,7 +44,6 @@ public class TransferResponseDto {
         dto.amount = transfer.getAmount();
         dto.currency = transfer.getCurrency();
         dto.status = transfer.getStatus();
-        dto.gatewayStatus = transfer.getGatewayStatus();
         dto.failureReason = transfer.getFailureReason();
         dto.retryCount = transfer.getRetryCount();
         dto.initiatedAt = transfer.getInitiatedAt();
@@ -82,9 +80,6 @@ public class TransferResponseDto {
     
     public Transfer.TransferStatus getStatus() { return status; }
     public void setStatus(Transfer.TransferStatus status) { this.status = status; }
-    
-    public String getGatewayStatus() { return gatewayStatus; }
-    public void setGatewayStatus(String gatewayStatus) { this.gatewayStatus = gatewayStatus; }
     
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
