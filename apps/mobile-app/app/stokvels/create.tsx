@@ -183,48 +183,6 @@ const StokvelForm: React.FC = () => {
         }
     };
 
-    // Helper to render frequency options (fixes JSX parse issues)
-    const renderFrequencyOptions = (
-        field: 'contributionFrequency' | 'payoutFrequency',
-        selectedValue: string
-    ) => {
-        if (isDarkMode) {
-            return (
-                <View className="flex-row justify-between mb-3">
-                    {['Monthly', 'Bi-Weekly', 'Weekly'].map((opt) => {
-                        const selected = selectedValue === opt;
-                        return (
-                            <TouchableOpacity
-                                key={opt}
-                                onPress={() => handleRadioSelect(field, opt)}
-                                className="px-3 py-2 rounded-full"
-                            >
-                                <Text
-                                    className="text-base"
-                                    style={
-                                        selected
-                                            ? { color: colors.primary, fontWeight: '700' }
-                                            : { color: colors.text, fontWeight: '700', opacity: 0.95 }
-                                    }
-                                >
-                                    {opt}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-            );
-        }
-
-        return (
-            <RadioBox
-                options={['Monthly', 'Bi-Weekly', 'Weekly']}
-                selectedOption={selectedValue}
-                onSelect={(option) => handleRadioSelect(field, option)}
-            />
-        );
-    };
-
     return (
         <GestureHandlerRootView className="flex-1">
             <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
@@ -358,8 +316,12 @@ const StokvelForm: React.FC = () => {
                         >
                             Contributions
                         </Text>
-                        {renderFrequencyOptions('contributionFrequency', form.contributionFrequency)}
-
+                        <RadioBox
+                            options={["Monthly", "Bi-Weekly", "Weekly"]}
+                            selectedOption={form.contributionFrequency}
+                            onSelect={(option) => handleRadioSelect('contributionFrequency', option)}
+                        />
+                        
                         {/* First Contribution Date */}
                         {isDarkMode && (
                           <Text className="mb-1 text-sm font-['PlusJakartaSans-SemiBold']" style={{ color: '#FFFFFF' }}>
@@ -377,7 +339,11 @@ const StokvelForm: React.FC = () => {
                         >
                             Payouts
                         </Text>
-                        {renderFrequencyOptions('payoutFrequency', form.payoutFrequency)}
+                        <RadioBox
+                            options={["Monthly", "Bi-Weekly", "Weekly"]}
+                            selectedOption={form.payoutFrequency}
+                            onSelect={(option) => handleRadioSelect('payoutFrequency', option)}
+                        />
 
                         {/* First Payout Date */}
                         {isDarkMode && (

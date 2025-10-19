@@ -64,16 +64,22 @@ const Transactions = () => {
     try {
       setCardsLoading(true);
       const userCards = await cardService.getUserBankDetails();
-      const formattedCards = userCards.map(card => ({
-        id: card.id,
-        bank: card.bank,
-        last4Digits: card.last4Digits,
-        cardHolder: card.cardHolder,
-        expiryMonth: card.expiryMonth.toString().padStart(2, '0'),
-        expiryYear: (card.expiryYear % 100).toString().padStart(2, '0'),
-        cardType: card.cardType.toLowerCase() as 'mastercard' | 'visa',
-        isActive: card.isActive
-      }));
+      const formattedCards = userCards.map((card) => {
+        const expMonth = Number(card.expiryMonth);
+        const expYearNum = Number(card.expiryYear);
+        const twoDigitYear = Number.isFinite(expYearNum) ? expYearNum % 100 : 0;
+
+        return {
+          id: card.id,
+          bank: card.bank,
+          last4Digits: card.last4Digits,
+          cardHolder: card.cardHolder,
+          expiryMonth: String(Number.isFinite(expMonth) ? expMonth : 0).padStart(2, '0'),
+          expiryYear: String(twoDigitYear).padStart(2, '0'),
+          cardType: String(card.cardType || '').toLowerCase() as 'mastercard' | 'visa',
+          isActive: !!card.isActive,
+        };
+      });
       setCards(formattedCards);
     } catch (error) {
       console.error('Error fetching cards:', error);

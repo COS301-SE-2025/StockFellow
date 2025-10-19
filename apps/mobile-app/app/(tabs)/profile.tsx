@@ -77,22 +77,21 @@ const profile = () => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
+
+        // Always fetch real data
         const response = await userService.getProfile();
-        
-        // Update profile data with real data
+
         setUserProfile(response.user);
         setAffordabilityInfo(response.affordability);
-        
-        // Update local state for display
         setProfileData({
           name: `${response.user.firstName || ''} ${response.user.lastName || ''}`.trim() || response.user.username,
           email: response.user.email,
           profileImage: null 
         });
-        
+        setError(null);
       } catch (err: any) {
-        setError(err.message);
         console.error('Failed to load profile:', err);
+        setError(err?.message || 'Failed to load profile');
       } finally {
         setLoading(false);
       }
@@ -143,6 +142,14 @@ const profile = () => {
       </SafeAreaView>
     );
   }
+
+  // Tier config and helpers
+  const tierIcons = [icons.levelOne, icons.levelTwo, icons.levelThree, icons.levelFour, icons.levelFive];
+  const tierNames = ['Essential Savers', 'Steady Builders', 'Balanced Savers', 'Growth Investors', 'Premium Accumulators'];
+  const rawTier = affordabilityInfo?.tier;
+  const hasTier = typeof rawTier === 'number' && rawTier >= 0;
+  const tierIndex = hasTier ? Math.min(rawTier, tierIcons.length - 1) : null;
+  const displayTier = hasTier ? Math.max(1, Math.min((rawTier as number) + 1, 5)) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
@@ -227,7 +234,7 @@ const profile = () => {
                       className="w-16 h-16"
                       resizeMode="contain"
                       style={{ 
-                        opacity: badge.earned ? 1 : 0.4 // Dim unearned badges
+                        opacity: badge.earned ? 1 : 0.4
                       }}
                     />
                   </TouchableOpacity>
@@ -236,49 +243,82 @@ const profile = () => {
             </ScrollView>
           </View>
 
+          {/* Your Tier */}
           <Text
             className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4"
             style={{ color: colors.text }}
           >
-            Rank
+            Your Tier
           </Text>
-          
-          
-          
-          {/* Tier tasks */}
-          <View className="rounded-lg overflow-hidden">
-            {/* Current Tier */}
-            <View className="bg-[#1DA1FA] px-4 py-3 rounded-t-lg">
-              <Text className="text-white font-['PlusJakartaSans-SemiBold'] text-2xl">
-                {affordabilityInfo?.tier >= 0 ? `Tier ${affordabilityInfo.tier+1}` : 'No Tier Yet'}
+
+          <View
+            className="rounded-lg p-4 mb-2"
+            style={isDarkMode ? { backgroundColor: colors.card } : { backgroundColor: '#F0F7FA' }}
+          >
+            <View className="items-center mb-3">
+              <Text
+                className="text-xl font-['PlusJakartaSans-Bold']"
+                style={{ color: colors.text }}
+              >
+                {hasTier ? `Tier ${displayTier}` : 'No Tier Yet'}
+              </Text>
+              <Text
+                className="text-sm mt-1 font-['PlusJakartaSans-Regular']"
+                style={{ color: colors.text, opacity: 0.7 }}
+              >
+                {'Keep contributing to advance to the next tier.'}
               </Text>
             </View>
-            
-            {/* Tasks */}
-            <View className="px-4 py-4 rounded-b-lg" style={isDarkMode ? { backgroundColor: colors.card } : { backgroundColor: '#F0F7FA' }}>
-              <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
-                  Join a stokvel group
-                </Text>
-              </View>
-              
-              <View className="flex-row items-center mb-3">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
-                  Verify your account information
-                </Text>
-              </View>
-              
-              <View className="flex-row items-center">
-                <View className="w-6 h-6 border-2 border-gray-400 rounded mr-3 mb-1" />
-                <Text className="flex-1 text-m font-['PlusJakartaSans-Regular'] mb-1" style={{ color: colors.text }}>
-                  Complete the tutorial guide
-                </Text>
-              </View>
+
+            <View className="flex-row justify-between items-center px-4 mt-2">
+              {tierIcons.map((icn, i) => {
+                const active = hasTier && i <= (tierIndex as number);
+                const isCurrent = hasTier && i === (tierIndex as number);
+                const iconSize = isCurrent ? 62 : 40;
+                const numberTop = isCurrent ? 16 : 10;
+                const numberFont = isCurrent ? 24 : 12;
+
+                return (
+                  <View key={i} className="items-center">
+                    <View style={{ position: 'relative' }}>
+                      <Image
+                        source={icn}
+                        className="mb-1"
+                        resizeMode="contain"
+                        style={[
+                          { width: iconSize, height: iconSize },
+                          active ? { tintColor: colors.primary, opacity: 1 } : { opacity: 0.35 }
+                        ]}
+                      />
+                      <Text
+                        style={{
+                          position: 'absolute',
+                          top: numberTop,
+                          left: 0,
+                          right: 0,
+                          textAlign: 'center',
+                          fontWeight: '700',
+                          fontSize: numberFont,
+                          color: colors.text,
+                          opacity: active ? 0.95 : 0.5
+                        }}
+                      >
+                        {i + 1}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
+          {/* Optional hint */}
+          <Text
+            className="text-sm ml-1 mt-1 font-['PlusJakartaSans-Regular']"
+            style={{ color: colors.text, opacity: 0.6, textAlign: 'center' }}
+          >
+            Advancing tiers unlocks better group opportunities.
+          </Text>
         </View>
       </ScrollView>
 
