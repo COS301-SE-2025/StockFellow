@@ -46,6 +46,21 @@ const StokvelForm: React.FC = () => {
 
     const { colors, isDarkMode } = useTheme();
 
+    // Helper: compare dates by start of day
+    const toStartOfDay = (d: Date) => {
+        const x = new Date(d);
+        x.setHours(0, 0, 0, 0);
+        return x;
+    };
+    // Earliest valid date is tomorrow (not today)
+    const isBeforeTomorrow = (d: Date) => {
+        const tomorrow = toStartOfDay(new Date());
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return toStartOfDay(d) < tomorrow;
+    };
+    // Helper: d is on or before ref (same day counts as invalid)
+    const isOnOrBefore = (d: Date, ref: Date) => toStartOfDay(d) <= toStartOfDay(ref);
+
     const frequencyMap: Record<FrequencyKey, BackendFrequencyValue> = {
         "Monthly": "Monthly",
         "Bi-Weekly": "Bi-weekly",
@@ -65,10 +80,26 @@ const StokvelForm: React.FC = () => {
     };
 
     const handleContributionDateChange = (datetime: Date | null) => {
+        if (datetime && isBeforeTomorrow(datetime)) {
+            Alert.alert("Invalid date", "First contribution date must be from tomorrow onwards.");
+            return;
+        }
         setForm(prev => ({ ...prev, contributionDate: datetime }));
     };
 
     const handlePayoutDateChange = (datetime: Date | null) => {
+        if (datetime) {
+            // Must be at least tomorrow
+            if (isBeforeTomorrow(datetime)) {
+                Alert.alert("Invalid date", "First payout date must be from tomorrow onwards.");
+                return;
+            }
+            // Must be strictly after contribution date (if set)
+            if (form.contributionDate && isOnOrBefore(datetime, form.contributionDate)) {
+                Alert.alert("Invalid date", "First payout date must be after the first contribution date.");
+                return;
+            }
+        }
         setForm(prev => ({ ...prev, payoutDate: datetime }));
     };
 
@@ -93,6 +124,23 @@ const StokvelForm: React.FC = () => {
             if (maxMembersNum > 30) {
                 Alert.alert("Error", "Maximum members cannot exceed 30");
                 return;
+            }
+
+            if (form.contributionDate && isBeforeTomorrow(form.contributionDate)) {
+                Alert.alert("Error", "First contribution date must be from tomorrow onwards.");
+                return;
+            }
+
+            // Payout date must be from tomorrow and after contribution date
+            if (form.payoutDate) {
+                if (isBeforeTomorrow(form.payoutDate)) {
+                    Alert.alert("Error", "First payout date must be from tomorrow onwards.");
+                    return;
+                }
+                if (form.contributionDate && isOnOrBefore(form.payoutDate, form.contributionDate)) {
+                    Alert.alert("Error", "First payout date must be after the first contribution date.");
+                    return;
+                }
             }
 
             const payload = {
@@ -133,6 +181,48 @@ const StokvelForm: React.FC = () => {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Helper to render frequency options (fixes JSX parse issues)
+    const renderFrequencyOptions = (
+        field: 'contributionFrequency' | 'payoutFrequency',
+        selectedValue: string
+    ) => {
+        if (isDarkMode) {
+            return (
+                <View className="flex-row justify-between mb-3">
+                    {['Monthly', 'Bi-Weekly', 'Weekly'].map((opt) => {
+                        const selected = selectedValue === opt;
+                        return (
+                            <TouchableOpacity
+                                key={opt}
+                                onPress={() => handleRadioSelect(field, opt)}
+                                className="px-3 py-2 rounded-full"
+                            >
+                                <Text
+                                    className="text-base"
+                                    style={
+                                        selected
+                                            ? { color: colors.primary, fontWeight: '700' }
+                                            : { color: colors.text, fontWeight: '700', opacity: 0.95 }
+                                    }
+                                >
+                                    {opt}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            );
+        }
+
+        return (
+            <RadioBox
+                options={['Monthly', 'Bi-Weekly', 'Weekly']}
+                selectedOption={selectedValue}
+                onSelect={(option) => handleRadioSelect(field, option)}
+            />
+        );
     };
 
     return (
@@ -268,11 +358,7 @@ const StokvelForm: React.FC = () => {
                         >
                             Contributions
                         </Text>
-                        <RadioBox
-                            options={["Monthly", "Bi-Weekly", "Weekly"]}
-                            selectedOption={form.contributionFrequency}
-                            onSelect={(option) => handleRadioSelect('contributionFrequency', option)}
-                        />
+                        {renderFrequencyOptions('contributionFrequency', form.contributionFrequency)}
 
                         {/* First Contribution Date */}
                         {isDarkMode && (
@@ -291,11 +377,7 @@ const StokvelForm: React.FC = () => {
                         >
                             Payouts
                         </Text>
-                        <RadioBox
-                            options={["Monthly", "Bi-Weekly", "Weekly"]}
-                            selectedOption={form.payoutFrequency}
-                            onSelect={(option) => handleRadioSelect('payoutFrequency', option)}
-                        />
+                        {renderFrequencyOptions('payoutFrequency', form.payoutFrequency)}
 
                         {/* First Payout Date */}
                         {isDarkMode && (
