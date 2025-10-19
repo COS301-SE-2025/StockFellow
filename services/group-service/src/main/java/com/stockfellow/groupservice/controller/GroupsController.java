@@ -10,9 +10,11 @@ import com.stockfellow.groupservice.dto.CreateGroupResult;
 import com.stockfellow.groupservice.dto.NextPayeeResult;
 import com.stockfellow.groupservice.dto.UpdateGroupRequest;
 import com.stockfellow.groupservice.model.Event;
+import com.stockfellow.groupservice.client.NotificationClient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +44,8 @@ public class GroupsController {
     private final ReadModelService readModelService;
     private final EventStoreService eventStoreService;
     private final SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    @Autowired
+    private NotificationClient notificationClient;
 
     public GroupsController(GroupService groupService,
             GroupMemberService memberService,
@@ -228,6 +232,57 @@ public class GroupsController {
 
             // Call the service to create the group
             CreateGroupResult result = groupService.createGroup(request);
+
+            // SEND GROUP CREATION NOTIFICATION TO ADMIN
+            try {
+                notificationClient.sendNotification(
+                    new NotificationClient.NotificationRequest()
+                        .userId(adminId)
+                        .groupId(result.getGroupId())
+                        .type("GROUP_JOIN")
+                        .title("Group Created Successfully")
+                        .message("Your group '" + request.getName() + "' has been created! Invite members to start building your investment circle.")
+                        .channel("IN_APP")
+                        .priority("NORMAL")
+                        .metadata(Map.of(
+                            "groupId", result.getGroupId(),
+                            "groupName", request.getName(),
+                            "maxMembers", request.getMaxMembers(),
+                            "minContribution", request.getMinContribution()
+                        ))
+                );
+                logger.info("Group creation notification sent to admin: {}", adminId);
+            } catch (Exception e) {
+                logger.error("Failed to send group creation notification: {}", e.getMessage());
+            }
+
+            // SEND NOTIFICATIONS TO INITIAL MEMBERS (if any)
+            if (request.getMembers() != null && !request.getMembers().isEmpty()) {
+                try {
+                    for (String memberId : request.getMembers()) {
+                        if (!memberId.equals(adminId)) { // Don't send to admin again
+                            notificationClient.sendNotification(
+                                new NotificationClient.NotificationRequest()
+                                    .userId(memberId)
+                                    .groupId(result.getGroupId())
+                                    .type("GROUP_INVITE")
+                                    .title("You've been added to a group")
+                                    .message(adminName + " added you to '" + request.getName() + "'. Start contributing today!")
+                                    .channel("IN_APP")
+                                    .priority("HIGH")
+                                    .metadata(Map.of(
+                                        "groupId", result.getGroupId(),
+                                        "groupName", request.getName(),
+                                        "invitedBy", adminName
+                                    ))
+                            );
+                        }
+                    }
+                    logger.info("Member invitation notifications sent for group: {}", result.getGroupId());
+                } catch (Exception e) {
+                    logger.error("Failed to send member invitation notifications: {}", e.getMessage());
+                }
+            }
 
             // Build successful response
             Map<String, Object> response = new HashMap<>();
@@ -447,6 +502,87 @@ public class GroupsController {
 
             String eventId = memberService.processJoinRequest(groupId, requestId, action, adminId);
 
+            // Get group details for notification
+            Optional<Group> groupOpt = readModelService.getGroup(groupId);
+            String groupName = groupOpt.map(Group::getName).orElse("the group");
+
+            // Get the user ID from the join request
+            // You'll need to modify this based on how you store join requests
+            String userId = getRequestingUserId(groupId, requestId);
+            
+            if ("accept".equals(action)) {
+            //SEND ACCEPTANCE NOTIFICATION TO USER
+                try {
+                    notificationClient.sendNotification(
+                        new NotificationClient.NotificationRequest()
+                            .userId(userId)
+                            .groupId(groupId)
+                            .type("GROUP_JOIN")
+                            .title("Join Request Accepted!")
+                            .message("Welcome to '" + groupName + "'! You can now start making contributions.")
+                            .channel("IN_APP")
+                            .priority("HIGH")
+                            .metadata(Map.of(
+                                "groupId", groupId,
+                                "groupName", groupName,
+                                "acceptedBy", adminId
+                            ))
+                    );
+                    logger.info("Join acceptance notification sent to user: {}", userId);
+                } catch (Exception e) {
+                    logger.error("Failed to send join acceptance notification: {}", e.getMessage());
+                }
+
+                // NOTIFY OTHER GROUP MEMBERS
+                try {
+                    if (groupOpt.isPresent()) {
+                        List<String> memberIds = groupOpt.get().getMembers().stream()
+                            .map(member -> member.getUserId())
+                            .filter(id -> !id.equals(userId)) // Don't notify the new member again
+                            .toList();
+                        
+                        if (!memberIds.isEmpty()) {
+                            notificationClient.sendBulkNotifications(
+                                memberIds,
+                                "SYSTEM_UPDATE",
+                                "New Member Joined",
+                                "A new member has joined " + groupName + "!",
+                                "IN_APP",
+                                "NORMAL",
+                                groupId,
+                                Map.of("groupId", groupId, "newMemberId", userId)
+                            );
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to notify group members: {}", e.getMessage());
+                }
+
+            } else if ("reject".equals(action)) {
+                // SEND REJECTION NOTIFICATION
+                try {
+                    notificationClient.sendNotification(
+                        new NotificationClient.NotificationRequest()
+                            .userId(userId)
+                            .groupId(groupId)
+                            .type("SYSTEM_UPDATE")
+                            .title("Join Request Not Approved")
+                            .message("Your request to join '" + groupName + "' was not approved at this time.")
+                            .channel("IN_APP")
+                            .priority("NORMAL")
+                            .metadata(Map.of(
+                                "groupId", groupId,
+                                "groupName", groupName
+                            ))
+                    );
+                    logger.info("Join rejection notification sent to user: {}", userId);
+                } catch (Exception e) {
+                    logger.error("Failed to send rejection notification: {}", e.getMessage());
+                }
+            }
+
+
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Join request " + action + "ed successfully");
             response.put("groupId", groupId);
@@ -561,7 +697,57 @@ public class GroupsController {
 
             // Record payout via service
             NextPayeeResult nextPayee = memberService.recordPayout(groupId, recipientId, amount);
+            
+             // Get group details
+            Optional<Group> groupOpt = readModelService.getGroup(groupId);
+            String groupName = groupOpt.map(Group::getName).orElse("your group");
 
+            // ✅ SEND PAYOUT NOTIFICATION TO RECIPIENT
+            try {
+                notificationClient.sendNotification(
+                    new NotificationClient.NotificationRequest()
+                        .userId(recipientId)
+                        .groupId(groupId)
+                        .type("PAYOUT_READY")
+                        .title("Payout Received!")
+                        .message("You've received a payout of R" + String.format("%.2f", amount) + " from " + groupName + "!")
+                        .channel("IN_APP")
+                        .priority("URGENT")
+                        .metadata(Map.of(
+                            "groupId", groupId,
+                            "groupName", groupName,
+                            "amount", amount,
+                            "payoutDate", System.currentTimeMillis()
+                        ))
+                );
+                logger.info("Payout notification sent to recipient: {}", recipientId);
+            } catch (Exception e) {
+                logger.error("Failed to send payout notification: {}", e.getMessage());
+            }
+
+            // ✅ NOTIFY NEXT PAYEE
+            try {
+                notificationClient.sendNotification(
+                    new NotificationClient.NotificationRequest()
+                        .userId(nextPayee.getRecipientId())
+                        .groupId(groupId)
+                        .type("REMINDER")
+                        .title("You're Next for Payout!")
+                        .message("You're next in line to receive the payout from " + groupName + " in the next cycle!")
+                        .channel("IN_APP")
+                        .priority("NORMAL")
+                        .metadata(Map.of(
+                            "groupId", groupId,
+                            "groupName", groupName,
+                            "position", nextPayee.getCurrentPosition()
+                        ))
+                );
+                logger.info("Next payout notification sent to: {}", nextPayee.getRecipientId());
+            } catch (Exception e) {
+                logger.error("Failed to send next payout notification: {}", e.getMessage());
+            }
+
+            
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Payout recorded successfully");
             response.put("processedRecipient", recipientId);
@@ -712,6 +898,69 @@ public class GroupsController {
         } catch (ParseException e) {
             throw new IllegalArgumentException("Invalid " + fieldName + " format. Expected ISO format");
         }
+    }
+
+    /**
+     * Attempts to find the userId associated with a join request for a given group and requestId.
+     * This implementation retrieves pending requests from memberService and then uses reflection
+     * to flexibly read either getter methods or fields named requestId/userId to support different
+     * JoinRequest implementations without causing compile-time coupling.
+     *
+     * Returns null if no matching request is found or if an error occurs while extracting the id.
+     */
+    private String getRequestingUserId(String groupId, String requestId) {
+        try {
+            List<Group.JoinRequest> requests = memberService.getGroupJoinRequests(groupId);
+            if (requests == null) {
+                return null;
+            }
+            for (Group.JoinRequest req : requests) {
+                if (req == null) continue;
+                try {
+                    String rid = null;
+                    // Try getter method getRequestId()
+                    try {
+                        java.lang.reflect.Method m = req.getClass().getMethod("getRequestId");
+                        Object val = m.invoke(req);
+                        rid = val != null ? val.toString() : null;
+                    } catch (NoSuchMethodException ignored) {
+                        // Try field named requestId
+                        try {
+                            java.lang.reflect.Field f = req.getClass().getDeclaredField("requestId");
+                            f.setAccessible(true);
+                            Object val = f.get(req);
+                            rid = val != null ? val.toString() : null;
+                        } catch (NoSuchFieldException ignored2) {
+                        }
+                    }
+
+                    if (rid != null && rid.equals(requestId)) {
+                        // Found matching request; extract userId
+                        String uid = null;
+                        try {
+                            java.lang.reflect.Method m2 = req.getClass().getMethod("getUserId");
+                            Object val2 = m2.invoke(req);
+                            uid = val2 != null ? val2.toString() : null;
+                        } catch (NoSuchMethodException ignored3) {
+                            try {
+                                java.lang.reflect.Field f2 = req.getClass().getDeclaredField("userId");
+                                f2.setAccessible(true);
+                                Object val2 = f2.get(req);
+                                uid = val2 != null ? val2.toString() : null;
+                            } catch (NoSuchFieldException ignored4) {
+                            }
+                        }
+                        return uid;
+                    }
+                } catch (Exception ex) {
+                    logger.error("Error extracting ids from join request: {}", ex.getMessage());
+                    // Continue to next request if reflection on this one fails
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving join requests for group {}: {}", groupId, e.getMessage());
+        }
+        return null;
     }
 
     @Schema(description = "Request payload for creating a new group")

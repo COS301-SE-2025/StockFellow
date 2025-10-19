@@ -1,8 +1,8 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-import jakarta.validation.constraints.*;
-
+import com.stockfellow.transactionservice.model.Transaction;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 public class ProcessTransactionDto {
     
     @NotBlank(message = "Paystack transaction ID is required")

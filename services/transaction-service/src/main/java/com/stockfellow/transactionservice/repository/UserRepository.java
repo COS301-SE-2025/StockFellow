@@ -1,6 +1,6 @@
 package com.stockfellow.transactionservice.repository;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.User;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -47,7 +47,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /**
      * Search users by name (case insensitive)
      */
-    @Query("SELECT u FROM User u WHERE " +
-           "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
+    @Query("SELECT u FROM User u WHERE " 
+            + "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<User> findByFullNameContainingIgnoreCase(@Param("name") String name);
 }

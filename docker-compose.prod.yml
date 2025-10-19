@@ -243,6 +243,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - MONGODB_URI=${GROUP_SERVICE_MONGODB_URI}
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/stockfellow
+      - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_JWKS_URI=${KEYCLOAK_JWKS_URI}
       - USER_SERVICE_URL=http://user-service:4020
       - LOGGING_LEVEL_ROOT=WARN

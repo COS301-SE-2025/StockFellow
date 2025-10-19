@@ -3,13 +3,18 @@ package com.stockfellow.transactionservice.scheduler;
 import com.stockfellow.transactionservice.dto.CreateTransactionDto;
 import com.stockfellow.transactionservice.model.GroupCycle;
 import com.stockfellow.transactionservice.model.PayerDetails;
+import com.stockfellow.transactionservice.model.Rotation;
 import com.stockfellow.transactionservice.model.Transaction;
 import com.stockfellow.transactionservice.model.User;
 import com.stockfellow.transactionservice.service.UserService;
+import com.stockfellow.transactionservice.service.RotationService;
 import com.stockfellow.transactionservice.service.TransactionService;
 import com.stockfellow.transactionservice.repository.GroupCycleRepository;
 import com.stockfellow.transactionservice.repository.PayerDetailsRepository;
 import com.stockfellow.transactionservice.repository.TransactionRepository;
+import com.stockfellow.transactionservice.repository.UserRepository;
+import com.stockfellow.transactionservice.repository.RotationRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
 
 @Component
 public class PaymentScheduler {
+
+    private final RotationService rotationService;
 
     @Autowired
     private UserService userService;
@@ -41,45 +51,157 @@ public class PaymentScheduler {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private RotationRepository rotationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(PaymentScheduler.class);
 
-    public PaymentScheduler() {}
+    public PaymentScheduler(RotationService rotationService) {
+        this.rotationService = rotationService;
+    }
 
     @Scheduled(cron = "0 * * * * ?") // Run every minute for testing (Run daily at 9 AM)
     @Transactional
     public void processScheduledPayments() {
         logger.info("Starting scheduled payment processing");
         
-        List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("PENDING", LocalDate.now());
-        
+        LocalDate today = LocalDate.now(ZoneOffset.ofHours(2));
+        List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("pending", today);
+
         logger.info("{} Pending cycles found", dueCycles.size());
         for (GroupCycle cycle : dueCycles) {
-            if ("PENDING".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(LocalDate.now().plusDays(1))) {
+            if ("pending".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(today.plusDays(1))) {
                 
                 logger.info("Processing payments for cycle {} with recipient {}", 
                     cycle.getCycleId(), cycle.getRecipientUserId());
                 
-                cycle.setStatus("PROCESSING");
+                cycle.setStatus("processing");
                 groupCycleRepository.save(cycle);
                 
                 processPaymentsForCycle(cycle);
+            } else {
+                logger.info("Cycle doesnt meet criteria. Status: {} Check date: {} Actual_Date: {}",
+                    cycle.getStatus(), today.plusDays(1), cycle.getCollectionStartDate());                
             }
         }
     }
+
+    @Scheduled(cron = "0 * * * * ?") // Run every minute for testing (Run daily at 9 AM: "0 0 9 * * ?")
+    @Transactional
+    public void processRotations() {
+        logger.info("Starting rotation processing");
+        
+        List<Rotation> rotations = rotationRepository.findAll();
+        logger.info("{} rotations found for processing", rotations.size());
+        
+        for (Rotation rotation : rotations) {
+            try {
+                String status = rotation.getStatus();
+                
+                if ("complete".equalsIgnoreCase(status)) {
+                    logger.debug("Rotation {} is already complete, skipping", rotation.getId());
+                    // Nothing to do for completed rotations
+                } else if ("inactive".equalsIgnoreCase(status) || "pending".equalsIgnoreCase(status)) {
+                    processInactiveRotation(rotation);
+                } else if ("active".equalsIgnoreCase(status)) {
+                    processActiveRotation(rotation);
+                }
+            } catch (Exception e) {
+                logger.error("Error processing rotation {}: {}", rotation.getId(), e.getMessage(), e);
+                // Continue processing other rotations even if one fails
+            }
+        }
+        
+        logger.info("Completed rotation processing");
+    }
+
+    /**
+     * Processes inactive/pending rotations - activates them if they have enough members
+     */
+    private void processInactiveRotation(Rotation rotation) {
+        logger.info("Processing inactive rotation {} for group {}", 
+            rotation.getId(), rotation.getGroupId());
+        
+        // Check if rotation has at least 2 members
+        if (rotation.getMemberIds().length >= 2) {
+            logger.info("Rotation {} has {} members, activating and creating first cycle", 
+                rotation.getId(), rotation.getMemberIds().length);
+            
+            // Change status to ACTIVE
+            rotation.setStatus("active");
+            
+            try {
+                GroupCycle cycle = rotationService.createGroupCycle(rotation);
+                logger.info("Successfully created first group cycle {} for rotation {}", 
+                    cycle.getCycleId(), rotation.getId());
+                
+                rotationRepository.save(rotation);
+            } catch (Exception e) {
+                logger.error("Failed to create group cycle for rotation {}: {}", 
+                    rotation.getId(), e.getMessage());
+                throw new RuntimeException("Failed to activate rotation", e);
+            }
+        } else {
+            logger.info("Rotation {} only has {} member(s), needs at least 2 to activate", 
+                rotation.getId(), rotation.getMemberIds().length);
+        }
+    }
+
+    /**
+     * Processes active rotations - checks if all members have received payout
+     */
+    private void processActiveRotation(Rotation rotation) {
+        logger.info("Processing active rotation {} for group {}", 
+            rotation.getId(), rotation.getGroupId());
+        
+        // Check if all members have received their payout
+        if (rotation.getPosition() >= rotation.getMemberIds().length - 1) {
+            logger.info("Rotation {} has completed all payouts (position: {}, members: {})", 
+                rotation.getId(), rotation.getPosition(), rotation.getMemberIds().length);
+            
+            rotation.setStatus("complete");
+            rotationRepository.save(rotation);
+            
+            logger.info("Rotation {} marked as COMPLETE", rotation.getId());
+        } else {
+            logger.debug("Rotation {} still has {} members remaining", 
+                rotation.getId(), 
+                rotation.getMemberIds().length - rotation.getPosition() - 1);
+        }
+    }
+
 
     private void processPaymentsForCycle(GroupCycle cycle) {
         logger.info("Processing payments for cycle: {}", cycle.getCycleId());
 
         try {
-            // Fetch all users in the group
-            List<User> users = userService.fetchUsers(cycle.getGroupId());
-            
             // Remove the recipient from the list (they don't pay, they receive)
-            List<User> payingUsers = users.stream()
-                .filter(user -> !user.getUserId().equals(cycle.getRecipientUserId()))
-                .collect(Collectors.toList());
+            UUID[] memberIdsArray = cycle.getMemberIds();
             
-            logger.info("Found {} users to charge for cycle {}", payingUsers.size(), cycle.getCycleId());
+            if (memberIdsArray == null || memberIdsArray.length == 0) {
+                logger.warn("No member IDs found for cycle {}", cycle.getCycleId());
+                return;
+            }
+
+            List<UUID> payingUserIds = Arrays.stream(memberIdsArray)
+            .filter(memberId -> !memberId.equals(cycle.getRecipientUserId()))
+            .collect(Collectors.toList());
+            
+            logger.info("Found {} users to charge for cycle {} (excluding recipient)", 
+                payingUserIds.size(), cycle.getCycleId());
+            
+
+            List<User> payingUsers = userRepository.findAllById(payingUserIds);
+
+            if (payingUsers.isEmpty()) {
+                logger.warn("No paying users found in database for cycle {}", cycle.getCycleId());
+                return;
+            }
+            
+            logger.info("Successfully fetched {} user records", payingUsers.size());
             
             // Process each paying user
             for (User user : payingUsers) {
@@ -88,7 +210,6 @@ public class PaymentScheduler {
                 } catch (Exception e) {
                     logger.error("Failed to process payment for user {} in cycle {}: {}", 
                         user.getUserId(), cycle.getCycleId(), e.getMessage());
-                    // Continue with other users even if one fails
                 }
             }
             
@@ -97,7 +218,7 @@ public class PaymentScheduler {
             
         } catch (Exception e) {
             logger.error("Error processing payments for cycle {}: {}", cycle.getCycleId(), e.getMessage());
-            cycle.setStatus("ERROR");
+            cycle.setStatus("error");
             groupCycleRepository.save(cycle);
         }
     }
@@ -245,11 +366,17 @@ public class PaymentScheduler {
         BigDecimal expectedTotal = cycle.getExpectedTotal();
         
         if (received == expectedTotal) {
-            cycle.setStatus("COMPLETED");
+            cycle.setStatus("completed");
+            updateRotation(cycle.getRotationId()); 
+            
         } else {
-            cycle.setStatus("PROCESSING");
+            cycle.setStatus("processing");
         }
         
         groupCycleRepository.save(cycle);
+    }
+
+    private void updateRotation(UUID id) {
+        rotationService.updateRotation(id);
     }
 }
