@@ -69,17 +69,17 @@ public class PaymentScheduler {
         logger.info("Starting scheduled payment processing");
         
         LocalDate today = LocalDate.now(ZoneOffset.ofHours(2));
-        List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("pending", today);
+        List<GroupCycle> dueCycles = groupCycleRepository.findByStatusAndCollectionStartDateLessThanEqual("active", today);
 
-        logger.info("{} Pending cycles found", dueCycles.size());
+        logger.info("{} Active cycles found", dueCycles.size());
         for (GroupCycle cycle : dueCycles) {
-            if ("pending".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(today.plusDays(1))) {
+            if ("active".equals(cycle.getStatus()) && cycle.getCollectionStartDate().isBefore(today.plusDays(1))) {
                 
                 logger.info("Processing payments for cycle {} with recipient {}", 
                     cycle.getCycleId(), cycle.getRecipientUserId());
                 
-                cycle.setStatus("processing");
-                groupCycleRepository.save(cycle);
+                // cycle.setStatus("processing");
+                // groupCycleRepository.save(cycle);
                 
                 processPaymentsForCycle(cycle);
             } else {
@@ -178,7 +178,6 @@ public class PaymentScheduler {
         logger.info("Processing payments for cycle: {}", cycle.getCycleId());
 
         try {
-            // Remove the recipient from the list (they don't pay, they receive)
             UUID[] memberIdsArray = cycle.getMemberIds();
             
             if (memberIdsArray == null || memberIdsArray.length == 0) {
@@ -187,8 +186,8 @@ public class PaymentScheduler {
             }
 
             List<UUID> payingUserIds = Arrays.stream(memberIdsArray)
-            .filter(memberId -> !memberId.equals(cycle.getRecipientUserId()))
-            .collect(Collectors.toList());
+                .filter(memberId -> !memberId.equals(cycle.getRecipientUserId()))
+                .collect(Collectors.toList());
             
             logger.info("Found {} users to charge for cycle {} (excluding recipient)", 
                 payingUserIds.size(), cycle.getCycleId());
@@ -352,6 +351,12 @@ public class PaymentScheduler {
             user.getUserId(), cycle.getCycleId(), reason);
     }
 
+    /**
+     * Fetch transactions for cycle and checks on their status
+     * If all completed cycle becomes complete
+     *  Else cycle set to collecting
+     * @param cycle
+     */
     private void updateCycleStatus(GroupCycle cycle) {
         List<Transaction> cycleTransactions = transactionRepository.findByCycleId(cycle.getCycleId());
         
@@ -370,7 +375,7 @@ public class PaymentScheduler {
             updateRotation(cycle.getRotationId()); 
             
         } else {
-            cycle.setStatus("processing");
+            cycle.setStatus("collecting");
         }
         
         groupCycleRepository.save(cycle);

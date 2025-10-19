@@ -157,51 +157,50 @@ public class TransactionService {
 
         transaction.setPaystackReference(generateTransactionReference(transaction));
         
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        // try {
+        //     PaystackChargeRequest request = new PaystackChargeRequest(
+        //         user.getEmail(),
+        //         createDto.getAmount().multiply(new BigDecimal("100")).intValue(), // Convert to cents
+        //         authCode
+        //     );
 
-        try {
-            PaystackChargeRequest request = new PaystackChargeRequest(
-                user.getEmail(),
-                createDto.getAmount().multiply(new BigDecimal("100")).intValue(), // Convert to cents
-                authCode
-            );
+        //     Map<String, Object> metadata = new HashMap<>();
+        //     metadata.put("transaction_id", transaction.getTransactionId().toString());
+        //     metadata.put("cycle_id", cycle.getCycleId().toString());
+        //     metadata.put("user_id", user.getUserId().toString());
+        //     metadata.put("payment_type", "recurring");
 
-            Map<String, Object> metadata = new HashMap<>();
-            metadata.put("transaction_id", transaction.getTransactionId().toString());
-            metadata.put("cycle_id", cycle.getCycleId().toString());
-            metadata.put("user_id", user.getUserId().toString());
-            metadata.put("payment_type", "recurring");
-            // TODO: Might need to add metadata field to PaystackChargeRequest if not present
+        //     PaystackTransactionResponse response = paystackService.chargeTransaction(request);
 
-            PaystackTransactionResponse response = paystackService.chargeTransaction(request);
-
-            if (response.getStatus() && response.getData() != null) {
-                transaction.setStatus(TransactionStatus.COMPLETED);
-                transaction.setCompletedAt(LocalDateTime.now());
-                transaction.setPaystackTransId(response.getData().getReference()); // or appropriate ID field
-                transaction.setGatewayStatus("success");
+        //     if (response.getStatus() && response.getData() != null) {
+        //         transaction.setStatus(TransactionStatus.COMPLETED);
+        //         transaction.setCompletedAt(LocalDateTime.now());
+        //         transaction.setPaystackTransId(response.getData().getReference()); // or appropriate ID field
+        //         transaction.setGatewayStatus("success");
                 
-                logger.info("Stored card charged successfully for transaction: {}", transaction.getTransactionId());
+        //         logger.info("Stored card charged successfully for transaction: {}", transaction.getTransactionId());
                 
-                if (!payerDetails.getIsAuthenticated()) {
-                    payerDetails.setIsAuthenticated(true);
-                    payerDetailsRepository.save(payerDetails);
-                }
+        //         if (!payerDetails.getIsAuthenticated()) {
+        //             payerDetails.setIsAuthenticated(true);
+        //             payerDetailsRepository.save(payerDetails);
+        //         }
                 
-            } else {
-                // Failed charge
-                transaction.setStatus(TransactionStatus.FAILED);
-                transaction.setFailureReason(response.getMessage() != null ? response.getMessage() : "Charge authorization failed");
-                transaction.setGatewayStatus("failed");
+        //     } else {
+        //         // Failed charge
+        //         transaction.setStatus(TransactionStatus.FAILED);
+        //         transaction.setFailureReason(response.getMessage() != null ? response.getMessage() : "Charge authorization failed");
+        //         transaction.setGatewayStatus("failed");
                 
-                logger.error("Failed to charge stored card: {}", response.getMessage());
-            }
+        //         logger.error("Failed to charge stored card: {}", response.getMessage());
+        //     }
 
-        } catch (Exception e) {
-            logger.error("Exception occurred while charging stored card: {}", e.getMessage(), e);
-            transaction.setStatus(TransactionStatus.FAILED);
-            transaction.setFailureReason("Exception during charge: " + e.getMessage());
-            transaction.setGatewayStatus("error");
-        }
+        // } catch (Exception e) {
+        //     logger.error("Exception occurred while charging stored card: {}", e.getMessage(), e);
+        //     transaction.setStatus(TransactionStatus.FAILED);
+        //     transaction.setFailureReason("Exception during charge: " + e.getMessage());
+        //     transaction.setGatewayStatus("error");
+        // }
 
         transaction = transactionRepository.save(transaction);
         handleTransactionStatusChange(transaction, TransactionStatus.PROCESSING);
@@ -232,9 +231,7 @@ public class TransactionService {
         Transaction.TransactionStatus oldStatus = transaction.getStatus();
         
         // Update transaction with gateway response
-        transaction.setPaystackTransId(processDto.getPaystackTransId());
         transaction.setStatus(processDto.getStatus());
-        transaction.setGatewayStatus(processDto.getGatewayStatus());
         transaction.setFailureReason(processDto.getFailureReason());
         
         // Set completion time for successful transactions
@@ -278,10 +275,6 @@ public class TransactionService {
             
             if (verification.getStatus()) {
                 PaystackTransactionVerificationResponse.PaystackTransactionVerificationData data = verification.getData();
-                
-                // Update transaction with verification data
-                transaction.setPaystackTransId(data.getId().toString());
-                transaction.setGatewayStatus(data.getGatewayResponse());
                 
                 if ("success".equals(data.getStatus())) {
                     transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
@@ -336,7 +329,6 @@ public class TransactionService {
         transaction.setRetryCount(transaction.getRetryCount() + 1);
         transaction.setStatus(Transaction.TransactionStatus.PENDING);
         transaction.setFailureReason(null);
-        transaction.setGatewayStatus(null);
         
         transaction = transactionRepository.save(transaction);
         
@@ -436,30 +428,30 @@ public class TransactionService {
         }
     }
 
-    /**
-     * Handle stale pending transactions
-     */
-    @Transactional
-    public void handleStalePendingTransactions() {
-        logger.info("Handling stale pending transactions");
+    // /**
+    //  * Handle stale pending transactions
+    //  */
+    // @Transactional
+    // public void handleStalePendingTransactions() {
+    //     logger.info("Handling stale pending transactions");
         
-        // Find transactions pending for more than 1 hour
-        LocalDateTime cutoffTime = LocalDateTime.now().minusHours(1);
-        List<Transaction> staleTransactions = transactionRepository.findStalePendingTransactions(cutoffTime);
+    //     // Find transactions pending for more than 1 hour
+    //     LocalDateTime cutoffTime = LocalDateTime.now().minusHours(1);
+    //     List<Transaction> staleTransactions = transactionRepository.findStalePendingTransactions(cutoffTime);
         
-        for (Transaction transaction : staleTransactions) {
-            try {
-                // Verify the transaction status with Paystack
-                verifyTransaction(transaction.getPaystackReference());
-            } catch (Exception e) {
-                logger.error("Failed to verify stale transaction: {}", transaction.getTransactionId(), e);
-                // Mark as failed if verification fails
-                transaction.setStatus(Transaction.TransactionStatus.FAILED);
-                transaction.setFailureReason("Transaction verification timeout");
-                transactionRepository.save(transaction);
-            }
-        }
-    }
+    //     for (Transaction transaction : staleTransactions) {
+    //         try {
+    //             // Verify the transaction status with Paystack
+    //             verifyTransaction(transaction.getPaystackReference());
+    //         } catch (Exception e) {
+    //             logger.error("Failed to verify stale transaction: {}", transaction.getTransactionId(), e);
+    //             // Mark as failed if verification fails
+    //             transaction.setStatus(Transaction.TransactionStatus.FAILED);
+    //             transaction.setFailureReason("Transaction verification timeout");
+    //             transactionRepository.save(transaction);
+    //         }
+    //     }
+    // }
 
     /**
      * Validate cycle for transaction

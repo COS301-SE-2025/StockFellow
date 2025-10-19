@@ -60,11 +60,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     Optional<Transaction> findByPaystackReference(String paystackReference);
     
     /**
-     * Find transactions by Paystack transaction ID
-     */
-    Optional<Transaction> findByPaystackTransId(String paystackTransId);
-    
-    /**
      * Find failed transactions that can be retried
      */
     @Query("SELECT t FROM Transaction t WHERE t.status = 'FAILED' AND t.retryCount < :maxRetries")
