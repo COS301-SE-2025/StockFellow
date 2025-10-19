@@ -16,6 +16,8 @@ import TopBar from "../../../src/components/TopBar";
 import { icons } from "../../../src/constants";
 import { formatDistanceToNow } from "date-fns";
 import authService from "../../../src/services/authService";
+import { useTheme } from "../../_layout";
+import { StatusBar } from "expo-status-bar";
 
 interface JoinRequest {
     requestId: string;
@@ -35,6 +37,7 @@ const StokvelRequests = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [groupName, setGroupName] = useState<string>('');
+    const { colors, isDarkMode } = useTheme();
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -159,7 +162,8 @@ const StokvelRequests = () => {
     if (loading && requests.length === 0) {
         return (
             <GestureHandlerRootView className="flex-1">
-                <SafeAreaView className="flex-1 bg-white">
+                <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+                    <StatusBar style={isDarkMode ? 'light' : 'dark'} />
                     <TopBar title="Join Requests" />
                     <View className="flex-1 justify-center items-center">
                         <ActivityIndicator size="large" color="#1DA1FA" />
@@ -171,14 +175,15 @@ const StokvelRequests = () => {
 
     return (
         <GestureHandlerRootView className="flex-1">
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+                <StatusBar style={isDarkMode ? 'light' : 'dark'} />
                 <TopBar title="Join Requests" />
                 <View className="mx-6 mt-6 mb-4">
-                    <Text className="text-xl font-['PlusJakartaSans-SemiBold']">
+                    <Text className="text-xl font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text }}>
                         Join Requests
                     </Text>
                     {groupName && (
-                        <Text className="text-sm text-gray-600 font-['PlusJakartaSans-Regular'] mt-1">
+                        <Text className="text-sm text-gray-600 font-['PlusJakartaSans-Regular'] mt-1" style={{ color: colors.text, opacity: 0.7 }}>
                             {groupName}
                         </Text>
                     )}
@@ -187,6 +192,7 @@ const StokvelRequests = () => {
                 <ScrollView
                     className="flex-1 px-5 py-3"
                     contentContainerStyle={{ flexGrow: 1 }}
+                    style={{ backgroundColor: colors.background }}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -198,23 +204,23 @@ const StokvelRequests = () => {
                 >
                     {requests.length > 0 ? (
                         requests.map((request) => (
-                            <View key={request.requestId} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <View key={request.requestId} className="mb-6 p-4 bg-gray-50 rounded-lg" style={isDarkMode ? { backgroundColor: colors.card } : undefined}>
                                 <View className="flex-row items-center mb-3">
                                     <View className="w-14 h-14 rounded-full bg-white items-center justify-center mr-3 shadow-xl shadow-[#1DA1FA]/90">
                                         <Image
-                                            source={request.profileImage ? { uri: request.profileImage } : icons.avatar}
+                                            source={icons.avatar}
                                             className="w-12 h-12 rounded-full"
                                             resizeMode="cover"
                                         />
                                     </View>
                                     <View className="flex-1">
-                                        <Text className="font-['PlusJakartaSans-SemiBold'] text-base">
+                                        <Text className="font-['PlusJakartaSans-SemiBold'] text-base" style={{ color: colors.text }}>
                                             {request.profileName || request.userId}
                                         </Text>
-                                        <Text className="text-gray-600 text-sm">
-                                            wants to join your stokvel
+                                        <Text className="text-gray-600 text-sm" style={{ color: colors.text, opacity: 0.8 }}>
+                                            wants to join
                                         </Text>
-                                        <Text className="text-gray-500 text-xs mt-1">
+                                        <Text className="text-gray-500 text-xs mt-1" style={{ color: isDarkMode ? '#9CA3AF' : undefined }}>
                                             {formatDistanceToNow(request.timestamp, { addSuffix: true })}
                                         </Text>
                                     </View>
@@ -249,11 +255,12 @@ const StokvelRequests = () => {
                                     source={icons.request}
                                     className="w-24 h-24 opacity-70 mb-4"
                                     resizeMode="contain"
+                                    style={isDarkMode ? { tintColor: '#FFFFFF' } : undefined}
                                 />
-                                <Text className="text-gray-600 font-['PlusJakartaSans-Medium']">
+                                <Text className="text-gray-600 font-['PlusJakartaSans-Medium']" style={{ color: colors.text, opacity: 0.8 }}>
                                     No pending requests
                                 </Text>
-                                <Text className="text-gray-500 text-sm text-center mt-2">
+                                <Text className="text-gray-500 text-sm text-center mt-2" style={{ color: colors.text, opacity: 0.6 }}>
                                     When users request to join this group,{'\n'}they will appear here
                                 </Text>
                             </View>

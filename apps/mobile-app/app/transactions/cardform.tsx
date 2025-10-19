@@ -8,10 +8,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import cardService from '../../src/services/cardService';
 import authService from '../../src/services/authService';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../_layout';
 
 const CardForm = () => {
     const router = useRouter();
     const [isInitializing, setIsInitializing] = useState(false);
+    const { colors, isDarkMode } = useTheme();
 
     const handleAddCard = async () => {
         try {
@@ -55,21 +58,26 @@ const CardForm = () => {
 
     return (
         <GestureHandlerRootView className="flex-1">
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+                <StatusBar style={isDarkMode ? 'light' : 'dark'} />
                 <TopBar title="Add New Card" />
-                <ScrollView className="flex-1 bg-white p-6" contentContainerStyle={{ flexGrow: 1 }}>
-                    
+                <ScrollView
+                    className="flex-1 bg-white p-6"
+                    contentContainerStyle={{ paddingBottom: 24 }}
+                    style={{ backgroundColor: colors.background }}
+                >
                     {/* Header */}
-                    <View className="items-center mb-8">
+                    <View className="items-center mb-2">
                         <Image 
-                            source={icons.creditCard} // You might need to add this icon
-                            className="w-20 h-20 mb-4"
+                            source={icons.debitcard}
+                            className="w-20 h-20"
                             resizeMode="contain"
+                            // keep icon brand color; no tint needed
                         />
-                        <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-center mb-2">
+                        <Text className="text-2xl font-['PlusJakartaSans-Bold'] text-center mb-2" style={{ color: colors.text }}>
                             Add Your Card Securely
                         </Text>
-                        <Text className="text-gray-600 text-center text-base leading-6">
+                        <Text className="text-center text-base leading-6" style={{ color: colors.text, opacity: 0.75 }}>
                             We use Paystack's secure payment system to safely store your card details. 
                             Your card information is never stored on our servers.
                         </Text>
@@ -77,48 +85,51 @@ const CardForm = () => {
 
                     {/* Security Features */}
                     <View className="mb-8">
-                        <Text className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4">
+                        <Text className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4" style={{ color: colors.text }}>
                             Why this is secure:
                         </Text>
                         
                         <View className="space-y-3">
+                            {/* item 1 */}
                             <View className="flex-row items-start">
                                 <View className="w-6 h-6 bg-green-100 rounded-full items-center justify-center mr-3 mt-0.5">
                                     <Text className="text-green-600 text-xs">✓</Text>
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="font-['PlusJakartaSans-SemiBold'] text-gray-800">
+                                    <Text className="font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text }}>
                                         PCI DSS Compliant
                                     </Text>
-                                    <Text className="text-gray-600 text-sm">
+                                    <Text className="text-sm" style={{ color: colors.text, opacity: 0.75 }}>
                                         Paystack meets the highest security standards for handling card data
                                     </Text>
                                 </View>
                             </View>
 
+                            {/* item 2 */}
                             <View className="flex-row items-start">
                                 <View className="w-6 h-6 bg-green-100 rounded-full items-center justify-center mr-3 mt-0.5">
                                     <Text className="text-green-600 text-xs">✓</Text>
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="font-['PlusJakartaSans-SemiBold'] text-gray-800">
+                                    <Text className="font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text }}>
                                         End-to-End Encryption
                                     </Text>
-                                    <Text className="text-gray-600 text-sm">
+                                    <Text className="text-sm" style={{ color: colors.text, opacity: 0.75 }}>
                                         Your card details are encrypted during transmission and storage
                                     </Text>
                                 </View>
                             </View>
 
+                            {/* item 3 */}
                             <View className="flex-row items-start">
                                 <View className="w-6 h-6 bg-green-100 rounded-full items-center justify-center mr-3 mt-0.5">
                                     <Text className="text-green-600 text-xs">✓</Text>
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="font-['PlusJakartaSans-SemiBold'] text-gray-800">
+                                    <Text className="font-['PlusJakartaSans-SemiBold']" style={{ color: colors.text }}>
                                         Small Authorization Charge
                                     </Text>
-                                    <Text className="text-gray-600 text-sm">
+                                    <Text className="text-sm" style={{ color: colors.text, opacity: 0.75 }}>
                                         We'll charge R1.00 to verify your card (this will be refunded)
                                     </Text>
                                 </View>
@@ -128,7 +139,7 @@ const CardForm = () => {
 
                     {/* Supported Banks */}
                     <View className="mb-8">
-                        <Text className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4">
+                        <Text className="text-lg font-['PlusJakartaSans-SemiBold'] mb-4" style={{ color: colors.text }}>
                             Supported Banks:
                         </Text>
                         <View className="flex-row flex-wrap justify-between">
@@ -145,7 +156,7 @@ const CardForm = () => {
                                         className="w-12 h-8 mb-1" 
                                         resizeMode="contain" 
                                     />
-                                    <Text className="text-xs text-gray-600 text-center">
+                                    <Text className="text-xs text-center" style={{ color: colors.text, opacity: 0.7 }}>
                                         {bank.name}
                                     </Text>
                                 </View>
@@ -153,13 +164,11 @@ const CardForm = () => {
                         </View>
                     </View>
 
-                    {/* Spacer to push button to bottom */}
-                    <View className="flex-1" />
-
                     {/* Add Card Button */}
                     <View className="mb-6">
                         <TouchableOpacity
-                            className="bg-[#0C0C0F] p-4 rounded-3xl items-center justify-center min-h-[56px]"
+                            className="p-4 rounded-3xl items-center justify-center min-h=[56px] min-h-[56px]"
+                            style={{ backgroundColor: colors.primary }}
                             onPress={handleAddCard}
                             disabled={isInitializing}
                         >
@@ -189,8 +198,8 @@ const CardForm = () => {
                     </View>
 
                     {/* Footer Info */}
-                    <View className="bg-gray-50 p-4 rounded-lg">
-                        <Text className="text-sm text-gray-600 text-center">
+                    <View className="p-4 rounded-lg" style={isDarkMode ? { backgroundColor: colors.card } : { backgroundColor: '#F9FAFB' }}>
+                        <Text className="text-sm text-center" style={{ color: colors.text, opacity: 0.75 }}>
                             By adding your card, you agree to our Terms of Service and Privacy Policy. 
                             Your card will be used for automatic contributions to your savings groups.
                         </Text>

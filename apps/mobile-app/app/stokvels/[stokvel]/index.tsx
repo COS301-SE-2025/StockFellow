@@ -10,6 +10,8 @@ import StokvelActivity from "../../../src/components/StokvelActivity";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import authService from '../../../src/services/authService';
 import StokvelMandate from "../../../src/components/StokvelMandate";
+import { useTheme } from "../../_layout";
+import { StatusBar } from "expo-status-bar";
 
 interface Member {
   id: string;
@@ -68,8 +70,7 @@ const Stokvel = () => {
   const params = useLocalSearchParams();
   const id = params.id || params.stokvel;
 
-  console.log('All received params:', params);
-  console.log('Extracted ID:', id);
+  const { colors, isDarkMode } = useTheme();
 
   if (!id) {
     console.error('No ID found in params');
@@ -264,7 +265,8 @@ const Stokvel = () => {
   if (loading) {
     return (
       <GestureHandlerRootView className="flex-1">
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+          <StatusBar style={isDarkMode ? 'light' : 'dark'} />
           <TopBar title="Stokvels" />
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#1DA1FA" />
@@ -277,10 +279,11 @@ const Stokvel = () => {
   if (!stokvel) {
     return (
       <GestureHandlerRootView className="flex-1">
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+          <StatusBar style={isDarkMode ? 'light' : 'dark'} />
           <TopBar title="Stokvels" />
           <View className="flex-1 justify-center items-center">
-            <Text className="text-gray-700">Failed to load stokvel details</Text>
+            <Text className="text-gray-700" style={{ color: colors.text, opacity: 0.8 }}>Failed to load stokvel details</Text>
           </View>
         </SafeAreaView>
       </GestureHandlerRootView>
@@ -289,13 +292,15 @@ const Stokvel = () => {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <TopBar title="Stokvels" />
 
         <ScrollView
           contentContainerStyle={{ paddingTop: 15 }}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
+          style={{ backgroundColor: colors.background }}
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
@@ -308,7 +313,7 @@ const Stokvel = () => {
           <View className="w-full flex-1 justify-start items-center h-full">
             {/* Stokvel Name */}
             <View className="w-full flex-1 flex-row justify-between items-center px-5">
-              <Text className="text-2xl font-['PlusJakartaSans-Bold']">
+              <Text className="text-2xl font-['PlusJakartaSans-Bold']" style={{ color: colors.text }}>
                 {stokvel.name}
               </Text>
               {stokvel.userPermissions?.canViewRequests && (
@@ -320,6 +325,7 @@ const Stokvel = () => {
                     source={icons.request}
                     className="w-10 h-10 mr-1"
                     resizeMode="contain"
+                    style={isDarkMode ? { tintColor: '#FFFFFF' } : undefined}
                   />
                   <Text className="text-xs font-['PlusJakartaSans-Regular'] text-[#1DA1FA]">
                     Requests
@@ -364,7 +370,7 @@ const Stokvel = () => {
             )}
 
             <View className="w-full py-3 pl-5">
-              <Text className="w-full pl-2 text-left text-base font-['PlusJakartaSans-SemiBold'] mb-2">
+              <Text className="w-full pl-2 text-left text-base font-['PlusJakartaSans-SemiBold'] mb-2" style={{ color: colors.text }}>
                 Members ({stokvel.members.length})
               </Text>
               <ScrollView
@@ -387,19 +393,19 @@ const Stokvel = () => {
               </ScrollView>
 
               {/* Activity */}
-              <Text className="w-full px-2 text-left text-base font-['PlusJakartaSans-SemiBold'] mb-2">
+              <Text className="w-full px-2 text-left text-base font-['PlusJakartaSans-SemiBold'] mb-2" style={{ color: colors.text }}>
                 Activity
               </Text>
 
               <View className="w-full">
                 {stokvel.activities && stokvel.activities.length > 0 ? (
-                    stokvel.activities.map((activity) => (
+                  stokvel.activities.map((activity) => (
                     <StokvelActivity key={activity.id} activity={activity} />
-                    ))
+                  ))
                 ) : (
-                    <Text className="text-gray-500 text-center py-4 font-['PlusJakartaSans-Regular']">
+                  <Text className="text-gray-500 text-center py-4 font-['PlusJakartaSans-Regular']" style={{ color: colors.text, opacity: 0.7 }}>
                     No recent activity
-                    </Text>
+                  </Text>
                 )}
               </View>
             </View>

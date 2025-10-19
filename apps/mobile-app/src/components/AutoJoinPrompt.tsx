@@ -17,7 +17,7 @@ const AutoJoinPrompt: React.FC<AutoJoinPromptProps> = ({
   onClose,
   tierName
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
 
   return (
     <Modal
@@ -34,8 +34,8 @@ const AutoJoinPrompt: React.FC<AutoJoinPromptProps> = ({
           {/* Header */}
           <View className="items-center mb-4">
             <Image
-              source={icons.stokvel}
-              style={{ width: 60, height: 60, tintColor: colors.primary }}
+              source={icons.stokvel} // Replace with your icon
+              style={{ width: 60, height: 60, tintColor: isDarkMode ? '#FFFFFF' : colors.primary }}
               resizeMode="contain"
             />
             <Text 
@@ -59,7 +59,10 @@ const AutoJoinPrompt: React.FC<AutoJoinPromptProps> = ({
           </Text>
 
           {/* Benefits */}
-          <View className="bg-primary/10 rounded-xl p-4 mb-6">
+          <View
+            className="bg-primary/10 rounded-xl p-4 mb-6"
+            style={isDarkMode ? { backgroundColor: 'rgba(255,255,255,0.06)' } : undefined}
+          >
             <Text 
               style={{ color: colors.primary }}
               className="text-sm font-['PlusJakartaSans-SemiBold'] mb-2"

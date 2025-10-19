@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTutorial } from '../help/TutorialContext';
+import { useTheme } from '../../../app/_layout'; // added
 
 const { width, height } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ const TutorialOverlay: React.FC = () => {
         previousStep,
         endTutorial
     } = useTutorial();
+    const { isDarkMode, colors } = useTheme(); // added
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -38,13 +40,12 @@ const TutorialOverlay: React.FC = () => {
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
 
-    const renderOverlay = () => {
+  const renderOverlay = () => {
     return (
-      <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/50" /> // Changed from /70 to /50
+      <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/50" />
     );
   };
 
-  // Adjust info panel position based on current step
   const getInfoPanelPosition = () => {
     const step = getCurrentStep();
     if (step.id === 'create_stokvel') {
@@ -79,12 +80,21 @@ const TutorialOverlay: React.FC = () => {
       
       {/* Info Panel */}
       <View className={`absolute left-6 right-6 ${getInfoPanelPosition()}`}>
-        <View className="bg-white rounded-2xl p-6 shadow-lg">
-          <Text className="text-[#1DA1FA] text-2xl font-['PlusJakartaSans-Bold'] mb-3">
+        <View
+          className="bg-white rounded-2xl p-6 shadow-lg"
+          style={isDarkMode ? { backgroundColor: colors.card } : undefined}
+        >
+          <Text
+            className="text-[#1DA1FA] text-2xl font-['PlusJakartaSans-Bold'] mb-3"
+            // accent color stays the same for both modes
+          >
             {step.title}
           </Text>
           
-          <Text className="text-gray-700 text-base font-['PlusJakartaSans-Regular'] mb-6">
+          <Text
+            className="text-gray-700 text-base font-['PlusJakartaSans-Regular'] mb-6"
+            style={isDarkMode ? { color: colors.text, opacity: 0.85 } : undefined}
+          >
             {step.description}
           </Text>
           
@@ -95,6 +105,13 @@ const TutorialOverlay: React.FC = () => {
                 className={`h-2 rounded-full mx-1 ${
                   index === currentStep ? 'bg-[#1DA1FA] w-6' : 'bg-gray-200 w-2'
                 }`}
+                style={
+                  index === currentStep
+                    ? undefined
+                    : isDarkMode
+                      ? { backgroundColor: 'rgba(255,255,255,0.2)' }
+                      : undefined
+                }
               />
             ))}
           </View>
@@ -105,8 +122,14 @@ const TutorialOverlay: React.FC = () => {
                 <TouchableOpacity
                   onPress={previousStep}
                   className="px-6 py-3 rounded-full bg-gray-100"
+                  style={isDarkMode ? { backgroundColor: 'rgba(255,255,255,0.1)' } : undefined}
                 >
-                  <Text className="text-gray-700 font-['PlusJakartaSans-Medium']">Back</Text>
+                  <Text
+                    className="text-gray-700 font-['PlusJakartaSans-Medium']"
+                    style={isDarkMode ? { color: colors.text } : undefined}
+                  >
+                    Back
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -116,7 +139,12 @@ const TutorialOverlay: React.FC = () => {
                 onPress={endTutorial}
                 className="px-6 py-3 rounded-full mr-2"
               >
-                <Text className="text-gray-500 font-['PlusJakartaSans-Medium']">Skip</Text>
+                <Text
+                  className="text-gray-500 font-['PlusJakartaSans-Medium']"
+                  style={isDarkMode ? { color: '#9CA3AF' } : undefined}
+                >
+                  Skip
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity

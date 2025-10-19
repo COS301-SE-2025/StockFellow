@@ -4,6 +4,7 @@ import { icons } from '../constants';
 import HelpMenu from './help/HelpMenu';
 import PayoutCountdownModal from './PayoutCountdownModal';
 import TierModal from './TierModal';
+import { useTheme } from '../../app/_layout';
 
 interface QuickActionsProps {
   contributionsLeft?: number;
@@ -21,6 +22,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [showPayoutCountdown, setShowPayoutCountdown] = useState(false);
   const [showTierModal, setShowTierModal] = useState(false);
+  const { isDarkMode, colors } = useTheme();
 
   const actions = [
     { 
@@ -56,7 +58,10 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 style={{ tintColor: '#FFFFFF' }}
               />
             </View>
-            <Text className="text-sm font-['PlusJakartaSans-Medium'] text-gray-700">
+            <Text
+              className="text-sm font-['PlusJakartaSans-Medium'] text-gray-700"
+              style={isDarkMode ? { color: colors.text, opacity: 0.8 } : undefined}
+            >
               {action.label}
             </Text>
           </TouchableOpacity>
