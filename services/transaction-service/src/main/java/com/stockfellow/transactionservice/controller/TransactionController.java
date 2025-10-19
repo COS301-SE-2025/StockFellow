@@ -18,14 +18,24 @@ import org.springframework.data.domain.Sort;
 
 import io.swagger.v3.oas.annotations.tags.*;
 import io.swagger.v3.oas.annotations.Operation;
+import com.stockfellow.transactionservice.client.*;
+
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @Tag(name = "Transactions", description = "Operations related to transactions (contributions)")
 @RequestMapping("/api/transactions")
 @CrossOrigin(origins = "*")
 public class TransactionController {
+    private static final Logger logger = LoggerFactory.getLogger(TransactionController.class);
     @Autowired
     private TransactionService transactionService;
+
+    @Autowired
+    private NotificationClient notificationClient;
     
     // @Autowired
     // private ActivityLogService activityLogService;
@@ -40,6 +50,30 @@ public class TransactionController {
         // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
         //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
         //                              "TRANSACTION_CREATED", null, null);
+
+        // SEND CONTRIBUTION NOTIFICATION
+        try {
+            notificationClient.sendNotification(
+                new NotificationClient.NotificationRequest()
+                    .userId(transaction.getUserId().toString())
+                    .groupId(transaction.getCycleId().toString()) // Or get actual groupId
+                    .type("PAYMENT_RECEIVED")
+                    .title("Contribution Received")
+                    .message("Your contribution of R" + String.format("%.2f", transaction.getAmount()) + " has been received successfully!")
+                    .channel("IN_APP")
+                    .priority("NORMAL")
+                    .metadata(Map.of(
+                        "transactionId", transaction.getTransactionId().toString(),
+                        "amount", transaction.getAmount(),
+                        "status", transaction.getStatus().toString(),
+                        "timestamp", System.currentTimeMillis()
+                    ))
+            );
+            logger.info("Contribution notification sent to user: {}", transaction.getUserId());
+        } catch (Exception e) {
+            logger.error("Failed to send contribution notification: {}", e.getMessage());
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
                            .body(TransactionResponseDto.fromEntity(transaction));
     }
