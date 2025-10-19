@@ -96,7 +96,7 @@ public class Rotation {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = "pending";
+            status = "inactive";
         }
         if (position == null) {
             position = 0;

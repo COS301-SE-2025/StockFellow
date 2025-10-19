@@ -131,7 +131,7 @@ public class RotationService {
         
         // Calculate expected total (contribution amount × number of members)
         BigDecimal expectedTotal = rotation.getAmount()
-            .multiply(new BigDecimal(rotation.getMemberIds().length));
+            .multiply(new BigDecimal(rotation.getMemberIds().length - 1));
         
         // Create DTO for group cycle
         CreateGroupCycleDto cycleDto = new CreateGroupCycleDto();
@@ -161,8 +161,8 @@ public class RotationService {
             .orElseThrow(() -> new IllegalArgumentException("Rotation not found with for Group with ID: " + groupId));
         
         // Check if the rotation is active
-        if (!"active".equals(rotation.getStatus())) {
-            throw new IllegalStateException("Cannot add members to inactive rotation");
+        if ("active".equals(rotation.getStatus())) {
+            throw new IllegalStateException("Cannot add members to active rotation");
         }
         
         // Add user to memberIds array
