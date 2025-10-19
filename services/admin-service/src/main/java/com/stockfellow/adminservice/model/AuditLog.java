@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -42,7 +43,7 @@ public class AuditLog {
     private String userAgent;
 
     @Column(name = "timestamp", nullable = false)
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp = LocalDateTime.now(ZoneOffset.ofHours(2));
 
     @Column(name = "session_id")
     private String sessionId;
