@@ -110,7 +110,9 @@
 | Demo 1 | [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) |
 | Demo 2 |   [Video](https://drive.google.com/file/d/1AH8BwU9aKuq70EnTokyEi4T5MXGcpFyp/view?usp=drive_link)   | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit?utm_content=DAGoirDqLZs&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)                                                 |
 |Demo 3| [Video](https://drive.google.com/file/d/1BGR054N_6pEaafB9qam58Dgxa2EjJN_Q/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
-|Demo 4| [Video](https://drive.google.com/file/d/1BGR054N_6pEaafB9qam58Dgxa2EjJN_Q/view?usp=drive_link) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
+|Demo 4| [Video](https://youtu.be/2oboF9fcJYI) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
+|Final Video| [Video](https://youtu.be/TcPNf54WmR8) | |
+|App Link| [APK](https://expo.dev/accounts/ltshikila/projects/mobile-app/builds/f10bf381-6e4f-4924-87a9-70a7b5976f0c) | |
 
 <!-- Documentation -->
 ## Documentation
@@ -118,12 +120,12 @@
 | Link                   | Description                   |
 |------------------------|-------------------------------|
 | [Software Requirements Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/SRS/Stockfellow_SRS_v4.pdf) | Project Requirements            |
-| [Architectural Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Architectural Requirements/Stockfellow_Architectural_Requirements_v4.pdf) | Architectural Patterns, Strategies and Functional Requirements   |
-| [Coding Standard](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Coding Standards/Stockfellow_Coding_Standards.pdf) | Coding best practices to follow and programming guidelines   |
-| [Testing Policy](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Testing Policy/Testing-Policy.pdf) | Testing strategy and mthods for testing the system |
-| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
+| [Architectural Specification](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Architectural_Requirements/Stockfellow_Architectural_Requirements_v4.pdf) | Architectural Patterns, Strategies and Functional Requirements   |
+| [Coding Standard](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Coding_Standards/Stockfellow_Coding_Standards.pdf) | Coding best practices to follow and programming guidelines   |
+| [Testing Policy](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Testing_Policy/Testing-Policy.pdf) | Testing strategy and mthods for testing the system |
+| [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment_Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
 | [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/user_manual.pdf) | Step by step documentation on how to use the app |
-| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical Installation Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
+| [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical_Installation_Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
 
 
 <!-- ROADMAP -->
@@ -292,7 +294,7 @@ stockfellow/
         <a href="https://github.com/ltshikila" style="text-decoration: none; margin-right: 10px; display: inline-block;">
           <img src="https://skillicons.dev/icons?i=github" alt="GitHub" />
         </a>
-        <a href="https://www.linkedin.com/in/lubabalo-tshikila-718438355/" style="text-decoration: none; display: inline-block;">
+        <a href="https://www.linkedin.com/in/lubabalo-tshikila-508952384/" style="text-decoration: none; display: inline-block;">
           <img src="https://skillicons.dev/icons?i=linkedin" alt="LinkedIn" />
         </a>
       </div>
