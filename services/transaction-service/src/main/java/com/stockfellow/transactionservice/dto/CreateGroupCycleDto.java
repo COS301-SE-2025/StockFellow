@@ -1,13 +1,22 @@
 package com.stockfellow.transactionservice.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Future;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 public class CreateGroupCycleDto {
     @NotNull(message = "Group ID is required")
-    private UUID groupId;
+    private String groupId;
+
+    @NotNull(message = "Rotation ID is required")
+    private UUID rotationId;
     
     @NotBlank(message = "Cycle period is required")
     @Size(max = 50, message = "Cycle period must not exceed 50 characters")
@@ -36,12 +45,17 @@ public class CreateGroupCycleDto {
     
     private LocalDate payoutDate;
 
+    private UUID[] memberIds;
+
     // Constructors
     public CreateGroupCycleDto() {}
 
     // Getters and Setters
-    public UUID getGroupId() { return groupId; }
-    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public String getGroupId() { return groupId; }
+    public void setGroupId(String groupId) { this.groupId = groupId; }
+
+    public UUID getRotationId() { return rotationId; }
+    public void setRotationId(UUID rotationId) { this.rotationId = rotationId; }
     
     public String getCyclePeriod() { return cyclePeriod; }
     public void setCyclePeriod(String cyclePeriod) { this.cyclePeriod = cyclePeriod; }
@@ -56,7 +70,12 @@ public class CreateGroupCycleDto {
     public void setExpectedTotal(BigDecimal expectedTotal) { this.expectedTotal = expectedTotal; }
     
     public LocalDate getCollectionStartDate() { return collectionStartDate; }
-    public void setCollectionStartDate(LocalDate collectionStartDate) { this.collectionStartDate = collectionStartDate; }
+    public void setCollectionStartDate(LocalDate collectionStartDate) {
+        this.collectionStartDate = collectionStartDate; 
+    }
+
+    public UUID[] getMemberIds() { return memberIds; }
+    public void setMemberIds(UUID[] memberIds) { this.memberIds = memberIds; }
     
     public LocalDate getCollectionEndDate() { return collectionEndDate; }
     public void setCollectionEndDate(LocalDate collectionEndDate) { this.collectionEndDate = collectionEndDate; }

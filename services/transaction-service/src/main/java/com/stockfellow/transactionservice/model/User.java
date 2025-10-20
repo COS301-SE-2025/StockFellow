@@ -21,7 +21,7 @@ public class User {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name="paystack_user_id")
+    @Column(name = "paystack_user_id")
     private String paystackUserId;
     
     @Column(name = "first_name")

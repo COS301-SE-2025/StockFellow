@@ -1,12 +1,25 @@
 package com.stockfellow.transactionservice.controller;
 
-import com.stockfellow.transactionservice.dto.*;
-import com.stockfellow.transactionservice.model.*;
-import com.stockfellow.transactionservice.service.*;
+import com.stockfellow.transactionservice.dto.InitializeCardAuthDto;
+import com.stockfellow.transactionservice.dto.PayerDetailsResponseDto;
+import com.stockfellow.transactionservice.dto.CreatePayoutDetailsDto;
+import com.stockfellow.transactionservice.dto.PayoutDetailsResponseDto;
+
+import com.stockfellow.transactionservice.model.PayerDetails;
+import com.stockfellow.transactionservice.model.PayoutDetails;
+import com.stockfellow.transactionservice.service.PaymentDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -16,7 +29,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Map;
 
-import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
@@ -246,7 +259,7 @@ public class PaymentDetailsController {
         }
     }
 
-    //TODO: How to handle this with paystack?    
+    // TODO How to handle this with paystack?    
     // @PutMapping("/payer/{payerId}")
     // public ResponseEntity<PayerDetailsResponseDto> updatePayerDetails(
     //         @PathVariable UUID payerId,
@@ -255,7 +268,7 @@ public class PaymentDetailsController {
     //     return ResponseEntity.ok(PayerDetailsResponseDto.fromEntity(payerDetails));
     // }
 
-    //TODO: How to handle this with paystack?    
+    // TODO How to handle this with paystack?    
     // @PutMapping("/payout/{payoutId}")
     // public ResponseEntity<PayoutDetailsResponseDto> updatePayoutDetails(
     //         @PathVariable UUID payoutId,
@@ -264,7 +277,7 @@ public class PaymentDetailsController {
     //     return ResponseEntity.ok(PayoutDetailsResponseDto.fromEntity(payoutDetails));
     // }
     
-    //TODO: not needed. A user should only have 1 payout method
+    // TODO not needed. A user should only have 1 payout method
     // @PutMapping("/payout/{payoutId}/set-default")
     // public ResponseEntity<PayoutDetailsResponseDto> setActivePayoutMethod(@PathVariable UUID payoutId) {
     //     PayoutDetails payoutDetails = paymentDetailsService.setAsActive(payoutId);

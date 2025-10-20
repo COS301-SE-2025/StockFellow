@@ -6,6 +6,7 @@ import com.stockfellow.groupservice.model.Group.JoinRequest;
 import com.stockfellow.groupservice.model.Group.Member;
 import com.stockfellow.groupservice.repository.GroupRepository;
 import com.stockfellow.groupservice.dto.NextPayeeResult;
+import com.stockfellow.groupservice.client.TransactionServiceClient;
 
 import java.util.Arrays;
 import java.util.Calendar;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Date;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +31,17 @@ public class GroupMemberService {
     private final GroupRepository groupRepository;
     private final EventStoreService eventStoreService;
     private final MongoTemplate mongoTemplate;
+    private final TransactionServiceClient transactionServiceClient;
 
-    public GroupMemberService(GroupRepository groupRepository, EventStoreService eventStoreService, MongoTemplate mongoTemplate) {
+    public GroupMemberService(
+            GroupRepository groupRepository,
+            EventStoreService eventStoreService,
+            MongoTemplate mongoTemplate,
+            TransactionServiceClient transactionServiceClient) {
         this.groupRepository = groupRepository;
         this.eventStoreService = eventStoreService;
         this.mongoTemplate = mongoTemplate;
+        this.transactionServiceClient = transactionServiceClient;
     }
 
     // Creates Join request
@@ -175,17 +183,26 @@ public class GroupMemberService {
     }
 
     public void addMemberToGroup(String groupId, String userId, String username) {
+        UUID memberUuid;
+        try {
+            memberUuid = UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format: " + userId);
+        }
+
         Member newMember = new Member(userId, username, "member");
-        
         Query query = new Query(Criteria.where("groupId").is(groupId));
         Update update = new Update().push("members", newMember);
         mongoTemplate.updateFirst(query, update, Group.class);
+
+        boolean addedToRotation = transactionServiceClient.addMemberToRotation(groupId, memberUuid);
 
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("groupId", groupId);
         eventData.put("userId", userId);
         eventData.put("username", username);
         eventData.put("role", "member");
+        eventData.put("addedToRotation", addedToRotation);
 
         Event event = new Event("MemberAdded", eventData);
         eventStoreService.saveEvent(groupId, event);

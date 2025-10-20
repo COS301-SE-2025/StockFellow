@@ -1,7 +1,8 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
-import jakarta.validation.constraints.*;
+import com.stockfellow.transactionservice.model.Transfer;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public class ProcessTransferDto {
     
@@ -13,7 +14,6 @@ public class ProcessTransferDto {
     @NotNull(message = "Status is required")
     private Transfer.TransferStatus status;
     
-    private String gatewayStatus;
     private String failureReason;
 
     // Constructors
@@ -28,9 +28,6 @@ public class ProcessTransferDto {
     
     public Transfer.TransferStatus getStatus() { return status; }
     public void setStatus(Transfer.TransferStatus status) { this.status = status; }
-    
-    public String getGatewayStatus() { return gatewayStatus; }
-    public void setGatewayStatus(String gatewayStatus) { this.gatewayStatus = gatewayStatus; }
     
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
