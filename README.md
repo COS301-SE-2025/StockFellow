@@ -126,6 +126,7 @@
 | [Deployment Model](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Deployment_Model/Stockfellow_Deployment_Model_v4.pdf) | Deployment architecture and infrastructure specifications |
 | [User Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/user_manual.pdf) | Step by step documentation on how to use the app |
 | [Technical Installation Manual](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Technical_Installation_Manual/Stockfellow_Technical_Installation_Manual.pdf) | Guide to install and run project |
+| [Research Document](https://github.com/COS301-SE-2025/StockFellow/blob/main/docs/Research_Document/Stockfellow_Research_Document.pdf) | Research done for the project |
 
 
 <!-- ROADMAP -->
