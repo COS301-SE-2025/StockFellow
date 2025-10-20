@@ -1,14 +1,16 @@
-# User Service Configuration
+# User Service Configuration - Simple University Project
 spring:
   application:
     name: user-service
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://${DROPLET1_IP:postgres}:${DATABASE_PORT:5432}/userservice_db
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-    
+    url: jdbc:postgresql://${DROPLET1_IP:-postgres}:5432/userservice_db
+    username: ${POSTGRES_USER:-postgres}
+    password: ${POSTGRES_PASSWORD:-postgres}
+    hikari:
+      auto-commit: false
+ 
   # JPA Configuration
   jpa:
     hibernate:
@@ -22,17 +24,11 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # For Alresco which is commented out for now
-  # http:
-  #   client:
-  #     connection-timeout: 5000ms
-  #     read-timeout: 30000ms
-
 # Server Configuration
 server:
   port: ${USER_SERVICE_PORT:4020}
 
-# Security (comment out for now)
+# Security
 # spring:
 #   security:
 #     oauth2:
@@ -46,29 +42,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
+        include: health,info
 
 # Logging 
 logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
     com.stockfellow: ${LOGGING_LEVEL_APP:DEBUG}
-    org.springframework.security: WARN
-    org.hibernate.SQL: WARN
-
-# alfresco:
-#   base-url: ${ALFRESCO_BASE_URL:http://alfresco:8081/alfresco}
-#   username: ${ALFRESCO_USERNAME:admin}
-#   password: ${ALFRESCO_PASSWORD:admin}
-#   site-name: ${ALFRESCO_SITE_NAME:stockfellow}
-#   api:
-#     version: ${ALFRESCO_API_VERSION:1}
-#     timeout: ${ALFRESCO_TIMEOUT:30000}
-#   storage:
-#     user-documents: /Sites/${alfresco.site-name}/documentLibrary/Users
-#     group-documents: /Sites/${alfresco.site-name}/documentLibrary/Groups
-#     transaction-receipts: /Sites/${alfresco.site-name}/documentLibrary/Transactions
-#     compliance-docs: /Sites/${alfresco.site-name}/documentLibrary/Compliance

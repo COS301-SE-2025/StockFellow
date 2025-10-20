@@ -1,15 +1,15 @@
 package com.stockfellow.userservice.controller;
 
-import com.stockfellow.userservice.model.BankTransaction;
 import com.stockfellow.userservice.model.User;
 import com.stockfellow.userservice.service.UserService;
 import com.stockfellow.userservice.service.SouthAfricanIdValidationService;
 import com.stockfellow.userservice.service.PdfIdExtractionService;
 import com.stockfellow.userservice.service.AlfrescoService;
 import com.stockfellow.userservice.service.AffordabilityTierService;
+import com.stockfellow.userservice.service.BankStatementExtractionService;
 import com.stockfellow.userservice.dto.AffordabilityTierResult;
 import com.stockfellow.userservice.dto.BankStatementUploadRequest;
-import com.stockfellow.userservice.client.*;
+import com.stockfellow.userservice.model.BankTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
@@ -50,13 +49,11 @@ public class UserController {
     private PdfIdExtractionService pdfExtractionService;
 
     @Autowired
-    private AlfrescoService alfrescoService;
-
-    @Autowired
+    private AlfrescoService alfrescoService;    @Autowired
     private AffordabilityTierService affordabilityTierService;
-
+    
     @Autowired
-    private NotificationClient notificationClient;
+    private BankStatementExtractionService bankStatementExtractionService;
 
      @GetMapping
     public ResponseEntity<?> getServiceInfo() {
@@ -70,7 +67,7 @@ public class UserController {
                             "GET /api/users/profile - Get user profile (requires auth)",
                             "POST /api/users/verifyID - Verify user ID document",
                             "POST /api/users/affordability/analyze - Analyze user affordability",
-                            "POST /api/users/affordability/analyze-pdf - Upload PDF bank statement for affordability analysis",
+                            "POST /api/users/affordability/analyze-pdf - Analyze bank statement PDF",
                             "GET /api/users/{id} - Get user by ID (requires auth)",
                             "GET /api/users/{id}/affordability - Get user affordability tier",
                             "GET /api/users/search?name={name} - Search users by name",
@@ -203,29 +200,6 @@ public class UserController {
             logger.info("User successfully registered in database: userId={}, id={}", 
                     savedUser.getUserId(), savedUser.getId());
 
-
-            // SEND WELCOME NOTIFICATION
-            try {
-                notificationClient.sendNotification(
-                    new NotificationClient.NotificationRequest()
-                        .userId(savedUser.getUserId())
-                        .type("WELCOME")
-                        .title("Welcome to StockFellow!")
-                        .message("Thank you for joining our platform, " + savedUser.getUsername() + "! Start exploring saving groups today!")
-                        .channel("IN_APP")
-                        .priority("NORMAL")
-                        .metadata(Map.of(
-                            "source", "registration",
-                            "campaign", "welcome-series",
-                            "username", savedUser.getUsername()
-                        ))
-                );
-                logger.info("Welcome notification sent to user: {}", savedUser.getUserId());
-            } catch (Exception e) {
-                logger.error("Failed to send welcome notification, but continuing: {}", e.getMessage());
-                // Don't fail registration if notification fails
-            }
-
             // Prepare response
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -242,20 +216,18 @@ public class UserController {
             userMap.put("affordabilityTier", savedUser.getAffordabilityTier());
             userMap.put("createdAt", savedUser.getCreatedAt());
             userMap.put("updatedAt", savedUser.getUpdatedAt());
-            response.put("user", userMap);
-
-            // Add next steps for user
+            response.put("user", userMap);            // Add next steps for user
             response.put("nextSteps", Map.of(
                 "message", "Complete your profile to access all features",
                 "steps", List.of(
                     "1. Verify your ID document",
-                    "2. Upload bank statements for affordability analysis",
+                    "2. Upload bank statement PDF for affordability analysis",
                     "3. Complete additional profile information"
                 ),
                 "endpoints", Map.of(
                     "idVerification", "/api/users/verifyID",
-                    "affordabilityAnalysis", "/api/users/affordability/analyze",
-                    "bankStatementUpload", "/api/users/affordability/analyze-pdf",
+                    "affordabilityAnalysisPDF", "/api/users/affordability/analyze-pdf",
+                    "affordabilityAnalysisJSON", "/api/users/affordability/analyze",
                     "profile", "/api/users/profile"
                 )
             ));
@@ -382,162 +354,6 @@ public class UserController {
         }
     }
 
-    /**
-     * NEW ENDPOINT: Upload PDF bank statement and perform affordability analysis
-     * This is the endpoint your frontend should use
-     */
-    @PostMapping("/affordability/analyze-pdf")
-    public ResponseEntity<?> analyzeBankStatementPdf(
-            @RequestParam("file") MultipartFile file,
-            HttpServletRequest httpRequest) {
-
-        try {
-            String userId = httpRequest.getHeader("X-User-Id");
-            if (userId == null || userId.isEmpty()) {
-                return ResponseEntity.status(401).body(Map.of(
-                        "error", "User not authenticated",
-                        "message", "User ID is required for affordability analysis"));
-            }
-
-            // Validate file
-            if (file == null || file.isEmpty()) {
-                return ResponseEntity.status(400).body(Map.of(
-                        "error", "Invalid file",
-                        "message", "PDF bank statement is required"));
-            }
-
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.equals("application/pdf")) {
-                return ResponseEntity.status(400).body(Map.of(
-                        "error", "Invalid file type",
-                        "message", "Only PDF files are accepted for bank statements"));
-            }
-
-            // Check if user exists
-            User user = userService.getUserByUserId(userId);
-            if (user == null) {
-                return ResponseEntity.status(404).body(Map.of(
-                        "error", "User not found",
-                        "message", "User must be registered before affordability analysis"));
-            }
-
-            logger.info("Starting bank statement analysis from PDF for user: {}", userId);
-
-            // Step 1: Extract transactions from PDF
-            List<BankTransaction> transactions;
-            try {
-                transactions = bankStatementParserService.extractTransactionsFromPdf(file);
-                logger.info("Extracted {} transactions from PDF", transactions.size());
-            } catch (IOException e) {
-                logger.error("Error extracting transactions from PDF for user: {}", userId, e);
-                return ResponseEntity.status(400).body(Map.of(
-                        "error", "PDF parsing failed",
-                        "message", "Could not extract transaction data from the provided PDF: " + e.getMessage()));
-            }
-
-            // Step 2: Validate transactions
-            try {
-                bankStatementParserService.validateTransactions(transactions);
-            } catch (IllegalArgumentException e) {
-                logger.warn("Transaction validation failed for user {}: {}", userId, e.getMessage());
-                return ResponseEntity.status(400).body(Map.of(
-                        "error", "Insufficient data",
-                        "message", e.getMessage(),
-                        "transactionsFound", transactions.size()));
-            }
-
-            // Step 3: Extract bank statement metadata (optional)
-            BankStatementParserService.BankStatementInfo statementInfo = null;
-            try {
-                statementInfo = bankStatementParserService.extractBankStatementInfo(file);
-                logger.info("Bank statement info - Bank: {}, Account: {}", 
-                        statementInfo.getBankName(), statementInfo.getAccountNumber());
-            } catch (Exception e) {
-                logger.warn("Could not extract bank statement metadata: {}", e.getMessage());
-                // Continue anyway - this is optional
-            }
-
-            // Step 4: Perform affordability analysis
-            logger.info("Starting affordability analysis for user: {} with {} transactions",
-                    userId, transactions.size());
-
-            AffordabilityTierResult result = affordabilityTierService.analyzeBankStatements(
-                    userId, transactions);
-
-            // Step 5: Update user's affordability tier in database
-            userService.updateUserAffordabilityTier(userId, result.getTier(), result.getConfidence());
-
-            logger.info("Affordability analysis completed for user: {} - Tier: {}, Confidence: {}%",
-                    userId, result.getTier(), Math.round(result.getConfidence() * 100));
-            
-
-            //  SEND AFFORDABILITY ANALYSIS NOTIFICATION
-            try {
-                String tierName = getTierName(result.getTier());
-                notificationClient.sendNotification(
-                    new NotificationClient.NotificationRequest()
-                        .userId(userId)
-                        .type("SYSTEM_UPDATE")
-                        .title("Affordability Analysis Complete")
-                        .message("Your affordability tier has been determined: " + tierName + ". You can now join groups matching your tier!")
-                        .channel("IN_APP")
-                        .priority("HIGH")
-                        .metadata(Map.of(
-                            "tier", result.getTier(),
-                            "tierName", tierName,
-                            "confidence", result.getConfidence(),
-                            "minContribution", result.getRecommendedContributionMin(),
-                            "maxContribution", result.getRecommendedContributionMax()
-                        ))
-                );
-                logger.info("Affordability analysis notification sent to user: {}", userId);
-            } catch (Exception e) {
-                logger.error("Failed to send affordability notification: {}", e.getMessage());
-            }
-
-            // Step 6: Return comprehensive response
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Bank statement analyzed successfully");
-            response.put("statementInfo", statementInfo != null ? Map.of(
-                    "bankName", statementInfo.getBankName() != null ? statementInfo.getBankName() : "Unknown",
-                    "accountNumber", statementInfo.getAccountNumber() != null ? statementInfo.getAccountNumber() : "Unknown",
-                    "period", statementInfo.getStatementPeriod() != null ? statementInfo.getStatementPeriod() : "Unknown"
-            ) : null);
-            response.put("transactionsAnalyzed", transactions.size());
-            response.put("result", Map.of(
-                    "tier", result.getTier(),
-                    "tierName", getTierName(result.getTier()),
-                    "confidence", result.getConfidence(),
-                    "contributionRange", getContributionRange(result.getTier()),
-                    "analysisDetails", result));
-            response.put("timestamp", System.currentTimeMillis());
-            response.put("nextSteps", Map.of(
-                    "message", "Your affordability tier has been determined. You can now join stokvels matching your tier.",
-                    "recommendedContribution", "R" + result.getRecommendedContributionMin() + 
-                                            " - R" + result.getRecommendedContributionMax() + " per month"
-            ));
-
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request for bank statement analysis: {}", e.getMessage());
-            return ResponseEntity.status(400).body(Map.of(
-                    "error", "Invalid request",
-                    "message", e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Error during bank statement analysis for user: {}",
-                    httpRequest.getHeader("X-User-Id"), e);
-            return ResponseEntity.status(500).body(Map.of(
-                    "error", "Analysis failed",
-                    "message", "An unexpected error occurred during bank statement analysis: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * AFFORDABILITY ANALYSIS ENDPOINT
-     * This accepts a JSON array of transactions directly
-     */
     @PostMapping("/affordability/analyze")
     public ResponseEntity<?> analyzeAffordability(
             @RequestBody BankStatementUploadRequest request,
@@ -607,6 +423,120 @@ public class UserController {
             return ResponseEntity.status(500).body(Map.of(
                     "error", "Analysis failed",
                     "message", "An unexpected error occurred during affordability analysis"));
+        }
+    }
+
+    @PostMapping("/affordability/analyze-pdf")
+    public ResponseEntity<?> analyzeBankStatementPdf(
+            @RequestParam("bankStatement") MultipartFile bankStatementFile,
+            HttpServletRequest httpRequest) {
+
+        try {
+            String userId = httpRequest.getHeader("X-User-Id");
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "error", "User not authenticated",
+                        "message", "User ID is required for affordability analysis"));
+            }
+
+            // Validate file
+            if (bankStatementFile == null || bankStatementFile.isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Invalid request",
+                        "message", "Bank statement PDF file is required"));
+            }
+
+            if (!bankStatementFile.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Invalid file type",
+                        "message", "Only PDF files are supported"));
+            }
+
+            // Check if user exists
+            if (userService.getUserByUserId(userId) == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                        "error", "User not found",
+                        "message", "User must be registered before affordability analysis"));
+            }
+
+            logger.info("Starting PDF bank statement analysis for user: {} with file: {}",
+                    userId, bankStatementFile.getOriginalFilename());
+
+            // Extract transactions from PDF
+            List<BankTransaction> transactions;
+            BankStatementExtractionService.BankStatementAnalysisResult extractionResult;
+            
+            try {
+                transactions = bankStatementExtractionService.extractTransactionsFromPdf(bankStatementFile);
+                extractionResult = bankStatementExtractionService.analyzeExtractionQuality(
+                    transactions, "PDF extraction");
+            } catch (Exception e) {
+                logger.error("Failed to extract transactions from PDF for user: {}", userId, e);
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "PDF extraction failed",
+                        "message", "Unable to extract transactions from the provided PDF. Please ensure it's a valid bank statement.",
+                        "details", e.getMessage()));
+            }
+
+            // Validate extracted transactions
+            if (transactions.isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "No transactions found",
+                        "message", "No valid transactions could be extracted from the PDF. Please check that it's a valid bank statement.",
+                        "extractionAnalysis", extractionResult));
+            }
+
+            if (transactions.size() < 50) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Insufficient data",
+                        "message", "Minimum 50 transactions required for reliable analysis. Extracted: " + 
+                                transactions.size(),
+                        "extractionAnalysis", extractionResult,
+                        "recommendation", "Please upload a statement covering at least 3 months of transactions"));
+            }
+
+            logger.info("Successfully extracted {} transactions from PDF for user: {}", 
+                    transactions.size(), userId);
+
+            // Perform affordability analysis
+            AffordabilityTierResult result = affordabilityTierService.analyzeBankStatements(
+                    userId, transactions);
+
+            // Update user's affordability tier in database
+            userService.updateUserAffordabilityTier(userId, result.getTier(), result.getConfidence());
+
+            logger.info("PDF affordability analysis completed for user: {} - Tier: {}, Confidence: {}%",
+                    userId, result.getTier(), Math.round(result.getConfidence() * 100));
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Bank statement PDF analyzed successfully",
+                    "extractionResult", Map.of(
+                            "transactionsExtracted", transactions.size(),
+                            "qualityScore", extractionResult.getQualityScore(),
+                            "dateRange", extractionResult.getDateRange(),
+                            "warnings", extractionResult.getWarnings(),
+                            "recommendations", extractionResult.getRecommendations()),
+                    "affordabilityResult", Map.of(
+                            "tier", result.getTier(),
+                            "tierName", getTierName(result.getTier()),
+                            "confidence", result.getConfidence(),
+                            "contributionRange", getContributionRange(result.getTier()),
+                            "analysisDetails", result),
+                    "timestamp", System.currentTimeMillis()));
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request for PDF affordability analysis: {}", e.getMessage());
+            return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid request",
+                    "message", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error during PDF affordability analysis for user: {}",
+                    httpRequest.getHeader("X-User-Id"), e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Analysis failed",
+                    "message", "An unexpected error occurred during PDF affordability analysis",
+                    "details", e.getMessage()));
         }
     }
 
@@ -840,26 +770,6 @@ public class UserController {
                 return ResponseEntity.status(500).body(Map.of(
                         "error", "Update failed",
                         "message", "Could not update user verification status"));
-            }
-
-            // SEND ID VERIFICATION SUCCESS NOTIFICATION
-            try {
-                notificationClient.sendNotification(
-                    new NotificationClient.NotificationRequest()
-                        .userId(userId)
-                        .type("SYSTEM_UPDATE")
-                        .title("ID Verification Complete")
-                        .message("Your ID has been successfully verified! You can now upload bank statements for affordability analysis.")
-                        .channel("IN_APP")
-                        .priority("HIGH")
-                        .metadata(Map.of(
-                            "verifiedAt", System.currentTimeMillis(),
-                            "documentId", documentId
-                        ))
-                );
-                logger.info("ID verification notification sent to user: {}", userId);
-            } catch (Exception e) {
-                logger.error("Failed to send ID verification notification: {}", e.getMessage());
             }
 
             // Return success response with extracted information
