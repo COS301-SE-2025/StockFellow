@@ -10,6 +10,8 @@ import TopBar from '../../src/components/TopBar';
 import { icons } from '../../src/constants';
 import cardService from '../../src/services/cardService';
 import authService from '../../src/services/authService';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../_layout';
 
 const Cards = () => {
   const router = useRouter();
@@ -18,6 +20,7 @@ const Cards = () => {
   const [activatingCardId, setActivatingCardId] = useState<string | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [addingNewCard, setAddingNewCard] = useState(false);
+  const { colors, isDarkMode } = useTheme();
 
   const fetchCards = async () => {
     try {
@@ -49,7 +52,7 @@ const Cards = () => {
 		const handleDeepLink = (url: string) => {
 			console.log('Deep link received:', url);
 			
-			// Simple check - if URL contains our callback path, refresh cards
+			// Simple check - if URL contains our callback path, refresh
 			if (url.includes('cards/callback')) {
 				console.log('Paystack callback received, refreshing cards...');
 				
@@ -182,11 +185,12 @@ const Cards = () => {
   if (loading) {
     return (
       <GestureHandlerRootView className="flex-1">
-        <SafeAreaView className="flex-1 bg-white">
-          <TopBar title="My Cards" />
+        <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+          <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+          <TopBar title="My Cards" showBackButton />
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#0000ff" />
-            <Text className="mt-4 text-gray-600">Loading your cards...</Text>
+            <Text className="mt-4 text-gray-600" style={{ color: colors.text, opacity: 0.7 }}>Loading your cards...</Text>
           </View>
         </SafeAreaView>
       </GestureHandlerRootView>
@@ -195,33 +199,25 @@ const Cards = () => {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <SafeAreaView className="flex-1 bg-white">
-        <TopBar title="My Cards" />
-        <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 80 }}>
-          {/* Header with "My Cards" and Add Button */}
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-xl font-['PlusJakartaSans-Bold']">My Cards</Text>
-            <TouchableOpacity
-              onPress={addNewCard}
-              disabled={addingNewCard}
-              className="p-2"
-            >
-              {addingNewCard ? (
-                <ActivityIndicator color="#0000ff" />
-              ) : (
-                <Image 
-                  source={icons.plus}
-                  className="w-8 h-8"
-                  resizeMode="contain"
-                />
-              )}
-            </TouchableOpacity>
-          </View>
+      <SafeAreaView className="flex-1 bg-white" style={{ backgroundColor: colors.background }}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+        <TopBar
+          title="My Cards"
+          showBackButton
+        />
 
+        <ScrollView
+          className="flex-1 p-6"
+          contentContainerStyle={{ paddingBottom: 80 }}
+          style={{ backgroundColor: colors.background }}
+        >
+          {/* Removed inner header row */}
           {/* Current Active Card */}
           {cards.filter(card => card.isActive).length > 0 && (
             <>
-              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Current Active Card</Text>
+              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4" style={{ color: colors.text }}>
+                Current Active Card
+              </Text>
               {cards.filter(card => card.isActive).map(card => (
                 <View key={card.id} className="mb-6">
                   <DebitCard
@@ -239,7 +235,9 @@ const Cards = () => {
           {/* Other Cards */}
           {cards.filter(card => !card.isActive).length > 0 && (
             <>
-              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4">Other Cards</Text>
+              <Text className="text-base font-['PlusJakartaSans-SemiBold'] mb-4" style={{ color: colors.text }}>
+                Other Cards
+              </Text>
               {cards.filter(card => !card.isActive).map(card => (
                 <View key={card.id} className="mb-6">
                   <DebitCard
@@ -281,19 +279,21 @@ const Cards = () => {
           {/* Empty State */}
           {cards.length === 0 && (
             <View className="items-center justify-center py-20">
-              <Image 
-                source={icons.plus} // You might want a different icon here
-                className="w-16 h-16 opacity-30 mb-4"
+              <Image
+                source={icons.plus}
+                className="w-16 h-16 mb-4"
                 resizeMode="contain"
+                style={isDarkMode ? { tintColor: colors.text, opacity: 0.3 } : { opacity: 0.3 }}
               />
-              <Text className="text-gray-500 text-lg mb-2">No cards added yet</Text>
-              <Text className="text-gray-400 text-center px-8 mb-6">
+              <Text className="text-lg mb-2" style={{ color: colors.text }}>No cards added yet</Text>
+              <Text className="text-center px-8 mb-6" style={{ color: colors.text, opacity: 0.7 }}>
                 Add your first card to start making payments
               </Text>
               <TouchableOpacity
                 onPress={() => router.push('/transactions/cardform')}
                 disabled={addingNewCard}
-                className="bg-[#0C0C0F] px-6 py-3 rounded-3xl"
+                className="px-6 py-3 rounded-3xl"
+                style={{ backgroundColor: colors.primary }}
               >
                 {addingNewCard ? (
                   <ActivityIndicator color="white" />

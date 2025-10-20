@@ -1,64 +1,119 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { icons } from '../constants';
+import { useTheme } from '../../app/_layout';
+import icons from '../constants/icons';
 
 interface ActivityItemProps {
   title: string;
   subtitle: string;
-  amount: string;
-  onPress?: () => void;
+  amount?: string;
+  onPress: () => void;
+  icon?: React.ReactNode;
+  timestamp?: string;
 }
 
-const ActivityItem: React.FC<ActivityItemProps> = ({ 
-  title, 
-  subtitle, 
-  amount, 
-  onPress 
-}) => {
-  return (
-    <TouchableOpacity 
-      onPress={onPress}
-      className="flex-row items-center bg-blue-50 rounded-2xl p-4 mb-3"
-    >
-      {/* Profile Icon */}
-      <View className="mr-4">
-        <Image 
-          source={icons.up}
-          className="w-4 h-4"
-          resizeMode="contain"
-        />
-      </View>
+const chevronRight = icons.up;
 
-      {/* Content */}
-      <View className="flex-1 flex-row items-center justify-between">
-        {/* Text Section */}
-        <View>
-          <Text className="text-gray-900 text-base font-['PlusJakartaSans-SemiBold']">
+const ActivityItem: React.FC<ActivityItemProps> = ({
+  title,
+  subtitle,
+  amount,
+  onPress,
+  icon,
+  timestamp
+}) => {
+  const { colors } = useTheme();
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        backgroundColor: '#E6F2FF',
+        borderRadius: 14,
+        padding: 12,
+        marginBottom: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        // Removed shadow for a cleaner look
+      }}
+      activeOpacity={0.85}
+    >
+      {/* Left Section */}
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+        {/* Optional icon */}
+        {icon && (
+          <View style={{ marginRight: 8 }}>
+            {icon}
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              fontSize: 15,
+              fontWeight: '700',
+              color: colors.text,
+              marginBottom: 1,
+              fontFamily: 'PlusJakartaSans-SemiBold',
+            }}
+            numberOfLines={1}
+          >
             {title}
           </Text>
-          <Text className="text-gray-500 text-sm font-['PlusJakartaSans-Regular']">
+          <Text
+            style={{
+              fontSize: 13,
+              color: colors.text,
+              opacity: 0.7,
+              fontFamily: 'PlusJakartaSans-Regular',
+              marginBottom: 1,
+            }}
+            numberOfLines={1}
+          >
             {subtitle}
           </Text>
-        </View>
-
-        {/* Amount Section with Blue Line */}
-        <View className="flex-row items-center">
-          {/* Blue Vertical Line */}
-          <View className="w-[2px] h-12 bg-[#1DA1FA] mr-3" />
-          
-          {/* Amount and Arrow */}
-          <View className="flex-row items-center">
-            <Text className="text-gray-900 text-base font-['PlusJakartaSans-SemiBold'] mr-3">
-              R{amount}
+          {timestamp && (
+            <Text
+              style={{
+                fontSize: 11,
+                color: colors.text,
+                opacity: 0.4,
+                fontFamily: 'PlusJakartaSans-Regular',
+              }}
+            >
+              {timestamp}
             </Text>
-            <Image 
-              source={icons.right}
-              className="w-4 h-4"
-              style={{ tintColor: '#000' }}
-              resizeMode="contain"
-            />
-          </View>
+          )}
         </View>
+      </View>
+
+      {/* Divider */}
+      <View style={{
+        width: 1,
+        height: 32,
+        backgroundColor: '#B3D8FF',
+        marginHorizontal: 10,
+        borderRadius: 1,
+      }} />
+
+      {/* Right Section - Amount & Chevron */}
+      <View style={{ alignItems: 'flex-end', flexDirection: 'row' }}>
+        {amount && (
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: 'bold',
+              color: colors.primary,
+              marginRight: 6,
+              fontFamily: 'PlusJakartaSans-Bold',
+            }}
+          >
+            {amount.startsWith('R') ? amount : `R${amount}`}
+          </Text>
+        )}
+        <Image
+          source={chevronRight}
+          style={{ width: 18, height: 18, tintColor: '#1DA1FA' }}
+        />
       </View>
     </TouchableOpacity>
   );

@@ -33,11 +33,20 @@ const SignUp = () => {
     confirmPassword: ''
   });
 
-  // Commented out PDF-related states
+  const [touched, setTouched] = useState({
+    username: false,
+    firstName: false,
+    lastName: false,
+    contactNumber: false,
+    idNumber: false,
+    email: false,
+    password: false,
+    confirmPassword: false
+  });
+
   const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const router = useRouter();
   const passwordRef = useRef<string>('');
 
@@ -48,6 +57,83 @@ const SignUp = () => {
     symbol: false
   });
 
+  // Real-time validation functions
+  const validateUsername = (value: string): string => {
+    if (!value.trim()) return 'Username is required';
+    if (value.length < 3) return 'Username must be at least 3 characters';
+    if (value.length > 20) return 'Username must not exceed 20 characters';
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
+    return '';
+  };
+
+  const validateName = (value: string, fieldName: string): string => {
+    if (!value.trim()) return `${fieldName} is required`;
+    if (!/^[A-Z]/.test(value)) return `${fieldName} must start with a capital letter`;
+    if (!/^[A-Za-z\s-']+$/.test(value)) return `${fieldName} can only contain letters, spaces, hyphens, and apostrophes`;
+    if (value.length < 2) return `${fieldName} must be at least 2 characters`;
+    if (value.length > 50) return `${fieldName} must not exceed 50 characters`;
+    return '';
+  };
+
+  const validateContactNumber = (value: string): string => {
+    if (!value) return 'Contact number is required';
+    const cleanNumber = value.replace(/\s+/g, '');
+    if (!/^\d+$/.test(cleanNumber)) return 'Contact number must contain only digits';
+    if (!/^0[0-9]{9}$/.test(cleanNumber)) return 'Must be a valid 10-digit number starting with 0';
+    return '';
+  };
+
+  const validateIdNumber = (value: string): string => {
+    if (!value) return 'ID number is required';
+    if (!/^\d+$/.test(value)) return 'ID number must contain only digits';
+    if (value.length !== 13) return 'ID number must be exactly 13 digits';
+    
+    // Basic SA ID validation - check date format
+    const year = parseInt(value.substring(0, 2));
+    const month = parseInt(value.substring(2, 4));
+    const day = parseInt(value.substring(4, 6));
+    
+    if (month < 1 || month > 12) return 'ID number contains invalid month';
+    if (day < 1 || day > 31) return 'ID number contains invalid day';
+    
+    return '';
+  };
+
+  const validateEmail = (value: string): string => {
+    if (!value) return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address';
+    if (value.length > 100) return 'Email address is too long';
+    return '';
+  };
+
+  const validatePassword = (value: string): string => {
+    if (!value) return 'Password is required';
+    
+    const requirements = {
+      length: value.length >= 6,
+      uppercase: /[A-Z]/.test(value),
+      digit: /\d/.test(value),
+      symbol: /[!@#$%^&*(),.?":{}|<>]/.test(value)
+    };
+
+    const unmet = [];
+    if (!requirements.length) unmet.push('at least 6 characters');
+    if (!requirements.uppercase) unmet.push('one uppercase letter');
+    if (!requirements.digit) unmet.push('one digit');
+    if (!requirements.symbol) unmet.push('one symbol');
+
+    if (unmet.length > 0) {
+      return `Password must contain: ${unmet.join(', ')}`;
+    }
+    return '';
+  };
+
+  const validateConfirmPassword = (value: string, password: string): string => {
+    if (!value) return 'Please confirm your password';
+    if (value !== password) return 'Passwords do not match';
+    return '';
+  };
+
   // Dynamic password validation
   useEffect(() => {
     const newRequirements = {
@@ -57,106 +143,154 @@ const SignUp = () => {
       symbol: /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
     };
     setPasswordRequirements(newRequirements);
-
-    // Clear error when all requirements are met
-    if (newRequirements.length && newRequirements.uppercase &&
-      newRequirements.digit && newRequirements.symbol) {
-      setErrors({ ...errors, password: '' });
-    }
   }, [form.password]);
 
-  const getPasswordError = () => {
-    if (!form.password) return 'Password is required';
+  // Real-time validation on change
+  const handleFieldChange = (field: keyof typeof form, value: string) => {
+    let processedValue = value;
 
-    const requirements = [
-      { met: passwordRequirements.length, text: 'at least 6 characters' },
-      { met: passwordRequirements.uppercase, text: 'one uppercase letter' },
-      { met: passwordRequirements.digit, text: 'one digit' },
-      { met: passwordRequirements.symbol, text: 'one symbol' }
-    ];
+    // Field-specific processing
+    switch (field) {
+      case 'firstName':
+      case 'lastName':
+        // Auto-capitalize first letter
+        if (value.length === 1) {
+          processedValue = value.toUpperCase();
+        }
+        // Remove invalid characters
+        processedValue = processedValue.replace(/[^A-Za-z\s-']/g, '');
+        break;
+      
+      case 'username':
+        // Remove invalid characters
+        processedValue = value.replace(/[^a-zA-Z0-9_]/g, '');
+        break;
+      
+      case 'contactNumber':
+        // Remove non-numeric characters
+        processedValue = value.replace(/[^\d]/g, '');
+        // Limit to 10 digits
+        if (processedValue.length > 10) {
+          processedValue = processedValue.substring(0, 10);
+        }
+        break;
+      
+      case 'idNumber':
+        // Remove non-numeric characters
+        processedValue = value.replace(/[^\d]/g, '');
+        // Limit to 13 digits
+        if (processedValue.length > 13) {
+          processedValue = processedValue.substring(0, 13);
+        }
+        break;
+      
+      case 'email':
+        // Remove spaces
+        processedValue = value.replace(/\s/g, '');
+        break;
+    }
 
-    const unmet = requirements.filter(req => !req.met);
-    if (unmet.length === 0) return '';
+    setForm({ ...form, [field]: processedValue });
 
-    return `Password must contain: ${unmet.map(req => req.text).join(', ')}`;
+    // Validate on change if field has been touched
+    if (touched[field]) {
+      let error = '';
+      switch (field) {
+        case 'username':
+          error = validateUsername(processedValue);
+          break;
+        case 'firstName':
+          error = validateName(processedValue, 'First name');
+          break;
+        case 'lastName':
+          error = validateName(processedValue, 'Last name');
+          break;
+        case 'contactNumber':
+          error = validateContactNumber(processedValue);
+          break;
+        case 'idNumber':
+          error = validateIdNumber(processedValue);
+          break;
+        case 'email':
+          error = validateEmail(processedValue);
+          break;
+        case 'password':
+          error = validatePassword(processedValue);
+          // Also revalidate confirm password if it exists
+          if (form.confirmPassword) {
+            const confirmError = validateConfirmPassword(form.confirmPassword, processedValue);
+            setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
+          }
+          break;
+        case 'confirmPassword':
+          error = validateConfirmPassword(processedValue, form.password);
+          break;
+      }
+      setErrors({ ...errors, [field]: error });
+    }
+  };
+
+  const handleFieldBlur = (field: keyof typeof form) => {
+    setTouched({ ...touched, [field]: true });
+    
+    // Validate on blur
+    let error = '';
+    switch (field) {
+      case 'username':
+        error = validateUsername(form[field]);
+        break;
+      case 'firstName':
+        error = validateName(form[field], 'First name');
+        break;
+      case 'lastName':
+        error = validateName(form[field], 'Last name');
+        break;
+      case 'contactNumber':
+        error = validateContactNumber(form[field]);
+        break;
+      case 'idNumber':
+        error = validateIdNumber(form[field]);
+        break;
+      case 'email':
+        error = validateEmail(form[field]);
+        break;
+      case 'password':
+        error = validatePassword(form[field]);
+        break;
+      case 'confirmPassword':
+        error = validateConfirmPassword(form[field], form.password);
+        break;
+    }
+    setErrors({ ...errors, [field]: error });
   };
 
   const validateForm = () => {
-    let valid = true;
-    const newErrors = { ...errors };
-
-    if (!form.username.trim()) {
-      newErrors.username = 'Username is required';
-      valid = false;
-    }
-
-    if (!form.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-      valid = false;
-    }
-
-    if (!form.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-      valid = false;
-    }
-
-    if (!form.contactNumber) {
-      newErrors.contactNumber = 'Contact number is required';
-      valid = false;
-    } else {
-      const cleanNumber = form.contactNumber.replace(/\s+/g, '');
-      if (!/^0[0-9]{9}$/.test(cleanNumber)) {
-        newErrors.contactNumber = 'Please enter a valid 10-digit phone number';
-        valid = false;
-      } else {
-        newErrors.contactNumber = '';
-        // Update the form with the cleaned number
-        form.contactNumber = cleanNumber;
-      }
-    }
-
-    if (!form.idNumber.trim()) {
-      newErrors.idNumber = 'ID number is required';
-      valid = false;
-    }
-
-    if (!form.email) {
-      newErrors.email = 'Email is required';
-      valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      newErrors.email = 'Email is invalid';
-      valid = false;
-    }
-
-    if (!form.password) {
-      newErrors.password = 'Password is required';
-      valid = false;
-    } else if (form.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-      valid = false;
-    } else {
-      passwordRef.current = form.password;
-    }
-
-    if (!form.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-      valid = false;
-    } else if (form.password !== form.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-      valid = false;
-    }
-
-    const passwordError = getPasswordError();
-    if (passwordError) {
-      newErrors.password = passwordError;
-      valid = false;
-    }
+    const newErrors = {
+      username: validateUsername(form.username),
+      firstName: validateName(form.firstName, 'First name'),
+      lastName: validateName(form.lastName, 'Last name'),
+      contactNumber: validateContactNumber(form.contactNumber),
+      idNumber: validateIdNumber(form.idNumber),
+      email: validateEmail(form.email),
+      password: validatePassword(form.password),
+      confirmPassword: validateConfirmPassword(form.confirmPassword, form.password)
+    };
 
     setErrors(newErrors);
-    return valid;
+    setTouched({
+      username: true,
+      firstName: true,
+      lastName: true,
+      contactNumber: true,
+      idNumber: true,
+      email: true,
+      password: true,
+      confirmPassword: true
+    });
+
+    return Object.values(newErrors).every(error => error === '');
   };
 
-  // Update the password input to show requirements
   const renderPasswordRequirements = () => {
     return (
       <View className="mt-2">
@@ -183,47 +317,13 @@ const SignUp = () => {
     );
   };
 
-
-  // Commented out document upload handler
-  // const handleDocumentUpload = async (type: 'bankStatement' | 'payslip') => {
-  //   try {
-  //     setUploadingDoc(type);
-  //     const res = await DocumentPicker.getDocumentAsync({
-  //       type: 'application/pdf',
-  //     });
-
-  //     if (res.canceled) {
-  //       console.log('File selection canceled');
-  //       return;
-  //     }
-
-  //     if (res.assets && res.assets[0]) {
-  //       if (type === 'bankStatement') {
-  //         setBankStatement(res.assets[0]);
-  //       } else {
-  //         setPayslip(res.assets[0]);
-  //       }
-  //     }
-  //   } catch (err) {
-  //     console.error('Error during document picker:', err);
-  //     Alert.alert('Error', 'Failed to select document. Please try again.');
-  //   } finally {
-  //     setUploadingDoc(null);
-  //   }
-  // };
-
-  const handlePasswordChange = (text: string) => {
-    setForm({ ...form, password: text });
-    passwordRef.current = text;
-  };
-
   const handleConfirmPasswordChange = (text: string) => {
+    // Prevent pasting
     if (text.length > form.confirmPassword.length + 1) {
-      setForm({ ...form, confirmPassword: '' });
-      setErrors({ ...errors, confirmPassword: 'Pasting is not allowed' });
-    } else {
-      setForm({ ...form, confirmPassword: text });
+      Alert.alert('Paste Not Allowed', 'Please type your password to confirm');
+      return;
     }
+    handleFieldChange('confirmPassword', text);
   };
 
   const handleSignup = async () => {
@@ -232,7 +332,6 @@ const SignUp = () => {
       try {
         console.log('Attempting registration...');
 
-        // Prepare form data without documents
         const registrationData = {
           username: form.username,
           firstName: form.firstName,
@@ -249,46 +348,16 @@ const SignUp = () => {
 
         if (registrationResult.success) {
           console.log('Registration successful');
-
           router.push({
             pathname: '/login',
           });
-
-          // // Automatically login after successful registration
-          // const result = await authService.login(form.username, form.password);
-
-          // if (result.success) {
-          //   if (result.mfaRequired) {
-          //     // MFA is required - navigate to MFA verification
-          //     console.log('MFA required, navigating to verification');
-          //     router.push({
-          //       pathname: '/mfaVerification',
-          //       params: {
-          //         email: result.email,
-          //         tempSession: result.tempSession,
-          //         message: result.message,
-          //       },
-          //     });
-          //   } else {
-          //     // No MFA required - login successful
-          //     console.log('Login successful, navigating to home');
-          //     router.replace('/(tabs)/home');
-          //   }
-          // } else {
-          //   // Handle login failure
-          //   console.error('Login failed:', result.error);
-          //   setErrors({
-          //     ...errors,
-          //     username: result.error,
-          //   });
-          // }
         } else {
-          // Handle registration failure
           console.error('Registration failed:', registrationResult.error);
+          
+          const errorMessage = registrationResult.error || 'Registration failed. Please try again.';
 
-          // Show error on appropriate field
-          if (registrationResult.error.includes('already exists') ||
-            registrationResult.error.includes('User already exists')) {
+          if (errorMessage.includes('already exists') ||
+            errorMessage.includes('User already exists')) {
             setErrors({
               ...errors,
               username: 'Username or email already exists',
@@ -296,7 +365,7 @@ const SignUp = () => {
           } else {
             setErrors({
               ...errors,
-              email: registrationResult.error,
+              email: errorMessage,
             });
           }
         }
@@ -311,6 +380,8 @@ const SignUp = () => {
       } finally {
         setIsSubmitting(false);
       }
+    } else {
+      Alert.alert('Validation Error', 'Please fix all errors before submitting');
     }
   };
 
@@ -334,72 +405,81 @@ const SignUp = () => {
                 <FormInput
                   title="Username"
                   value={form.username}
-                  handleChangeText={(e) => setForm({ ...form, username: e })}
+                  handleChangeText={(e) => handleFieldChange('username', e)}
+                  onBlur={() => handleFieldBlur('username')}
                   otherStyles="mt-3"
                   placeholder='johndoe'
-                  error={errors.username}
+                  error={touched.username ? errors.username || '' : ''}
+                  autoCapitalize="none"
                 />
 
                 <FormInput
                   title="First Name"
                   value={form.firstName}
-                  handleChangeText={(e) => setForm({ ...form, firstName: e })}
+                  handleChangeText={(e) => handleFieldChange('firstName', e)}
+                  onBlur={() => handleFieldBlur('firstName')}
                   otherStyles="mt-3"
                   placeholder='Jane'
-                  error={errors.firstName}
+                  error={touched.firstName ? errors.firstName || '' : ''}
+                  autoCapitalize="words"
                 />
 
                 <FormInput
                   title="Last Name"
                   value={form.lastName}
-                  handleChangeText={(e) => setForm({ ...form, lastName: e })}
+                  handleChangeText={(e) => handleFieldChange('lastName', e)}
+                  onBlur={() => handleFieldBlur('lastName')}
                   otherStyles="mt-3"
                   placeholder='Doe'
-                  error={errors.lastName}
+                  error={touched.lastName ? errors.lastName || '' : ''}
+                  autoCapitalize="words"
                 />
 
                 <FormInput
                   title="Contact Number"
                   value={form.contactNumber}
-                  handleChangeText={(e) => {
-                    setForm({ ...form, contactNumber: e });
-                    if (errors.contactNumber) {
-                      setErrors({ ...errors, contactNumber: '' });
-                    }
-                  }}
+                  handleChangeText={(e) => handleFieldChange('contactNumber', e)}
+                  onBlur={() => handleFieldBlur('contactNumber')}
                   otherStyles="mt-3"
                   keyboardType="phone-pad"
-                  placeholder='071 234 5678'
-                  error={errors.contactNumber}
+                  placeholder='0712345678'
+                  error={touched.contactNumber ? errors.contactNumber || '' : ''}
+                  maxLength={10}
                 />
 
                 <FormInput
                   title="ID Number"
                   value={form.idNumber}
-                  handleChangeText={(e) => setForm({ ...form, idNumber: e })}
+                  handleChangeText={(e) => handleFieldChange('idNumber', e)}
+                  onBlur={() => handleFieldBlur('idNumber')}
                   otherStyles="mt-3"
                   keyboardType="numeric"
                   placeholder='8601011234567'
-                  error={errors.idNumber}
+                  error={touched.idNumber ? errors.idNumber || '' : ''}
+                  maxLength={13}
                 />
 
                 <FormInput
                   title="Email Address"
                   value={form.email}
-                  handleChangeText={(e) => setForm({ ...form, email: e })}
+                  handleChangeText={(e) => handleFieldChange('email', e)}
+                  onBlur={() => handleFieldBlur('email')}
                   otherStyles="mt-3"
                   keyboardType="email-address"
                   placeholder='jane@example.com'
-                  error={errors.email}
+                  error={touched.email ? errors.email || '' : ''}
+                  autoCapitalize="none"
                 />
 
                 <FormInput
                   title="Password"
                   value={form.password}
-                  handleChangeText={handlePasswordChange}
+                  handleChangeText={(e) => handleFieldChange('password', e)}
+                  onBlur={() => handleFieldBlur('password')}
                   otherStyles="mt-3"
                   placeholder='Create a password'
-                  error={errors.password}
+                  error={touched.password ? errors.password || '' : ''}
+                  autoCapitalize="none"
                 />
                 {renderPasswordRequirements()}
 
@@ -407,17 +487,18 @@ const SignUp = () => {
                   title="Confirm Password"
                   value={form.confirmPassword}
                   handleChangeText={handleConfirmPasswordChange}
+                  onBlur={() => handleFieldBlur('confirmPassword')}
                   otherStyles="mt-3"
                   placeholder='Confirm your password'
-                  error={errors.confirmPassword}
+                  error={touched.confirmPassword ? errors.confirmPassword || '' : ''}
+                  autoCapitalize="none"
                 />
-                {/* 3 Month Bank Statement Upload */}
+
                 <PDFUpload
                   heading="3 Month Bank Statement"
                   onDocumentSelect={(doc) => setBankStatement(doc)}
                 />
 
-                {/* Payslip Upload */}
                 <PDFUpload
                   heading="Latest Payslip"
                   onDocumentSelect={(doc) => setPayslip(doc)}
@@ -429,7 +510,7 @@ const SignUp = () => {
                   textStyles="text-white text-lg"
                   handlePress={handleSignup}
                   isLoading={isSubmitting}
-                  disabled={isSubmitting}  // Add this line to prevent multiple submissions
+                  disabled={isSubmitting}
                 />
 
                 <View className="flex-row justify-center gap-2 mt-1">

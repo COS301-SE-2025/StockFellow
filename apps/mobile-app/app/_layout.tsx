@@ -5,11 +5,12 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import { TutorialProvider } from "../src/components/help/TutorialContext";
 import TutorialOverlay from "../src/components/help/TutorialOverlay";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Create a simple ThemeContext
 export const ThemeContext = createContext({
   isDarkMode: false,
-  toggleTheme: () => {},
+  toggleTheme: () => { },
   colors: {
     background: '#FFFFFF',
     text: '#000000',
@@ -29,9 +30,9 @@ export default function RootLayout() {
   // Theme state
   const deviceTheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(deviceTheme === 'dark');
-  
+
   const toggleTheme = () => setIsDarkMode(prev => !prev);
-  
+
   // Define colors based on theme
   const colors = {
     background: isDarkMode ? '#121212' : '#FFFFFF',
@@ -52,71 +53,89 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontError) throw fontError;
-    if (fontsLoaded) SplashScreen.hideAsync();
+    // Safety net: Hide splash screen after 5 seconds max, even if fonts fail
+    const safetyTimer = setTimeout(() => {
+      SplashScreen.hideAsync();
+    }, 5000);
+
+    if (fontError) {
+      console.error('Font loading error:', fontError);
+      SplashScreen.hideAsync();
+      clearTimeout(safetyTimer);
+    }
+
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+      clearTimeout(safetyTimer);
+    }
+
+    return () => clearTimeout(safetyTimer); // Cleanup the timer
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) {
+  // Prevent rendering until fonts are loaded or have errored
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, colors }}>
-      <TutorialProvider>
-        <StatusBar style={isDarkMode ? "light" : "dark"} />
-        <Stack>
-          <Stack.Screen 
-            name="splashpage" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-          <Stack.Screen 
-            name="(onboarding)" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }}
-          />
-          <Stack.Screen 
-            name="(auth)" 
-            options={{ 
-              headerShown: false,
-              animation: "slide_from_right" 
-            }} 
-          />
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-          <Stack.Screen 
-            name="stokvels" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-          <Stack.Screen 
-            name="transactions" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-          <Stack.Screen 
-            name="notifications" 
-            options={{ 
-              headerShown: false,
-              animation: "fade" 
-            }} 
-          />
-        </Stack>
-        <TutorialOverlay />
-      </TutorialProvider>
-    </ThemeContext.Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeContext.Provider value={{ isDarkMode, toggleTheme, colors }}>
+        <TutorialProvider>
+          <StatusBar style={isDarkMode ? "light" : "dark"} />
+          <Stack>
+            <Stack.Screen
+              name="index"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+            <Stack.Screen
+              name="(onboarding)"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+            <Stack.Screen
+              name="(auth)"
+              options={{
+                headerShown: false,
+                animation: "slide_from_right"
+              }}
+            />
+            <Stack.Screen
+              name="(tabs)"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+            <Stack.Screen
+              name="stokvels"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+            <Stack.Screen
+              name="transactions"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+            <Stack.Screen
+              name="notifications"
+              options={{
+                headerShown: false,
+                animation: "fade"
+              }}
+            />
+          </Stack>
+          <TutorialOverlay />
+        </TutorialProvider>
+      </ThemeContext.Provider>
+    </GestureHandlerRootView>
   );
 }
