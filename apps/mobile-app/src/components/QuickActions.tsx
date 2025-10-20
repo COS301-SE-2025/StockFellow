@@ -3,22 +3,26 @@ import { View, TouchableOpacity, Image, Text } from 'react-native';
 import { icons } from '../constants';
 import HelpMenu from './help/HelpMenu';
 import PayoutCountdownModal from './PayoutCountdownModal';
-import ProgressTrackerModal from './ProgressTrackerModal';
+import TierModal from './TierModal';
+import { useTheme } from '../../app/_layout';
 
 interface QuickActionsProps {
   contributionsLeft?: number;
   totalContributions?: number;
   daysUntilPayout?: number;
+  nextPayoutDate?: string;
 }
 
 const QuickActions: React.FC<QuickActionsProps> = ({
   contributionsLeft = 3,
   totalContributions = 12,
-  daysUntilPayout = 45
+  daysUntilPayout = 45,
+  nextPayoutDate = "N/A"
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [showPayoutCountdown, setShowPayoutCountdown] = useState(false);
-  const [showProgressTracker, setShowProgressTracker] = useState(false);
+  const [showTierModal, setShowTierModal] = useState(false);
+  const { isDarkMode, colors } = useTheme();
 
   const actions = [
     { 
@@ -31,10 +35,10 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       label: 'Payout',
       onPress: () => setShowPayoutCountdown(true)
     },
-    { 
-      icon: icons.transactions, 
-      label: 'Progress',
-      onPress: () => setShowProgressTracker(true)
+    {
+      icon: icons.transactions,
+      label: 'My Tier',
+      onPress: () => setShowTierModal(true)
     },
   ];
 
@@ -54,7 +58,10 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 style={{ tintColor: '#FFFFFF' }}
               />
             </View>
-            <Text className="text-sm font-['PlusJakartaSans-Medium'] text-gray-700">
+            <Text
+              className="text-sm font-['PlusJakartaSans-Medium'] text-gray-700"
+              style={isDarkMode ? { color: colors.text, opacity: 0.8 } : undefined}
+            >
               {action.label}
             </Text>
           </TouchableOpacity>
@@ -71,14 +78,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         isVisible={showPayoutCountdown}
         onClose={() => setShowPayoutCountdown(false)}
         daysUntilPayout={daysUntilPayout}
-        nextPayoutDate="30 Dec 2025"
+        nextPayoutDate={nextPayoutDate}
       />
-      
-      <ProgressTrackerModal
-        isVisible={showProgressTracker}
-        onClose={() => setShowProgressTracker(false)}
-        contributionsLeft={contributionsLeft}
-        totalContributions={totalContributions}
+
+      <TierModal
+        isVisible={showTierModal}
+        onClose={() => setShowTierModal(false)}
       />
     </>
   );

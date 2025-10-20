@@ -1,6 +1,6 @@
 package com.stockfellow.transactionservice.dto;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.Transaction;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,10 +13,8 @@ public class TransactionResponseDto {
     private UUID userId;
     private UUID payerId;
     private String paystackReference;
-    private String paystackTransId;
     private BigDecimal amount;
     private Transaction.TransactionStatus status;
-    private String gatewayStatus;
     private String failureReason;
     private Integer retryCount;
     
@@ -40,10 +38,8 @@ public class TransactionResponseDto {
         dto.userId = transaction.getUserId();
         dto.payerId = transaction.getPayerId();
         dto.paystackReference = transaction.getPaystackReference();
-        dto.paystackTransId = transaction.getPaystackTransId();
         dto.amount = transaction.getAmount();
         dto.status = transaction.getStatus();
-        dto.gatewayStatus = transaction.getGatewayStatus();
         dto.failureReason = transaction.getFailureReason();
         dto.retryCount = transaction.getRetryCount();
         dto.initiatedAt = transaction.getInitiatedAt();
@@ -69,17 +65,11 @@ public class TransactionResponseDto {
     public String getPaystackReference() { return paystackReference; }
     public void setPaystackReference(String paystackReference) { this.paystackReference = paystackReference; }
     
-    public String getPaystackTransId() { return paystackTransId; }
-    public void setPaystackTransId(String paystackTransId) { this.paystackTransId = paystackTransId; }
-    
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     
     public Transaction.TransactionStatus getStatus() { return status; }
     public void setStatus(Transaction.TransactionStatus status) { this.status = status; }
-    
-    public String getGatewayStatus() { return gatewayStatus; }
-    public void setGatewayStatus(String gatewayStatus) { this.gatewayStatus = gatewayStatus; }
     
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }

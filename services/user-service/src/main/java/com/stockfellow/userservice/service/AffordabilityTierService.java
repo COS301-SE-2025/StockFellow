@@ -56,7 +56,7 @@ public class AffordabilityTierService {
                 throw new IllegalArgumentException("Bank statements are required for analysis");
             }
             
-            if (transactions.size() < 50) {
+            if (transactions.size() < 20) {
                 throw new IllegalArgumentException("Insufficient transaction data. Minimum 50 transactions required for reliable analysis");
             }
 
@@ -65,15 +65,33 @@ public class AffordabilityTierService {
             if (user == null) {
                 throw new IllegalArgumentException("User not found: " + userId); // Change to IllegalArgumentException
             }
-                
-            // Analyze transactions
+                  // Analyze transactions
             BankStatementAnalysis analysis = performBankStatementAnalysis(transactions);
+            
+            // Validate analysis results
+            validateAnalysisResults(analysis);
+            
+            // Log analysis results for debugging
+            logger.info("Bank statement analysis results for user {}:", userId);
+            logger.info("- Average monthly income: R{}", analysis.getAverageMonthlyIncome());
+            logger.info("- Average monthly expenses: R{}", analysis.getAverageMonthlyExpenses());
+            logger.info("- Average monthly savings: R{}", analysis.getAverageMonthlySavings());
+            logger.info("- Expense to income ratio: {}", analysis.getExpenseToIncomeRatio());
+            logger.info("- Savings rate: {}", analysis.getSavingsRate());
+            logger.info("- Overdraft count: {}", analysis.getOverdraftCount());
+            logger.info("- Income stability: {}", analysis.getIncomeStability());
             
             // Calculate financial scores
             int incomeStabilityScore = calculateIncomeStabilityScore(analysis);
             int expenseManagementScore = calculateExpenseManagementScore(analysis);
             int savingsBehaviorScore = calculateSavingsBehaviorScore(analysis);
             int financialStabilityScore = calculateFinancialStabilityScore(analysis);
+            
+            logger.info("Financial scores for user {}:", userId);
+            logger.info("- Income stability score: {}", incomeStabilityScore);
+            logger.info("- Expense management score: {}", expenseManagementScore);
+            logger.info("- Savings behavior score: {}", savingsBehaviorScore);
+            logger.info("- Financial stability score: {}", financialStabilityScore);
             
             // Determine tier using if-statements
             int tier = determineTierWithRules(analysis, incomeStabilityScore, expenseManagementScore, 
@@ -109,8 +127,7 @@ public class AffordabilityTierService {
         sortedTransactions.sort(Comparator.comparing(BankTransaction::getDate));
         
         // Group by month
-        Map<String, List<BankTransaction>> monthlyTransactions = sortedTransactions.stream()
-            .collect(Collectors.groupingBy(t -> t.getDate().toString().substring(0, 7)));
+        Map<String, List<BankTransaction>> monthlyTransactions = groupTransactionsByMonth(sortedTransactions);
         
         List<Double> monthlyIncomes = new ArrayList<>();
         List<Double> monthlyExpenses = new ArrayList<>();
@@ -133,17 +150,25 @@ public class AffordabilityTierService {
                 monthlyBalances.add(avgBalance);
             }
         }
-        
-        // Set analysis metrics
+          // Set analysis metrics
         analysis.setAverageMonthlyIncome(calculateAverage(monthlyIncomes));
         analysis.setAverageMonthlyExpenses(calculateAverage(monthlyExpenses));
         analysis.setAverageMonthlySavings(calculateAverage(monthlySavings));
         analysis.setAverageBalance(calculateAverage(monthlyBalances));
         
+        // Set additional metadata
+        analysis.setTotalTransactionsAnalyzed(sortedTransactions.size());
+        analysis.setMonthsAnalyzed(monthlyIncomes.size());
+        
         // Calculate ratios and stability
         analysis.setIncomeStability(calculateStabilityScore(monthlyIncomes));
-        analysis.setExpenseToIncomeRatio(analysis.getAverageMonthlyExpenses() / analysis.getAverageMonthlyIncome());
-        analysis.setSavingsRate(analysis.getAverageMonthlySavings() / analysis.getAverageMonthlyIncome());
+        if (analysis.getAverageMonthlyIncome() > 0) {
+            analysis.setExpenseToIncomeRatio(analysis.getAverageMonthlyExpenses() / analysis.getAverageMonthlyIncome());
+            analysis.setSavingsRate(analysis.getAverageMonthlySavings() / analysis.getAverageMonthlyIncome());
+        } else {
+            analysis.setExpenseToIncomeRatio(1.0); // Assume spending everything if no income detected
+            analysis.setSavingsRate(0.0);
+        }
         
         // Count special transactions
         analysis.setOverdraftCount(countOverdrafts(sortedTransactions));
@@ -156,6 +181,28 @@ public class AffordabilityTierService {
         return analysis;
     }
     
+    /**
+     * Enhanced monthly transaction grouping with better date handling
+     */
+    private Map<String, List<BankTransaction>> groupTransactionsByMonth(List<BankTransaction> transactions) {
+        Map<String, List<BankTransaction>> monthlyGroups = new LinkedHashMap<>();
+        
+        for (BankTransaction transaction : transactions) {
+            if (transaction.getDate() != null) {
+                String monthKey = transaction.getDate().getYear() + "-" + 
+                                String.format("%02d", transaction.getDate().getMonthValue());
+                
+                monthlyGroups.computeIfAbsent(monthKey, k -> new ArrayList<>()).add(transaction);
+            }
+        }
+        
+        // Remove months with insufficient data (less than 10 transactions)
+        monthlyGroups.entrySet().removeIf(entry -> entry.getValue().size() < 10);
+        
+        logger.info("Grouped transactions into {} valid months", monthlyGroups.size());
+        return monthlyGroups;
+    }
+
     public int determineTierWithRules(BankStatementAnalysis analysis, int incomeScore, 
                                      int expenseScore, int savingsScore, int stabilityScore) {
         
@@ -242,19 +289,30 @@ public class AffordabilityTierService {
         double[] nextTierRange = TIER_INCOME_RANGES.get(currentTier + 1);
         return income >= nextTierRange[0] * 0.8; // 80% of next tier minimum
     }
-    
-    private int getBaseTierFromIncome(double monthlyIncome) {
+      private int getBaseTierFromIncome(double monthlyIncome) {
+        logger.debug("Determining base tier for income: R{}", monthlyIncome);
+        
         for (int tier = 6; tier >= 1; tier--) {
             double[] range = TIER_INCOME_RANGES.get(tier);
+            logger.debug("Checking tier {}: range R{} - R{}", tier, range[0], 
+                       range[1] == Double.MAX_VALUE ? "unlimited" : range[1]);
+            
             if (monthlyIncome >= range[0]) {
-                // For tier boundaries, ensure we're not including values that are too close to the next tier
-                if (tier < 6 && monthlyIncome >= TIER_INCOME_RANGES.get(tier + 1)[0] * 0.9) {
-                    // If income is within 90% of next tier, consider it for the next tier
-                    continue;
+                // Check if income falls within this tier's upper bound
+                if (tier < 6) { // Not the highest tier
+                    double[] nextTierRange = TIER_INCOME_RANGES.get(tier + 1);
+                    if (monthlyIncome >= nextTierRange[0]) {
+                        // Income qualifies for higher tier, continue to check higher tiers
+                        continue;
+                    }
                 }
+                
+                logger.info("Base tier determined: {} for income R{}", tier, monthlyIncome);
                 return tier;
             }
         }
+        
+        logger.info("Income R{} below minimum threshold, assigning tier 1", monthlyIncome);
         return 1;
     }
     
@@ -475,30 +533,121 @@ public class AffordabilityTierService {
             .average()
             .orElse(0.0);
     }
-    
-    private boolean isIncomeTransaction(BankTransaction transaction) {
+      private boolean isIncomeTransaction(BankTransaction transaction) {
         String desc = transaction.getDescription().toLowerCase();
         double amount = transaction.getAmount();
         
-        // Check for salary/wage keywords
-        if (desc.contains("salary") || desc.contains("wage") || desc.contains("income") ||
-            desc.contains("bonus") || desc.contains("dividend") || desc.contains("interest")) {
+        // Income must be positive
+        if (amount <= 0) {
+            return false;
+        }
+          // Check for explicit income keywords
+        String[] incomeKeywords = {
+            "salary", "wage", "wages", "income", "bonus", "commission",
+            "dividend", "interest", "pension", "grant", "allowance",
+            "stipend", "payroll", "payment from", "transfer from",
+            "deposit", "credit", "refund", "rebate", "cashback",
+            "freelance", "consulting", "contractor", "salary payment",
+            "employer", "pty ltd", "company"
+        };
+        
+        for (String keyword : incomeKeywords) {
+            if (desc.contains(keyword)) {
+                logger.debug("Income transaction identified by keyword '{}': {} - R{}", 
+                           keyword, desc, amount);
+                return true;
+            }
+        }
+        
+        // Check for patterns that indicate income
+        // Large round amounts (likely salary)
+        if (amount >= 5000 && (amount % 100 == 0 || amount % 50 == 0)) {
+            logger.debug("Income transaction identified by amount pattern: {} - R{}", desc, amount);
             return true;
         }
         
-        // Large round amounts likely to be salary
-        if (amount > 5000 && amount % 100 == 0) {
+        // Regular monthly amounts (potential salary)
+        if (amount >= 3000 && amount <= 150000) {
+            // Check if it looks like a regular payment
+            if (desc.length() < 50 && !desc.contains("payment") && !desc.contains("transfer to")) {
+                logger.debug("Income transaction identified as potential salary: {} - R{}", desc, amount);
+                return true;
+            }
+        }
+          // Exclude obvious non-income transactions (but be careful with salary payments)
+        String[] excludeKeywords = {
+            "withdrawal", "purchase", "debit", "fee", "charge",
+            "transfer to", "sent to", "atm", "pos", "eft", "stop order",
+            "debit order", "insurance", "medical aid", "loan", "credit card"
+        };
+        
+        for (String keyword : excludeKeywords) {
+            if (desc.contains(keyword)) {
+                // Don't exclude if it's clearly a salary payment
+                if (keyword.equals("payment") && (desc.contains("salary") || desc.contains("wage") || desc.contains("employer"))) {
+                    continue; // Allow salary payments through
+                }
+                return false; // Definitely not income
+            }
+        }
+        
+        // For amounts over R1000, be more inclusive
+        if (amount >= 1000) {
+            logger.debug("Potential income transaction (large amount): {} - R{}", desc, amount);
             return true;
         }
         
         return false;
     }
-    
-    private boolean isSavingsTransaction(BankTransaction transaction) {
+      private boolean isSavingsTransaction(BankTransaction transaction) {
         String desc = transaction.getDescription().toLowerCase();
-        return desc.contains("savings") || desc.contains("investment") ||
-               desc.contains("transfer to") || desc.contains("fixed deposit") ||
-               desc.contains("unit trust") || desc.contains("tfsa");
+        double amount = Math.abs(transaction.getAmount()); // Consider both debit and credit
+        
+        // Direct savings keywords
+        String[] savingsKeywords = {
+            "savings", "save", "investment", "invest", "unit trust",
+            "fixed deposit", "fd", "tfsa", "tax free", "retirement",
+            "pension", "provident", "money market", "call account",
+            "notice account", "endowment", "policy", "fund",
+            "portfolio", "shares", "equity", "bond", "etf"
+        };
+        
+        for (String keyword : savingsKeywords) {
+            if (desc.contains(keyword)) {
+                logger.debug("Savings transaction identified by keyword '{}': {} - R{}", 
+                           keyword, desc, amount);
+                return true;
+            }
+        }
+        
+        // Transfer patterns that might indicate savings
+        if (desc.contains("transfer to") || desc.contains("transfer from")) {
+            // Exclude obvious non-savings transfers
+            if (!desc.contains("credit card") && !desc.contains("loan") && 
+                !desc.contains("current") && !desc.contains("cheque")) {
+                // Large transfers might be savings
+                if (amount >= 500) {
+                    logger.debug("Savings transaction identified as transfer: {} - R{}", desc, amount);
+                    return true;
+                }
+            }
+        }
+        
+        // Regular debit orders that might be investments
+        if (desc.contains("debit order") || desc.contains("stop order")) {
+            // Look for investment-related companies
+            if (desc.contains("allan gray") || desc.contains("coronation") ||
+                desc.contains("investec") || desc.contains("momentum") ||
+                desc.contains("old mutual") || desc.contains("sanlam") ||
+                desc.contains("liberty") || desc.contains("discovery") ||
+                desc.contains("standard bank") || desc.contains("fnb") ||
+                desc.contains("absa") || desc.contains("nedbank")) {
+                logger.debug("Savings transaction identified as investment debit order: {} - R{}", desc, amount);
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     private int countOverdrafts(List<BankTransaction> transactions) {
@@ -683,6 +832,35 @@ public class AffordabilityTierService {
             case 5: return "8-12";
             case 6: return "6-10";
             default: return "10-15";
+        }
+    }
+
+    /**
+     * Validate the analysis results to ensure they make sense
+     */
+    private void validateAnalysisResults(BankStatementAnalysis analysis) {
+        List<String> issues = new ArrayList<>();
+        
+        if (analysis.getAverageMonthlyIncome() <= 0) {
+            issues.add("No income detected in bank statement");
+        }
+        
+        if (analysis.getExpenseToIncomeRatio() > 2.0) {
+            issues.add("Expenses exceed income by more than 100% - possible data extraction error");
+        }
+        
+        if (analysis.getSavingsRate() > 0.8) {
+            issues.add("Savings rate above 80% - possible misclassification of transactions");
+        }
+        
+        if (analysis.getMonthsAnalyzed() < 2) {
+            issues.add("Insufficient months of data for reliable analysis");
+        }
+        
+        if (!issues.isEmpty()) {
+            logger.warn("Analysis validation issues found: {}", String.join(", ", issues));
+        } else {
+            logger.info("Analysis validation passed successfully");
         }
     }
 }

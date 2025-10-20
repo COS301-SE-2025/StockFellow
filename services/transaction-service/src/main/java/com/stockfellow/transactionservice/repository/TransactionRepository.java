@@ -1,6 +1,6 @@
 package com.stockfellow.transactionservice.repository;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -58,11 +58,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      * Find transactions by Paystack reference
      */
     Optional<Transaction> findByPaystackReference(String paystackReference);
-    
-    /**
-     * Find transactions by Paystack transaction ID
-     */
-    Optional<Transaction> findByPaystackTransId(String paystackTransId);
     
     /**
      * Find failed transactions that can be retried

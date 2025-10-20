@@ -91,7 +91,10 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
           }`}
         >
           {/* Header */}
-          <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
+          <View
+            className="flex-row justify-between items-center p-4 border-b border-gray-200"
+            style={isDarkMode ? { borderBottomColor: 'rgba(255,255,255,0.12)' } : undefined}
+          >
             <Text 
               style={{ color: colors.text }}
               className="text-xl font-['PlusJakartaSans-Bold']"
@@ -115,6 +118,7 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
                 key={index}
                 className="flex-row items-center p-4 border border-gray-200"
                 onPress={item.onPress}
+                style={isDarkMode ? { borderColor: 'rgba(255,255,255,0.12)' } : undefined}
               >
                 <View className="items-center justify-center mr-6 ml-2">
                   <Image 
@@ -150,10 +154,15 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
                   Frequently Asked Questions
                 </Text>
                 {faqItems.map((faq, index) => (
-                  <View key={index} className="mb-2 border border-gray-200 rounded-xl">
+                  <View
+                    key={index}
+                    className="mb-2 border border-gray-200 rounded-xl"
+                    style={isDarkMode ? { borderColor: 'rgba(255,255,255,0.12)' } : undefined}
+                  >
                     <TouchableOpacity 
                       onPress={() => toggleFAQ(index)} 
-                      className="p-3 bg-gray-100 dark:bg-gray-800 rounded-t-xl"
+                      className="p-3 bg-gray-100 rounded-t-xl"
+                      style={isDarkMode ? { backgroundColor: colors.background } : undefined}
                     >
                       <Text 
                         className="font-['PlusJakartaSans-SemiBold'] text-base"
@@ -163,7 +172,10 @@ const HelpMenu: React.FC<HelpMenuProps> = ({ isVisible, onClose }) => {
                       </Text>
                     </TouchableOpacity>
                     {openFAQIndex === index && (
-                      <View className="p-3 bg-white dark:bg-gray-900 rounded-b-xl">
+                      <View
+                        className="p-3 bg-white rounded-b-xl"
+                        style={isDarkMode ? { backgroundColor: colors.background } : undefined}
+                      >
                         <Text 
                           className="text-sm font-['PlusJakartaSans-Regular']"
                           style={{ color: isDarkMode ? '#D1D5DB' : '#374151' }}

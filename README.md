@@ -293,7 +293,7 @@ stockfellow/
         <a href="https://github.com/ltshikila" style="text-decoration: none; margin-right: 10px; display: inline-block;">
           <img src="https://skillicons.dev/icons?i=github" alt="GitHub" />
         </a>
-        <a href="https://www.linkedin.com/in/lubabalo-tshikila-718438355/" style="text-decoration: none; display: inline-block;">
+        <a href="https://www.linkedin.com/in/lubabalo-tshikila-508952384/" style="text-decoration: none; display: inline-block;">
           <img src="https://skillicons.dev/icons?i=linkedin" alt="LinkedIn" />
         </a>
       </div>

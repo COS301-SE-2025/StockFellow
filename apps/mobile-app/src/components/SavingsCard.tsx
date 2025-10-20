@@ -16,24 +16,29 @@ const SavingsCard: React.FC<SavingsCardProps> = ({
   contributionAmount,
   nextPayoutDate
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
 
   return (
-    <View className="bg-blue-300 rounded-2xl p-6 mb-6 shadow-sm">
+    <View
+      className="bg-blue-300 rounded-2xl p-6 mb-6 shadow-sm"
+      style={isDarkMode ? { backgroundColor: colors.card } : undefined}
+    >
       {/* Header with Tier Badge and Money Icon */}
       <View className="flex-row justify-between items-start mb-4">
         {/* User Tier Badge */}
-        {/* <View className="bg-white/50 px-4 py-2 rounded-2xl"> */}
-          <Text className="text-black text-2xl font-['PlusJakartaSans-Bold']">
-            {userTier} Member
-          </Text>
-        {/* </View> */}
+        <Text
+          className="text-black text-2xl font-['PlusJakartaSans-Bold']"
+          style={isDarkMode ? { color: colors.text } : undefined}
+        >
+          {userTier} Member
+        </Text>
 
         {/* Money Icon */}
         <Image 
           source={icons.money}
           className="w-8 h-8"
           resizeMode="contain"
+          style={isDarkMode ? { tintColor: colors.text } : undefined}
         />
       </View>
 
@@ -41,28 +46,46 @@ const SavingsCard: React.FC<SavingsCardProps> = ({
       <View className="space-y-4">
         {/* Next Contribution */}
         <View>
-          <Text className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+          <Text
+            className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1"
+            style={isDarkMode ? { color: colors.text, opacity: 0.7 } : undefined}
+          >
             Next Contribution
           </Text>
           <View className="flex-row justify-between items-center">
-            <Text className="text-white text-lg font-['PlusJakartaSans-SemiBold']">
+            <Text
+              className="text-white text-lg font-['PlusJakartaSans-SemiBold']"
+              style={isDarkMode ? { color: colors.text } : undefined}
+            >
               {nextContributionDate}
             </Text>
-            <Text className="text-white text-xl font-['PlusJakartaSans-Bold']">
+            <Text
+              className="text-white text-xl font-['PlusJakartaSans-Bold']"
+              style={isDarkMode ? { color: colors.text } : undefined}
+            >
               R{contributionAmount}
             </Text>
           </View>
         </View>
 
         {/* Divider */}
-        <View className="h-px bg-white/30" />
+        <View
+          className="h-px bg-white/30"
+          style={isDarkMode ? { backgroundColor: colors.text, opacity: 0.2 } : undefined}
+        />
 
         {/* Next Payout */}
         <View>
-          <Text className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1">
+          <Text
+            className="text-black/80 text-sm font-['PlusJakartaSans-Medium'] mb-1"
+            style={isDarkMode ? { color: colors.text, opacity: 0.7 } : undefined}
+          >
             Next Payout
           </Text>
-          <Text className="text-white text-lg font-['PlusJakartaSans-SemiBold']">
+          <Text
+            className="text-white text-lg font-['PlusJakartaSans-SemiBold']"
+            style={isDarkMode ? { color: colors.text } : undefined}
+          >
             {nextPayoutDate}
           </Text>
         </View>

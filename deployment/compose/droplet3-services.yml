@@ -173,7 +173,7 @@ services:
     environment:
       - SERVER_PORT=4060
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DROPLET1_IP}:${POSTGRES_PORT:5432}/admin_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DROPLET1_IP}:${POSTGRES_PORT:-5432}/admin_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-password}
       - KEYCLOAK_ISSUER=https://134.122.73.157.nip.io/realms/stockfellow

@@ -23,7 +23,6 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      
       className="w-full flex-row items-center mb-1 px-2 "
     >
       {/* Left section: Icon and info */}
@@ -34,12 +33,17 @@ const StokvelCard: React.FC<StokvelCardProps> = ({
           source={profileImage ? { uri: profileImage } : icons.group}
           className="w-20 h-20  shadow-xs shadow-[#1DA1FA]/90 self-center"
           resizeMode={"contain"}
+          style={
+            profileImage
+              ? undefined
+              : (isDarkMode ? { tintColor: '#FFFFFF' } : undefined)
+          }
         />
 
 
         <View className='flex-1 justify-center'>
           <Text
-            style={{ color: isDarkMode ? '#CCCCCC' : '#1A1A1A' }}
+            style={{ color: isDarkMode ? colors.text : '#1A1A1A' }}
             className="text-base font-['PlusJakartaSans-SemiBold']"
             numberOfLines={1}
           >

@@ -37,10 +37,7 @@ public class Transfer {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private TransferStatus status;
-    
-    @Column(name = "gateway_status")
-    private String gatewayStatus;
-    
+
     @Column(name = "failure_reason")
     private String failureReason;
     
@@ -81,7 +78,6 @@ public class Transfer {
     public BigDecimal getAmount() { return amount; }
     public String getCurrency() { return currency; }
     public TransferStatus getStatus() { return status; }
-    public String getGatewayStatus() { return gatewayStatus; }
     public String getFailureReason() { return failureReason; }
     public Integer getRetryCount() { return retryCount; }
     public LocalDateTime getInitiatedAt() { return initiatedAt; }
@@ -99,7 +95,6 @@ public class Transfer {
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public void setCurrency(String currency) { this.currency = currency; }
     public void setStatus(TransferStatus status) { this.status = status; }
-    public void setGatewayStatus(String gatewayStatus) { this.gatewayStatus = gatewayStatus; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
     public void setRetryCount(Integer retryCount) { this.retryCount = retryCount; }
     public void setInitiatedAt(LocalDateTime initiatedAt) { this.initiatedAt = initiatedAt; }

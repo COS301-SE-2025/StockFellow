@@ -6,8 +6,10 @@ import com.stockfellow.userservice.service.SouthAfricanIdValidationService;
 import com.stockfellow.userservice.service.PdfIdExtractionService;
 import com.stockfellow.userservice.service.AlfrescoService;
 import com.stockfellow.userservice.service.AffordabilityTierService;
+import com.stockfellow.userservice.service.BankStatementExtractionService;
 import com.stockfellow.userservice.dto.AffordabilityTierResult;
 import com.stockfellow.userservice.dto.BankStatementUploadRequest;
+import com.stockfellow.userservice.model.BankTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -47,10 +49,11 @@ public class UserController {
     private PdfIdExtractionService pdfExtractionService;
 
     @Autowired
-    private AlfrescoService alfrescoService;
-
-    @Autowired
+    private AlfrescoService alfrescoService;    @Autowired
     private AffordabilityTierService affordabilityTierService;
+    
+    @Autowired
+    private BankStatementExtractionService bankStatementExtractionService;
 
      @GetMapping
     public ResponseEntity<?> getServiceInfo() {
@@ -64,6 +67,7 @@ public class UserController {
                             "GET /api/users/profile - Get user profile (requires auth)",
                             "POST /api/users/verifyID - Verify user ID document",
                             "POST /api/users/affordability/analyze - Analyze user affordability",
+                            "POST /api/users/affordability/analyze-pdf - Analyze bank statement PDF",
                             "GET /api/users/{id} - Get user by ID (requires auth)",
                             "GET /api/users/{id}/affordability - Get user affordability tier",
                             "GET /api/users/search?name={name} - Search users by name",
@@ -212,19 +216,18 @@ public class UserController {
             userMap.put("affordabilityTier", savedUser.getAffordabilityTier());
             userMap.put("createdAt", savedUser.getCreatedAt());
             userMap.put("updatedAt", savedUser.getUpdatedAt());
-            response.put("user", userMap);
-
-            // Add next steps for user
+            response.put("user", userMap);            // Add next steps for user
             response.put("nextSteps", Map.of(
                 "message", "Complete your profile to access all features",
                 "steps", List.of(
                     "1. Verify your ID document",
-                    "2. Upload bank statements for affordability analysis",
+                    "2. Upload bank statement PDF for affordability analysis",
                     "3. Complete additional profile information"
                 ),
                 "endpoints", Map.of(
                     "idVerification", "/api/users/verifyID",
-                    "affordabilityAnalysis", "/api/users/affordability/analyze",
+                    "affordabilityAnalysisPDF", "/api/users/affordability/analyze-pdf",
+                    "affordabilityAnalysisJSON", "/api/users/affordability/analyze",
                     "profile", "/api/users/profile"
                 )
             ));
@@ -420,6 +423,120 @@ public class UserController {
             return ResponseEntity.status(500).body(Map.of(
                     "error", "Analysis failed",
                     "message", "An unexpected error occurred during affordability analysis"));
+        }
+    }
+
+    @PostMapping("/affordability/analyze-pdf")
+    public ResponseEntity<?> analyzeBankStatementPdf(
+            @RequestParam("bankStatement") MultipartFile bankStatementFile,
+            HttpServletRequest httpRequest) {
+
+        try {
+            String userId = httpRequest.getHeader("X-User-Id");
+            if (userId == null || userId.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "error", "User not authenticated",
+                        "message", "User ID is required for affordability analysis"));
+            }
+
+            // Validate file
+            if (bankStatementFile == null || bankStatementFile.isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Invalid request",
+                        "message", "Bank statement PDF file is required"));
+            }
+
+            if (!bankStatementFile.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Invalid file type",
+                        "message", "Only PDF files are supported"));
+            }
+
+            // Check if user exists
+            if (userService.getUserByUserId(userId) == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                        "error", "User not found",
+                        "message", "User must be registered before affordability analysis"));
+            }
+
+            logger.info("Starting PDF bank statement analysis for user: {} with file: {}",
+                    userId, bankStatementFile.getOriginalFilename());
+
+            // Extract transactions from PDF
+            List<BankTransaction> transactions;
+            BankStatementExtractionService.BankStatementAnalysisResult extractionResult;
+            
+            try {
+                transactions = bankStatementExtractionService.extractTransactionsFromPdf(bankStatementFile);
+                extractionResult = bankStatementExtractionService.analyzeExtractionQuality(
+                    transactions, "PDF extraction");
+            } catch (Exception e) {
+                logger.error("Failed to extract transactions from PDF for user: {}", userId, e);
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "PDF extraction failed",
+                        "message", "Unable to extract transactions from the provided PDF. Please ensure it's a valid bank statement.",
+                        "details", e.getMessage()));
+            }
+
+            // Validate extracted transactions
+            if (transactions.isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "No transactions found",
+                        "message", "No valid transactions could be extracted from the PDF. Please check that it's a valid bank statement.",
+                        "extractionAnalysis", extractionResult));
+            }
+
+            if (transactions.size() < 50) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error", "Insufficient data",
+                        "message", "Minimum 50 transactions required for reliable analysis. Extracted: " + 
+                                transactions.size(),
+                        "extractionAnalysis", extractionResult,
+                        "recommendation", "Please upload a statement covering at least 3 months of transactions"));
+            }
+
+            logger.info("Successfully extracted {} transactions from PDF for user: {}", 
+                    transactions.size(), userId);
+
+            // Perform affordability analysis
+            AffordabilityTierResult result = affordabilityTierService.analyzeBankStatements(
+                    userId, transactions);
+
+            // Update user's affordability tier in database
+            userService.updateUserAffordabilityTier(userId, result.getTier(), result.getConfidence());
+
+            logger.info("PDF affordability analysis completed for user: {} - Tier: {}, Confidence: {}%",
+                    userId, result.getTier(), Math.round(result.getConfidence() * 100));
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Bank statement PDF analyzed successfully",
+                    "extractionResult", Map.of(
+                            "transactionsExtracted", transactions.size(),
+                            "qualityScore", extractionResult.getQualityScore(),
+                            "dateRange", extractionResult.getDateRange(),
+                            "warnings", extractionResult.getWarnings(),
+                            "recommendations", extractionResult.getRecommendations()),
+                    "affordabilityResult", Map.of(
+                            "tier", result.getTier(),
+                            "tierName", getTierName(result.getTier()),
+                            "confidence", result.getConfidence(),
+                            "contributionRange", getContributionRange(result.getTier()),
+                            "analysisDetails", result),
+                    "timestamp", System.currentTimeMillis()));
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request for PDF affordability analysis: {}", e.getMessage());
+            return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid request",
+                    "message", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error during PDF affordability analysis for user: {}",
+                    httpRequest.getHeader("X-User-Id"), e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Analysis failed",
+                    "message", "An unexpected error occurred during PDF affordability analysis",
+                    "details", e.getMessage()));
         }
     }
 

@@ -1,7 +1,8 @@
 package com.stockfellow.transactionservice.controller;
 
-import com.stockfellow.transactionservice.dto.*;
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.dto.TransactionResponseDto;
+import com.stockfellow.transactionservice.dto.CreateTransactionDto;
+import com.stockfellow.transactionservice.model.Transaction;
 import com.stockfellow.transactionservice.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -9,14 +10,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import java.util.Map;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
 
-import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
@@ -31,11 +38,12 @@ public class TransactionController {
     // private ActivityLogService activityLogService;
 
     // Create transaction (called when user contributes to cycle)
-    //TODO: Remove this endpoint and replace with charge if possible
+    //TODO Remove this endpoint and replace with charge if possible
     @PostMapping
     @Operation(summary = "Create a new transaction", 
                 description = "Creates a new transaction for a group cycle with specified parameters")
-    public ResponseEntity<TransactionResponseDto> createTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
+    public ResponseEntity<TransactionResponseDto> createTransaction(
+            @Valid @RequestBody CreateTransactionDto createDto) {
         Transaction transaction = transactionService.createTransaction(createDto);
         // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
         //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 
@@ -58,8 +66,10 @@ public class TransactionController {
 
     @PostMapping("/charge-card")
     @Operation(summary = "Charge existing authorization", 
-                description = "Creates a new transaction for a group cycle using an existing payment authorization. Use in group cycle for recurring payments")
-    public ResponseEntity<TransactionResponseDto> chargeTransaction(@Valid @RequestBody CreateTransactionDto createDto) {
+                description = "Creates a new transaction for a group cycle using an existing"
+                + "payment authorization. Use in group cycle for recurring payments")
+    public ResponseEntity<TransactionResponseDto> chargeTransaction(
+            @Valid @RequestBody CreateTransactionDto createDto) {
         Transaction transaction = transactionService.chargeStoredCard(createDto);
         // activityLogService.logActivity(transaction.getUserId(), transaction.getCycleId(), 
         //                              ActivityLog.EntityType.TRANSACTION, transaction.getTransactionId(), 

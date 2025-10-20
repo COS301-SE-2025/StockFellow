@@ -363,7 +363,6 @@ class TransferServiceTest {
         processDto.setStatus(Transfer.TransferStatus.COMPLETED);
         processDto.setPaystackTransferCode("TRF_123");
         processDto.setPaystackRecipientCode("RCP_123");
-        processDto.setGatewayStatus("success");
 
         when(transferRepository.findById(testTransferId)).thenReturn(Optional.of(transfer));
         when(transferRepository.save(any(Transfer.class))).thenReturn(transfer);
@@ -383,7 +382,6 @@ class TransferServiceTest {
         assertEquals(Transfer.TransferStatus.COMPLETED, savedTransfer.getStatus());
         assertEquals("TRF_123", savedTransfer.getPaystackTransferCode());
         assertEquals("RCP_123", savedTransfer.getPaystackRecipientCode());
-        assertEquals("success", savedTransfer.getGatewayStatus());
         assertNotNull(savedTransfer.getCompletedAt());
 
         // Verify cycle status update

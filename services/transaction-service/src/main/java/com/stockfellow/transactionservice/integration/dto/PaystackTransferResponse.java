@@ -48,7 +48,7 @@ public class PaystackTransferResponse {
         private Integer amount; 
         
         @JsonProperty("status")
-        private String status; // "pending", "success", "failed"
+        private String status; // "PENDING", "success", "failed"
         
         @JsonProperty("recipient")
         private Long recipient;

@@ -8,12 +8,19 @@ import com.stockfellow.transactionservice.service.GroupCycleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 
-import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 
@@ -65,7 +72,7 @@ public class GroupCycleController {
     @GetMapping("/group/{groupId}")
         @Operation(summary = "Get cycles by group", 
                description = "Retrieves all cycles associated with a specific group")
-    public ResponseEntity<List<GroupCycleResponseDto>> getCyclesByGroup(@PathVariable UUID groupId) {
+    public ResponseEntity<List<GroupCycleResponseDto>> getCyclesByGroup(@PathVariable String groupId) {
         List<GroupCycle> cycles = groupCycleService.getCyclesByGroup(groupId);
         return ResponseEntity.ok(cycles.stream()
                                .map(GroupCycleResponseDto::fromEntity)

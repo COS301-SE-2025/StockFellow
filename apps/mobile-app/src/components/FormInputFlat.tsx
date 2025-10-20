@@ -1,5 +1,6 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, Image, Text } from "react-native";
+import { useTheme } from "../../app/_layout";
 
 interface FormInputFlatProps {
   title?: string;
@@ -24,6 +25,7 @@ const FormInputFlat: React.FC<FormInputFlatProps> = ({
   helperTextColor = "#1DA1FA", // Default gray color
   ...props
 }) => {
+  const { isDarkMode } = useTheme();
   return (
     <View className="mb-5">
       {/* Label */}
@@ -38,6 +40,7 @@ const FormInputFlat: React.FC<FormInputFlatProps> = ({
           placeholderTextColor="#A0A0A0"
           onChangeText={handleChangeText}
           className="flex-1 text-base text-gray-800 px-5 py-3 font-light" // Added py-3 for better vertical padding
+          style={isDarkMode ? { color: '#FFFFFF' } : undefined}
           {...props}
         />
         {icon && (

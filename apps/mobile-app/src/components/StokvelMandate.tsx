@@ -70,7 +70,7 @@ const StokvelMandate = ({ visible, onClose, onAccept }: StokvelMandateProps) => 
 
                     <View className="flex-row justify-between">
                         <TouchableOpacity
-                            className="px-4 py-2 border border-gray-300 rounded-lg"
+                            className="px-4 py-3"
                             onPress={onClose}
                         >
                             <Text className="text-base font-['PlusJakartaSans-SemiBold']">
@@ -79,7 +79,7 @@ const StokvelMandate = ({ visible, onClose, onAccept }: StokvelMandateProps) => 
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            className={`px-4 py-2 rounded-lg ${accepted ? "bg-[#1DA1FA]" : "bg-gray-300"}`}
+                            className={`px-4 py-3 rounded-3xl ${accepted ? "bg-[#0C0C0F]" : "bg-gray-300"}`}
                             onPress={handleAccept}
                             disabled={!accepted}
                         >
