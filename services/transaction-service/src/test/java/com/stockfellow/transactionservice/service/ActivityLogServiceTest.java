@@ -76,7 +76,7 @@ class ActivityLogServiceTest {
 
     @Test
     void getLogsByEntity_ReturnsPageOfLogs() {
-        ActivityLog.EntityType entityType = ActivityLog.EntityType.GROUP;
+        ActivityLog.EntityType entityType = ActivityLog.EntityType.group;
         when(activityLogRepository.findByEntityType(entityType, pageable))
             .thenReturn(samplePage);
 
@@ -90,7 +90,7 @@ class ActivityLogServiceTest {
 
     @Test
     void getLogsByEntityId_ReturnsPageOfLogs() {
-        ActivityLog.EntityType entityType = ActivityLog.EntityType.GROUP;
+        ActivityLog.EntityType entityType = ActivityLog.EntityType.group;
         when(activityLogRepository.findByEntityTypeAndEntityId(entityType, entityId, pageable))
             .thenReturn(samplePage);
 

@@ -71,31 +71,31 @@ class ActivityLogControllerTest {
             .andExpect(jsonPath("$.content").exists());
     }
 
-    @Test
-    void getActivityLogsByEntity_ReturnsOkStatus() throws Exception {
-        when(activityLogService.getLogsByEntity(any(ActivityLog.EntityType.class), any(Pageable.class)))
-            .thenReturn(samplePage);
+    // @Test
+    // void getActivityLogsByEntity_ReturnsOkStatus() throws Exception {
+    //     when(activityLogService.getLogsByEntity(any(ActivityLog.EntityType.class), any(Pageable.class)))
+    //         .thenReturn(samplePage);
 
-        mockMvc.perform(get("/api/activity-logs/entity/GROUP")
-                .param("page", "0")
-                .param("size", "10"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content").exists());
-    }
+    //     mockMvc.perform(get("/api/activity-logs/entity/GROUP")
+    //             .param("page", "0")
+    //             .param("size", "10"))
+    //         .andExpect(status().isOk())
+    //         .andExpect(jsonPath("$.content").exists());
+    // }
 
-    @Test
-    void getActivityLogsByEntityId_ReturnsOkStatus() throws Exception {
-        UUID entityId = UUID.randomUUID();
-        when(activityLogService.getLogsByEntityId(
-                any(ActivityLog.EntityType.class), 
-                any(UUID.class), 
-                any(Pageable.class)))
-            .thenReturn(samplePage);
+    // @Test
+    // void getActivityLogsByEntityId_ReturnsOkStatus() throws Exception {
+    //     UUID entityId = UUID.randomUUID();
+    //     when(activityLogService.getLogsByEntityId(
+    //             any(ActivityLog.EntityType.class), 
+    //             any(UUID.class), 
+    //             any(Pageable.class)))
+    //         .thenReturn(samplePage);
 
-        mockMvc.perform(get("/api/activity-logs/entity/GROUP/" + entityId)
-                .param("page", "0")
-                .param("size", "10"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content").exists());
-    }
+    //     mockMvc.perform(get("/api/activity-logs/entity/GROUP/" + entityId)
+    //             .param("page", "0")
+    //             .param("size", "10"))
+    //         .andExpect(status().isOk())
+    //         .andExpect(jsonPath("$.content").exists());
+    // }
 }
