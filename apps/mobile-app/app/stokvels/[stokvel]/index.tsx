@@ -12,7 +12,7 @@ import authService from '../../../src/services/authService';
 import StokvelMandate from "../../../src/components/StokvelMandate";
 import { useTheme } from "../../_layout";
 import { StatusBar } from "expo-status-bar";
-import cardService from "@/services/cardService";
+import cardService from "../../../src/services/cardService";
 
 interface Member {
   id: string;
