@@ -1,7 +1,7 @@
 
 package com.stockfellow.transactionservice.repository;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.PayoutDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;

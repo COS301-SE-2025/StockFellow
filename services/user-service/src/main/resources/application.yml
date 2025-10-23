@@ -8,7 +8,9 @@ spring:
     url: jdbc:postgresql://${DROPLET1_IP:-postgres}:5432/userservice_db
     username: ${POSTGRES_USER:-postgres}
     password: ${POSTGRES_PASSWORD:-postgres}
-    
+    hikari:
+      auto-commit: false
+ 
   # JPA Configuration
   jpa:
     hibernate:

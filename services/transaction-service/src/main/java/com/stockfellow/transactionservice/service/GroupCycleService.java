@@ -40,12 +40,15 @@ public class GroupCycleService {
 
         GroupCycle cycle = new GroupCycle(
             request.getGroupId(),
+            request.getRotationId(),
             request.getCyclePeriod(),
             request.getRecipientUserId(),
             request.getContributionAmount(),
             request.getExpectedTotal(),
             request.getCollectionStartDate(),
-            request.getCollectionEndDate()
+            request.getCollectionEndDate(),
+            request.getPayoutDate(),
+            request.getMemberIds()
         );
         
 //        cycle.setStatus("pending"); // Set default status
@@ -70,7 +73,7 @@ public class GroupCycleService {
                 .collect(Collectors.toList());
     }
 
-    public List<GroupCycle> getCyclesByGroup(UUID groupId) {
+    public List<GroupCycle> getCyclesByGroup(String groupId) {
         logger.info("Getting cycles for group: {}", groupId);
         List<GroupCycle> cycles = groupCycleRepository.findByGroupIdOrderByCollectionStartDateDesc(groupId);
         return cycles;
@@ -84,7 +87,7 @@ public class GroupCycleService {
                 .collect(Collectors.toList());
     }
 
-    public GroupCycle getNextCycleForGroup(UUID groupId, String status) {
+    public GroupCycle getNextCycleForGroup(String groupId, String status) {
         logger.info("Getting next cycle for group: {} with status: {}", groupId, status);
         Optional<GroupCycle> cycle = groupCycleRepository.findFirstByGroupIdAndStatusOrderByCollectionStartDateAsc(groupId, status);
         return cycle.orElseThrow(() -> new IllegalArgumentException("No upcoming cycle found for group: " + groupId));
@@ -96,13 +99,13 @@ public class GroupCycleService {
         return cycle.orElseThrow(() -> new IllegalArgumentException("No upcoming cycle found with status: " + status));
     }
 
-    public GroupCycle getCycleByGroupAndMonth(UUID groupId, String cycleMonth) {
+    public GroupCycle getCycleByGroupAndMonth(String groupId, String cycleMonth) {
         logger.info("Getting cycle for group: {} in month: {}", groupId, cycleMonth);
         Optional<GroupCycle> cycle = groupCycleRepository.findByGroupIdAndCyclePeriod(groupId, cycleMonth);
         return cycle.orElseThrow(() -> new IllegalArgumentException("No cycle found for group: " + groupId + " in month: " + cycleMonth));
     }
 
-    public List<GroupCycleResponseDto> getEarliestCyclesForGroup(UUID groupId) {
+    public List<GroupCycleResponseDto> getEarliestCyclesForGroup(String groupId) {
         logger.info("Getting earliest cycles for group: {}", groupId);
         Optional<GroupCycle> cycles = groupCycleRepository.findFirstByGroupIdOrderByCollectionStartDateAsc(groupId);
         return cycles.stream()
@@ -131,6 +134,9 @@ public class GroupCycleService {
     private void validateCreateCycleRequest(CreateGroupCycleDto request) {
         if (request.getGroupId() == null) {
             throw new IllegalArgumentException("Group ID cannot be null");
+        }
+        if (request.getRotationId() == null) {
+            throw new IllegalArgumentException("Rotation ID cannot be null");
         }
         if (request.getCyclePeriod() == null || request.getCyclePeriod().trim().isEmpty()) {
             throw new IllegalArgumentException("Cycle Period cannot be null or empty");

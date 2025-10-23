@@ -129,13 +129,13 @@ public class ActivityLog {
     }
 
     public enum EntityType {
-        USER,
-        TRANSACTION,
-        TRANSFER,
-        GROUP_CYCLE,
-        PAYER_DETAILS,
-        PAYOUT_DETAILS,
-        GROUP,
-        PAYMENT_METHOD
+        user,
+        transaction,
+        transfer,
+        cycle,
+        payer_details,
+        payout_details,
+        group,
+        recipient
     }
 }

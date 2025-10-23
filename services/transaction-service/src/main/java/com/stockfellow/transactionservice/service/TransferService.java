@@ -115,7 +115,6 @@ public class TransferService {
                 transfer.setStatus(TransferStatus.COMPLETED);
                 transfer.setCompletedAt(LocalDateTime.now());
                 transfer.setPaystackTransferCode(response.getData().getReference()); 
-                transfer.setGatewayStatus("success");
                 
                 logger.info("Successfully made payout for transfer: {}", transfer.getTransferId());
                 
@@ -128,7 +127,6 @@ public class TransferService {
                 // Failed payout
                 transfer.setStatus(TransferStatus.FAILED);
                 transfer.setFailureReason(response.getMessage() != null ? response.getMessage() : "Payout transfer failed");
-                transfer.setGatewayStatus("failed");
                 
                 logger.error("Failed to payout transfer: {}", response.getMessage());
             }
@@ -137,7 +135,6 @@ public class TransferService {
             logger.error("Exception occurred while paying out transfer: {}", e.getMessage(), e);
             transfer.setStatus(TransferStatus.FAILED);
             transfer.setFailureReason("Exception during transfer: " + e.getMessage());
-            transfer.setGatewayStatus("error");
         }
         
         logger.info("Transfer created successfully with ID: {}", transfer.getTransferId());
@@ -169,7 +166,6 @@ public class TransferService {
         transfer.setPaystackTransferCode(processDto.getPaystackTransferCode());
         transfer.setPaystackRecipientCode(processDto.getPaystackRecipientCode());
         transfer.setStatus(processDto.getStatus());
-        transfer.setGatewayStatus(processDto.getGatewayStatus());
         transfer.setFailureReason(processDto.getFailureReason());
         
         // Set completion time for successful transfers
@@ -419,7 +415,6 @@ public class TransferService {
             // Update transfer with Paystack response
             if (response.getStatus()) {
                 transfer.setPaystackTransferCode(response.getData().getTransferCode());
-                transfer.setGatewayStatus(response.getData().getStatus()); 
                 transfer.setStatus(Transfer.TransferStatus.PROCESSING);
                 transfer.setInitiatedAt(LocalDateTime.now());
 

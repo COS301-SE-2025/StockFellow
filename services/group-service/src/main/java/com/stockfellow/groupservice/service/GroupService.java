@@ -3,6 +3,7 @@ package com.stockfellow.groupservice.service;
 import com.stockfellow.groupservice.model.Event;
 import com.stockfellow.groupservice.model.Group;
 import com.stockfellow.groupservice.repository.GroupRepository;
+import com.stockfellow.groupservice.client.TransactionServiceClient;
 import com.stockfellow.groupservice.dto.CreateGroupRequest;
 import com.stockfellow.groupservice.dto.CreateGroupResult;
 import com.stockfellow.groupservice.dto.UpdateGroupRequest;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Service
 public class GroupService {
@@ -19,13 +22,16 @@ public class GroupService {
     private final GroupMemberService groupMemberService;
     private final EventStoreService eventStoreService;
     private final GroupRepository groupRepository;
+    private final TransactionServiceClient transactionServiceClient;
 
     public GroupService(EventStoreService eventStoreService,
             GroupRepository groupRepository,
-            GroupMemberService groupMemberService) {
+            GroupMemberService groupMemberService, 
+            TransactionServiceClient transactionServiceClient) {
         this.eventStoreService = eventStoreService;
         this.groupRepository = groupRepository;
         this.groupMemberService = groupMemberService;
+        this.transactionServiceClient = transactionServiceClient;
     }
 
     public CreateGroupResult createGroup(CreateGroupRequest request) {
@@ -50,7 +56,46 @@ public class GroupService {
 
         logger.info("Group created successfully with ID: {} by admin: {}", groupId, request.getAdminId());
 
+        createRotationForGroup(group, members);
+
         return new CreateGroupResult(groupId, eventId, "Group created successfully");
+    }
+
+    private void createRotationForGroup(Group group, List<String> memberIds) {
+        try {
+            UUID[] memberUuids = memberIds.stream()
+                    .map(UUID::fromString)
+                    .toArray(UUID[]::new);
+
+            LocalDate collectionDate = convertToLocalDate(group.getContributionDate());
+            LocalDate payoutDate = convertToLocalDate(group.getPayoutDate());
+
+            TransactionServiceClient.CreateRotationRequest rotationRequest = 
+                new TransactionServiceClient.CreateRotationRequest(
+                    group.getGroupId(),
+                    BigDecimal.valueOf(group.getMinContribution()),
+                    memberUuids,
+                    collectionDate,
+                    payoutDate,
+                    group.getContributionFrequency()
+                );
+
+            transactionServiceClient.createRotation(rotationRequest);
+            
+            logger.info("Rotation creation initiated for group {}", group.getGroupId());
+        } catch (Exception e) {
+            logger.error("Failed to create rotation for group {}: {}", 
+                        group.getGroupId(), e.getMessage());
+        }
+    }
+
+    private LocalDate convertToLocalDate(Date date) {
+        if (date == null) {
+            return LocalDate.now().plusDays(1); // Default to tomorrow
+        }
+        return date.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate();
     }
 
     private void validateCreateGroupRequest(CreateGroupRequest request) {

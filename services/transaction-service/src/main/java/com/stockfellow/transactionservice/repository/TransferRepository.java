@@ -1,6 +1,6 @@
 package com.stockfellow.transactionservice.repository;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.Transfer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

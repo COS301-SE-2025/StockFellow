@@ -292,14 +292,14 @@ public class PaymentDetailsService {
      * - Add metadata to identify this as card authorization
      * - Stores pending authorization details
      */
-    public Map<String,Object> initializeCardAuth(InitializeCardAuthDto initDto){
+    public Map<String, Object> initializeCardAuth(InitializeCardAuthDto initDto) {
         try {
             String tempRef = generateAuthReference();
             PaystackTransactionRequest request = new PaystackTransactionRequest();
             request.setEmail(initDto.getEmail());
             request.setAmount(100); 
             request.setReference(tempRef);
-            request.setCallbackUrl(callbackBaseUrl+"/api/transaction/payment-methods/payer/callback");
+            request.setCallbackUrl(callbackBaseUrl + "/api/transaction/payment-methods/payer/callback");
             
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("purpose", "card_authorization");
@@ -416,7 +416,9 @@ public class PaymentDetailsService {
     //Helpers
     public void validateNoDuplicatePayerDetails(CreatePayerDetailsDto createDto) {
         if (createDto.getSignature() != null) {
-            boolean signatureExists = payerDetailsRepository.existsByUserIdAndSignature(createDto.getUserId(), createDto.getSignature());
+            boolean signatureExists = payerDetailsRepository.existsByUserIdAndSignature(
+                    createDto.getUserId(), 
+                    createDto.getSignature());
             if (signatureExists) {
                 throw new RuntimeException("This card is already saved to your account");
             }
@@ -429,11 +431,11 @@ public class PaymentDetailsService {
             }
         }
     }
-    public void validateNoDuplicatePayoutDetails(UUID userId){
+    public void validateNoDuplicatePayoutDetails(UUID userId) {
         Boolean pd = payoutDetailsRepository.existsByUserIdAndIsVerifiedTrue(userId);
 
-        if (pd){
-            throw new RuntimeException("User with ID: "+ userId + " already has payout details assigned");
+        if (pd) {
+            throw new RuntimeException("User with ID: " + userId + " already has payout details assigned");
         }
     }
 

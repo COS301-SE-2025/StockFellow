@@ -1,7 +1,7 @@
 
 package com.stockfellow.transactionservice.repository;
 
-import com.stockfellow.transactionservice.model.*;
+import com.stockfellow.transactionservice.model.GroupCycle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,8 +18,13 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     /**
      * Find cycles by group ID
      */
-    List<GroupCycle> findByGroupId(UUID groupId);
-    
+    List<GroupCycle> findByGroupId(String groupId);
+
+    /**
+     * Find cycles by rotation ID
+     */
+    List<GroupCycle> findByRotationId(UUID rotationId);
+
     /**
      * Find cycles by recipient user ID
      */
@@ -33,7 +38,7 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     /**
      * Find cycles by group and status
      */
-    List<GroupCycle> findByGroupIdAndStatus(UUID groupId, String status);
+    List<GroupCycle> findByGroupIdAndStatus(String groupId, String status);
 
     /*
      * 
@@ -43,7 +48,7 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     /*
      * 
      */
-    Optional<GroupCycle> findFirstByGroupIdOrderByCollectionStartDateAsc(UUID groupId);
+    Optional<GroupCycle> findFirstByGroupIdOrderByCollectionStartDateAsc(String groupId);
 
     /*
      * Find current group cycles to charge transactions
@@ -52,12 +57,12 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     /*
      * 
      */
-    Optional<GroupCycle> findFirstByGroupIdAndStatusOrderByCollectionStartDateAsc(UUID groupId, String status);
+    Optional<GroupCycle> findFirstByGroupIdAndStatusOrderByCollectionStartDateAsc(String groupId, String status);
     
     /*
      * 
      */
-    List<GroupCycle> findByGroupIdOrderByCollectionStartDateDesc(UUID groupId);
+    List<GroupCycle> findByGroupIdOrderByCollectionStartDateDesc(String groupId);
     
     /**
      * Find active cycles (ACTIVE, COLLECTING, COLLECTION_COMPLETE)
@@ -84,13 +89,13 @@ public interface GroupCycleRepository extends JpaRepository<GroupCycle, UUID> {
     /*
      * Find cycles by group id for a specific period(week, month, etc)
      */
-    Optional<GroupCycle> findByGroupIdAndCyclePeriod(UUID groupId, String cyclePeriod);
+    Optional<GroupCycle> findByGroupIdAndCyclePeriod(String groupId, String cyclePeriod);
     
     /**
      * Get cycle statistics by group
      */
     @Query("SELECT gc.status, COUNT(gc) FROM GroupCycle gc WHERE gc.groupId = :groupId GROUP BY gc.status")
-    List<Object[]> getCycleStatisticsByGroup(@Param("groupId") UUID groupId);
+    List<Object[]> getCycleStatisticsByGroup(@Param("groupId") String groupId);
     
     /**
      * Find cycles where current total is less than expected total

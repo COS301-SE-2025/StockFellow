@@ -9,9 +9,9 @@ spring:
     active: docker
   
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://admin-postgres:5432/admin_db}
-    username: ${SPRING_DATASOURCE_USERNAME:admin_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:admin_pass}
+    url: jdbc:postgresql://${DROPLET1_IP}:${POSTGRES_PORT:5432}/admin_db
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
     
   jpa:
@@ -31,8 +31,8 @@ spring:
       resourceserver:
         jwt:
           #   THIS NEEDS TO BE keycloak URL
-          issuer-uri: ${KEYCLOAK_ISSUER:http://keycloak:8080/realms/stockfellow}
-          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://keycloak:8080/realms/stockfellow/protocol/openid-connect/certs}
+          issuer-uri: ${KEYCLOAK_ISSUER:https://134.122.73.157.nip.io/realms/stockfellow}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:https://134.122.73.157.nip.io/realms/stockfellow/protocol/openid-connect/certs}
 
   jackson:
     serialization:
@@ -61,7 +61,7 @@ management:
       show-details: always
 
 keycloak:
-  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://keycloak:808}
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://keycloak:8080}
   realm: stockfellow
   resource: admin-service-client
   credentials:

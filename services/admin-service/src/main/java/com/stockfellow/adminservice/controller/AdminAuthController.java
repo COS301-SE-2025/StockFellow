@@ -18,7 +18,7 @@ public class AdminAuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAuthController.class);
 
-    @Value("${keycloak.auth-server-url:http://keycloak:8080}")
+    @Value("${keycloak.auth-server-url}")
     private String keycloakUrl;
 
     @Value("${keycloak.realm:stockfellow}")

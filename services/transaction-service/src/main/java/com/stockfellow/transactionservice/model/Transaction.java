@@ -22,11 +22,8 @@ public class Transaction {
     @Column(name = "payer_id", nullable = false)
     private UUID payerId;
     
-    @Column(name = "paystack_reference", nullable = false)
+    @Column(name = "paystack_reference")
     private String paystackReference;
-
-    @Column(name = "paystack_trans_id", nullable = false)
-    private String paystackTransId;
 
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
@@ -34,10 +31,6 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TransactionStatus status;
-
-    
-    @Column(name = "gateway_status")
-    private String gatewayStatus;
     
     @Column(name = "failure_reason")
     private String failureReason;
@@ -73,10 +66,8 @@ public class Transaction {
     public UUID getUserId() { return userId; }
     public UUID getPayerId() { return payerId; }
     public String getPaystackReference() { return paystackReference; }
-    public String getPaystackTransId() { return paystackTransId; }
     public BigDecimal getAmount() { return amount; }
     public TransactionStatus getStatus() { return status; }
-    public String getGatewayStatus() { return gatewayStatus; }
     public String getFailureReason() { return failureReason; }
     public Integer getRetryCount() { return retryCount; }
     public LocalDateTime getInitiatedAt() { return initiatedAt; }
@@ -90,10 +81,8 @@ public class Transaction {
     public void setUserId(UUID userId) { this.userId = userId; }
     public void setPayerId(UUID payerId) { this.payerId = payerId; }
     public void setPaystackReference(String paystackReference) { this.paystackReference = paystackReference; }
-    public void setPaystackTransId(String paystackTransId) { this.paystackTransId = paystackTransId; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public void setStatus(TransactionStatus status) { this.status = status; }
-    public void setGatewayStatus(String gatewayStatus) { this.gatewayStatus = gatewayStatus; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
     public void setRetryCount(Integer retryCount) { this.retryCount = retryCount; }
     public void setInitiatedAt(LocalDateTime initiatedAt) { this.initiatedAt = initiatedAt; }

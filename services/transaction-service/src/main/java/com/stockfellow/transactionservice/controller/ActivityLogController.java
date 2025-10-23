@@ -6,15 +6,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import java.util.UUID;
 
-import io.swagger.v3.oas.annotations.tags.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 
 
 @RestController
-@Tag(name="Activity Log Controller", description = "Get inforamtion about events related to: Users, Transactions, Transfers, GroupCycles, Payment details")
+@Tag(
+    name = "Activity Log Controller", 
+    description = "Get info about events related to: Users, Transactions, Transfers, GroupCycles, Payment details"
+)
 @RequestMapping("/api/activity-logs")
 @CrossOrigin(origins = "*")
 public class ActivityLogController {
@@ -23,8 +30,8 @@ public class ActivityLogController {
     private ActivityLogService activityLogService;
 
     @GetMapping("/user/{userId}")
-    @Operation(summary="Get User logs",
-                description="Get activity logs by user")
+    @Operation(summary = "Get User logs",
+                description = "Get activity logs by user")
     public ResponseEntity<Page<ActivityLog>> getActivityLogsByUser(
             @PathVariable UUID userId, 
             Pageable pageable) {
@@ -33,8 +40,8 @@ public class ActivityLogController {
     }
     
     @GetMapping("/cycle/{cycleId}")
-    @Operation(summary="Get Group Cycle logs",
-                description="Get activity logs by cycle")
+    @Operation(summary = "Get Group Cycle logs",
+                description = "Get activity logs by cycle")
     public ResponseEntity<Page<ActivityLog>> getActivityLogsByCycle(
             @PathVariable UUID cycleId, 
             Pageable pageable) {
@@ -43,8 +50,8 @@ public class ActivityLogController {
     }
 
     @GetMapping("/entity/{entityType}")
-    @Operation(summary="Get Entity logs",
-                description="Get activity logs by entity")
+    @Operation(summary = "Get Entity logs",
+                description = "Get activity logs by entity")
     public ResponseEntity<Page<ActivityLog>> getActivityLogsByEntity(
             @PathVariable ActivityLog.EntityType entityType,
             Pageable pageable) {
@@ -53,8 +60,8 @@ public class ActivityLogController {
     }
     
     @GetMapping("/entity/{entityType}/{entityId}")
-    @Operation(summary="Get specific entitys logs",
-                description="Get activity logs by entity id")
+    @Operation(summary = "Get specific entitys logs",
+                description = "Get activity logs by entity id")
     public ResponseEntity<Page<ActivityLog>> getActivityLogsByEntityId(
             @PathVariable ActivityLog.EntityType entityType,
             @PathVariable UUID entityId,

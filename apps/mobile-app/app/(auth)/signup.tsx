@@ -45,10 +45,9 @@ const SignUp = () => {
   });
 
   const [bankStatement, setBankStatement] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [payslip, setPayslip] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const router = useRouter();
-  const passwordRef = useRef<string>('');
 
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -57,7 +56,7 @@ const SignUp = () => {
     symbol: false
   });
 
-  // Real-time validation functions
+  // Validation functions (keeping existing implementation)
   const validateUsername = (value: string): string => {
     if (!value.trim()) return 'Username is required';
     if (value.length < 3) return 'Username must be at least 3 characters';
@@ -88,7 +87,6 @@ const SignUp = () => {
     if (!/^\d+$/.test(value)) return 'ID number must contain only digits';
     if (value.length !== 13) return 'ID number must be exactly 13 digits';
     
-    // Basic SA ID validation - check date format
     const year = parseInt(value.substring(0, 2));
     const month = parseInt(value.substring(2, 4));
     const day = parseInt(value.substring(4, 6));
@@ -134,7 +132,6 @@ const SignUp = () => {
     return '';
   };
 
-  // Dynamic password validation
   useEffect(() => {
     const newRequirements = {
       length: form.password.length >= 6,
@@ -145,54 +142,43 @@ const SignUp = () => {
     setPasswordRequirements(newRequirements);
   }, [form.password]);
 
-  // Real-time validation on change
   const handleFieldChange = (field: keyof typeof form, value: string) => {
     let processedValue = value;
 
-    // Field-specific processing
     switch (field) {
       case 'firstName':
       case 'lastName':
-        // Auto-capitalize first letter
         if (value.length === 1) {
           processedValue = value.toUpperCase();
         }
-        // Remove invalid characters
         processedValue = processedValue.replace(/[^A-Za-z\s-']/g, '');
         break;
       
       case 'username':
-        // Remove invalid characters
         processedValue = value.replace(/[^a-zA-Z0-9_]/g, '');
         break;
       
       case 'contactNumber':
-        // Remove non-numeric characters
         processedValue = value.replace(/[^\d]/g, '');
-        // Limit to 10 digits
         if (processedValue.length > 10) {
           processedValue = processedValue.substring(0, 10);
         }
         break;
       
       case 'idNumber':
-        // Remove non-numeric characters
         processedValue = value.replace(/[^\d]/g, '');
-        // Limit to 13 digits
         if (processedValue.length > 13) {
           processedValue = processedValue.substring(0, 13);
         }
         break;
       
       case 'email':
-        // Remove spaces
         processedValue = value.replace(/\s/g, '');
         break;
     }
 
     setForm({ ...form, [field]: processedValue });
 
-    // Validate on change if field has been touched
     if (touched[field]) {
       let error = '';
       switch (field) {
@@ -216,7 +202,6 @@ const SignUp = () => {
           break;
         case 'password':
           error = validatePassword(processedValue);
-          // Also revalidate confirm password if it exists
           if (form.confirmPassword) {
             const confirmError = validateConfirmPassword(form.confirmPassword, processedValue);
             setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
@@ -233,7 +218,6 @@ const SignUp = () => {
   const handleFieldBlur = (field: keyof typeof form) => {
     setTouched({ ...touched, [field]: true });
     
-    // Validate on blur
     let error = '';
     switch (field) {
       case 'username':
@@ -318,7 +302,6 @@ const SignUp = () => {
   };
 
   const handleConfirmPasswordChange = (text: string) => {
-    // Prevent pasting
     if (text.length > form.confirmPassword.length + 1) {
       Alert.alert('Paste Not Allowed', 'Please type your password to confirm');
       return;
@@ -329,6 +312,8 @@ const SignUp = () => {
   const handleSignup = async () => {
     if (validateForm()) {
       setIsSubmitting(true);
+      setUploadProgress('Creating account...');
+      
       try {
         console.log('Attempting registration...');
 
@@ -339,18 +324,48 @@ const SignUp = () => {
           email: form.email,
           password: form.password,
           contactNumber: form.contactNumber,
-          idNumber: form.idNumber
+          idNumber: form.idNumber,
+          bankStatement: bankStatement || undefined, // Include bank statement if provided
         };
 
-        console.log('Registration data:', registrationData);
+        console.log('Registration data:', {
+          ...registrationData,
+          password: '***',
+          bankStatement: bankStatement ? 'Provided' : 'Not provided'
+        });
+
+        // Update progress message if bank statement is provided
+        if (bankStatement) {
+          setUploadProgress('Creating account and analyzing bank statement...');
+        }
 
         const registrationResult = await authService.register(registrationData);
 
         if (registrationResult.success) {
           console.log('Registration successful');
-          router.push({
-            pathname: '/login',
-          });
+          
+          // Show success message with tier info if available
+          let successMessage = 'Account created successfully!';
+          if (registrationResult.data?.tierName) {
+            successMessage += `\n\nYour affordability tier: ${registrationResult.data.tierName}`;
+          } else if (bankStatement) {
+            successMessage += '\n\nBank statement analysis is in progress.';
+          }
+          
+          Alert.alert(
+            'Success',
+            successMessage,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  router.push({
+                    pathname: '/login',
+                  });
+                }
+              }
+            ]
+          );
         } else {
           console.error('Registration failed:', registrationResult.error);
           
@@ -368,6 +383,8 @@ const SignUp = () => {
               email: errorMessage,
             });
           }
+          
+          Alert.alert('Registration Failed', errorMessage);
         }
       } catch (error) {
         console.error('Registration error:', error);
@@ -379,6 +396,7 @@ const SignUp = () => {
         });
       } finally {
         setIsSubmitting(false);
+        setUploadProgress('');
       }
     } else {
       Alert.alert('Validation Error', 'Please fix all errors before submitting');
@@ -495,17 +513,34 @@ const SignUp = () => {
                 />
 
                 <PDFUpload
-                  heading="3 Month Bank Statement"
-                  onDocumentSelect={(doc) => setBankStatement(doc)}
+                  heading="3 Month Bank Statement (Optional)"
+                  onDocumentSelect={(doc) => {
+                    setBankStatement(doc);
+                    console.log('Bank statement selected:', doc?.name);
+                  }}
                 />
 
-                <PDFUpload
-                  heading="Latest Payslip"
-                  onDocumentSelect={(doc) => setPayslip(doc)}
-                />
+                {bankStatement && (
+                  <View className="mt-2 p-3 bg-green-50 rounded-lg">
+                    <Text className="text-sm text-green-700 font-['PlusJakartaSans-Medium']">
+                      ✓ Bank statement ready for upload
+                    </Text>
+                    <Text className="text-xs text-green-600 font-['PlusJakartaSans-Regular'] mt-1">
+                      {bankStatement.name}
+                    </Text>
+                  </View>
+                )}
+
+                {uploadProgress && (
+                  <View className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <Text className="text-sm text-blue-700 font-['PlusJakartaSans-Medium']">
+                      {uploadProgress}
+                    </Text>
+                  </View>
+                )}
 
                 <CustomButton
-                  title="Sign Up"
+                  title={bankStatement ? "Sign Up & Analyze Statement" : "Sign Up"}
                   containerStyles="bg-[#1DA1FA] rounded-xl px-8 py-4 my-4 mt-10"
                   textStyles="text-white text-lg"
                   handlePress={handleSignup}
