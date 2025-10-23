@@ -39,7 +39,7 @@ const StokvelActivity: React.FC<{ activity: ActivityItem }> = ({ activity }) => 
           <Text className="text-sm">
             Monthly payout of{" "}
             <Text className="font-['PlusJakartaSans-Bold'] text-[#03DE58]">R{activity.amount?.toFixed(2)}</Text> has been paid to{" "}
-            <Text className="font-['PlusJakartaSans-SemiBold']">{activity.recipientName}</Text>
+            <Text className="font-['PlusJakartaSans-SemiBold']">{activity.memberName}</Text>
           </Text>
         );
       case "contribution":

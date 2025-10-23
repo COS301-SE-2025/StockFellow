@@ -5,7 +5,6 @@ import { icons } from "../constants";
 interface MemberCardProps {
   name: string;
   role: string;
-  contribution: string;
   tier: number; 
   profileImage?: string | null;
 }
@@ -13,7 +12,6 @@ interface MemberCardProps {
 const MemberCard: React.FC<MemberCardProps> = ({
   name,
   role,
-  contribution,
   tier,
   profileImage = null,
 }) => {
@@ -29,12 +27,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
   };
 
   return (
-    <View className="items-center mx-3 mb-5">
-      {/* Contribution Amount */}
-      <Text className="text-[#03DE58] font-['PlusJakartaSans-Medium'] text-base mb-2">
-        {contribution}
-      </Text>
-      
+    <View className="items-center mx-3 mb-5">  
       {/* Profile Image */}
       <View className="w-16 h-16 rounded-full bg-white items-center justify-center mb-2 shadow-lg shadow-[#1DA1FA]/90">
         <Image

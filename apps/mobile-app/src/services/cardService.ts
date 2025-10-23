@@ -90,7 +90,7 @@ const cardService = {
     }> {
         try {
             const response = await authService.apiRequest(
-                `/transactions/user?page=${page}&size=${size}&sort=createdAt,desc`
+                `/transaction/activity/user?page=${page}&size=${size}&sort=createdAt,desc`
             );
 
             if (!response.ok) {
@@ -104,6 +104,36 @@ const cardService = {
             throw error;
         }
     }, 
+
+    // Add to src/services/authService.ts
+    async fetchGroupActivities(
+        groupId: string, 
+        page: number = 0, 
+        size: number = 20
+    ): Promise<{
+        content: any[];
+        totalElements: number;
+        totalPages: number;
+        last: boolean;
+        first: boolean;
+        numberOfElements: number;
+    }> {
+        try {
+            const response = await authService.apiRequest(
+                `/transaction/activity/group/${groupId}/activities?page=${page}&size=${size}&sort=createdAt,desc`
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to fetch group activities');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching group activities:', error);
+            throw error;
+        }
+    },
 
     /**
      * Get all saved cards for the authenticated user

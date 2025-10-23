@@ -34,7 +34,7 @@ const Transactions = () => {
       // Transform backend data to your Transaction interface
       const formattedTransactions = response.content.map(tx => ({
         id: tx.id,
-        type: tx.type.toLowerCase(), // Assuming backend returns CONTRIBUTION/PAYOUT
+        type: (tx.type?.toLowerCase() || 'contribution') as 'contribution' | 'payout',
         amount: tx.amount,
         groupName: tx.groupName || 'Unknown Group',
         date: tx.createdAt || tx.date,

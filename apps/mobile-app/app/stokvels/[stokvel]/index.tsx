@@ -12,6 +12,7 @@ import authService from '../../../src/services/authService';
 import StokvelMandate from "../../../src/components/StokvelMandate";
 import { useTheme } from "../../_layout";
 import { StatusBar } from "expo-status-bar";
+import cardService from "@/services/cardService";
 
 interface Member {
   id: string;
@@ -66,6 +67,9 @@ const Stokvel = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showMandateModal, setShowMandateModal] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [activityPage, setActivityPage] = useState(0);
+  const [hasMoreActivities, setHasMoreActivities] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(false);
 
   const params = useLocalSearchParams();
   const id = params.id || params.stokvel;
@@ -125,6 +129,8 @@ const Stokvel = () => {
       // Set the request sent state based on existing requests
       setRequestSent(hasPendingRequest);
 
+      const activitiesData = await cardService.fetchGroupActivities(id as string, 0, 20);
+
       // Transform to match your frontend interface
       const transformedData: StokvelDetails = {
         id: data.group.id || data.group._id,
@@ -140,54 +146,13 @@ const Stokvel = () => {
           profileImage: null
         })) || [],
         requests: data.group.requests || [],
-        activities: [
-          // {
-          //   id: '1',
-          //   type: 'joined' as const,
-          //   memberName: 'John Doe',
-          //   stokvelName: data.group.name,
-          //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-          //   profileImage: null
-          // },
-          // {
-          //   id: '2',
-          //   type: 'contribution' as const,
-          //   memberName: 'Jane Smith',
-          //   amount: 500,
-          //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-          //   profileImage: null
-          // },
-          // {
-          //   id: '3',
-          //   type: 'contribution_change' as const,
-          //   memberName: 'Mike Johnson',
-          //   previousAmount: 300,
-          //   newAmount: 500,
-          //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-          //   profileImage: null
-          // },
-          // {
-          //   id: '4',
-          //   type: 'payout' as const,
-          //   memberName: 'Mike Johnson',
-          //   amount: 2000,
-          //   recipientName: 'Sarah Williams',
-          //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-          //   profileImage: null
-          // },
-          // {
-          //   id: '5',
-          //   type: 'missed_contribution' as const,
-          //   memberName: 'Robert Brown',
-          //   amount: 500,
-          //   timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
-          //   profileImage: null
-          // }
-        ],
+        activities: transformActivities(activitiesData.content),
         userPermissions: data.userPermissions
       };
 
       setStokvel(transformedData);
+      setActivityPage(0);
+      setHasMoreActivities(!activitiesData.last);
     } catch (error) {
       console.error('Fetch error:', error);
       Alert.alert('Error', 'Failed to load stokvel details');
@@ -248,6 +213,76 @@ const Stokvel = () => {
     } catch (error) {
       console.error('Join request error:', error);
       Alert.alert('Error', 'An error occurred while sending the request');
+    }
+  };
+
+  const transformActivities = (activities: any[]): ActivityItem[] => {
+    return activities.map((activity: any) => {
+      let activityType: ActivityItem['type'] = 'contribution';
+      
+      if (activity.type) {
+        const backendType = activity.type.toLowerCase();
+        
+        switch(backendType) {
+          case 'contribution':
+            activityType = 'contribution';
+            break;
+          case 'payout':
+            activityType = 'payout';
+            break;
+          case 'joined':
+            activityType = 'joined';
+            break;
+          case 'contribution_change':
+            activityType = 'contribution_change';
+            break;
+          case 'missed_contribution':
+            activityType = 'missed_contribution';
+            break;
+          default:
+            activityType = 'contribution'; // fallback
+        }
+      }
+      
+      return {
+        id: activity.id,
+        type: activityType,
+        memberName: activity.memberName,
+        stokvelName: activity.groupName,
+        amount: activity.amount,
+        previousAmount: activity.previousAmount,
+        newAmount: activity.newAmount,
+        recipientName: activity.recipientName,
+        timestamp: new Date(activity.createdAt), // Note: backend returns 'createdAt' not 'timestamp'
+        profileImage: activity.profileImage || null
+      };
+    });
+  };
+
+  const loadMoreActivities = async () => {
+    if (!hasMoreActivities || loadingActivities) return;
+    
+    setLoadingActivities(true);
+    try {
+      const nextPage = activityPage + 1;
+      const activitiesData = await cardService.fetchGroupActivities(id as string, nextPage, 20);
+      
+      if (stokvel) {
+        setStokvel({
+          ...stokvel,
+          activities: [
+            ...stokvel.activities,
+            ...transformActivities(activitiesData.content)
+          ]
+        });
+      }
+      
+      setActivityPage(nextPage);
+      setHasMoreActivities(!activitiesData.last);
+    } catch (error) {
+      console.error('Error loading more activities:', error);
+    } finally {
+      setLoadingActivities(false);
     }
   };
 
@@ -384,7 +419,6 @@ const Stokvel = () => {
                     <MemberCard
                       name={member.name}
                       role={member.role}
-                      contribution={member.contribution}
                       tier={member.tier}
                       profileImage={member.profileImage}
                     />
@@ -399,9 +433,28 @@ const Stokvel = () => {
 
               <View className="w-full">
                 {stokvel.activities && stokvel.activities.length > 0 ? (
-                  stokvel.activities.map((activity) => (
-                    <StokvelActivity key={activity.id} activity={activity} />
-                  ))
+                  <>
+                    {stokvel.activities.map((activity) => (
+                      <StokvelActivity key={activity.id} activity={activity} />
+                    ))}
+                    
+                    {/* Optional: Load More Button */}
+                    {hasMoreActivities && (
+                      <TouchableOpacity
+                        className="py-3 px-4 mt-2 bg-gray-100 rounded-lg items-center"
+                        onPress={loadMoreActivities}
+                        disabled={loadingActivities}
+                      >
+                        {loadingActivities ? (
+                          <ActivityIndicator size="small" color="#1DA1FA" />
+                        ) : (
+                          <Text className="text-[#1DA1FA] font-['PlusJakartaSans-SemiBold']">
+                            Load More
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </>
                 ) : (
                   <Text className="text-gray-500 text-center py-4 font-['PlusJakartaSans-Regular']" style={{ color: colors.text, opacity: 0.7 }}>
                     No recent activity
