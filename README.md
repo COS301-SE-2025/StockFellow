@@ -113,6 +113,7 @@
 |Demo 4| [Video](https://youtu.be/2oboF9fcJYI) | [Presentation](https://www.canva.com/design/DAGoirDqLZs/xO_h-BnKPPw5krVOillX-Q/edit) |
 |Final Video| [Video](https://youtu.be/TcPNf54WmR8) | |
 |App Link| [APK](https://drive.google.com/drive/folders/14ojQ398QfaWLVWc8atTlrnP2U1Ao0guA) | |
+|Mock PDF Bank Statements| [PDFs](https://drive.google.com/drive/folders/1PbyYIiz7Y7Gt1ToGCk_xCmT1g_dpTuDA?usp=sharing) | |
 
 <!-- Documentation -->
 ## Documentation
