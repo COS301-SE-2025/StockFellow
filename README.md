@@ -1,5 +1,4 @@
 <a id="readme-top"></a>
-[![Coverage][cov-shield]][cov-url]
 [![Issues][issues-shield]][issues-url]
 [![Build][build-shield]][build-url]
 [![Monitor][monitor-shield]][monitor-url]
